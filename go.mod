@@ -1,3 +1,3 @@
-module github.com/luis-octavius/todo-terminal
+module todo-terminal
 
 go 1.25.1
