@@ -20,12 +20,12 @@ type TodoManager struct {
 func CreateTodoManager() *TodoManager {
 	todoManager := TodoManager{
 		Todos: map[int]Todo{},
-		Id:    0,
+		Id:    1,
 	}
 	return &todoManager
 }
 
-func (t TodoManager) Add(description string) error {
+func (t *TodoManager) Add(description string) error {
 	newTodo := Todo{
 		id:          t.Id,
 		description: description,
@@ -35,29 +35,29 @@ func (t TodoManager) Add(description string) error {
 
 	t.Todos[t.Id] = newTodo
 	t.Id++
+	fmt.Println("Id: ", t.Id)
 	fmt.Println("Todo added succesfully!")
 	return nil
 }
 
-func (t TodoManager) Get(id int) (Todo, error) {
+func (t *TodoManager) Get(id int) (Todo, error) {
 	todo, ok := t.Todos[id]
-	fmt.Println("Todo: ", todo)
 	if !ok {
-		return Todo{}, fmt.Errorf("Todo with ID %w doesn't exists in Todo Manager", id)
+		return Todo{}, fmt.Errorf("Todo with the ID provided doesn't exist")
 	}
 
 	return todo, nil
 }
 
-func (t TodoManager) GetAll() error {
+func (t *TodoManager) GetAll() error {
 	for _, todo := range t.Todos {
-		fmt.Printf("%v. %v\n%v\n", todo.id, todo.description, todo.createdAt)
+		fmt.Printf("%v. %v\n%v\n", todo.id, todo.description, todo.createdAt.Format(time.RFC1123))
 	}
 
 	return nil
 }
 
-func (t TodoManager) Delete(id int) error {
+func (t *TodoManager) Delete(id int) error {
 	_, err := t.Get(id)
 	if err != nil {
 		return fmt.Errorf("Todo with ID %w doesn't exists in Todo Manager", id)
