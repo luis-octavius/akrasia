@@ -26,6 +26,9 @@ func CreateTodoManager() *TodoManager {
 }
 
 func (t *TodoManager) Add(description string) error {
+	if description == "" {
+		return fmt.Errorf("empty value, please use a description")
+	}
 	newTodo := Todo{
 		id:          t.Id,
 		description: description,
@@ -51,7 +54,7 @@ func (t *TodoManager) Get(id int) (Todo, error) {
 
 func (t *TodoManager) GetAll() error {
 	for _, todo := range t.Todos {
-		fmt.Printf("%v. %v\n%v\n", todo.id, todo.description, todo.createdAt.Format(time.RFC1123))
+		fmt.Printf("%v. %v %v\n", todo.id, todo.description, todo.createdAt.Format(time.RFC1123))
 	}
 
 	return nil
@@ -64,6 +67,6 @@ func (t *TodoManager) Delete(id int) error {
 	}
 
 	delete(t.Todos, id)
-	fmt.Printf("\nTodo with ID %w deleted succesfully", id)
+	fmt.Printf("\nTodo with ID %v deleted succesfully\n", id)
 	return nil
 }
