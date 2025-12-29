@@ -1,4 +1,5 @@
-CREATE TABLE todos (
+-- +goose Up 
+CREATE TABLE IF NOT EXISTS todos (
   id UUID PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT, 
@@ -6,4 +7,7 @@ CREATE TABLE todos (
   updated_at TIMESTAMP NOT NULL,
   concluded BOOLEAN NOT NULL 
 );
+
+-- +goose Down 
+DROP TABLE IF EXISTS todos;
 

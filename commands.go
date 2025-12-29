@@ -69,7 +69,24 @@ var getAll = &cobra.Command{
 	},
 }
 
+var getTodoByName = &cobra.Command{
+	Use:     "get-by-name",
+	Short:   "gets a todo by name",
+	Aliases: []string{"gn", "name"},
+	Args:    cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		name := args[0]
+		err := cfg.getTodoByName(name)
+		if err != nil {
+			log.Fatal("Error returning todo: ", err)
+		}
+
+		return nil
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(add)
 	rootCmd.AddCommand(getAll)
+	rootCmd.AddCommand(getTodoByName)
 }

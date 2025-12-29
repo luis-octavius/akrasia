@@ -46,8 +46,23 @@ func (cfg *Config) getTodos() error {
 	}
 
 	for _, todo := range todos {
-		fmt.Printf("ID: %v\nName: %v\nDescription: %v\nDate Added: %v\n", todo.ID, todo.Name, todo.Description, todo.CreatedAt)
+		printTodo(todo)
 	}
 
 	return nil
+}
+
+func (cfg *Config) getTodoByName(name string) error {
+	todo, err := cfg.Queries.GetTodoByName(context.Background(), name)
+	if err != nil {
+		return fmt.Errorf("error getting todo from provided name: %v", err)
+	}
+
+	printTodo(todo)
+	return nil
+}
+
+func printTodo(todo database.Todo) {
+	expiresAt := todo.ExpiresAt.Time.UTC()
+	fmt.Printf("ID: %v\nName: %v\nDescription: %v\nExpires At: %v\n", todo.ID, todo.Name, todo.Description.String, expiresAt)
 }

@@ -12,11 +12,11 @@ import (
 )
 
 const addTodo = `-- name: AddTodo :one
-INSERT INTO todos (id, name, description, created_at, updated_at, concluded)
+INSERT INTO todos (id, name, description, created_at, updated_at, concluded, expires_at)
 VALUES (
-  ?, ?, ?, ?, ?, ?
+  ?, ?, ?, ?, ?, ?, ?
 )
-RETURNING id, name, description, created_at, updated_at, concluded
+RETURNING id, name, description, created_at, updated_at, concluded, expires_at
 `
 
 type AddTodoParams struct {
@@ -26,6 +26,7 @@ type AddTodoParams struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	Concluded   bool
+	ExpiresAt   sql.NullTime
 }
 
 func (q *Queries) AddTodo(ctx context.Context, arg AddTodoParams) (Todo, error) {
@@ -36,6 +37,7 @@ func (q *Queries) AddTodo(ctx context.Context, arg AddTodoParams) (Todo, error) 
 		arg.CreatedAt,
 		arg.UpdatedAt,
 		arg.Concluded,
+		arg.ExpiresAt,
 	)
 	var i Todo
 	err := row.Scan(
@@ -45,12 +47,43 @@ func (q *Queries) AddTodo(ctx context.Context, arg AddTodoParams) (Todo, error) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Concluded,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
+const deleteConcluded = `-- name: DeleteConcluded :exec
+DELETE FROM todos 
+WHERE concluded = true
+`
+
+func (q *Queries) DeleteConcluded(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, deleteConcluded)
+	return err
+}
+
+const getTodoByName = `-- name: GetTodoByName :one
+SELECT id, name, description, created_at, updated_at, concluded, expires_at FROM todos 
+WHERE name LIKE ?
+`
+
+func (q *Queries) GetTodoByName(ctx context.Context, name string) (Todo, error) {
+	row := q.db.QueryRowContext(ctx, getTodoByName, name)
+	var i Todo
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Concluded,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
 
 const getTodos = `-- name: GetTodos :many
-SELECT id, name, description, created_at, updated_at, concluded FROM todos
+SELECT id, name, description, created_at, updated_at, concluded, expires_at FROM todos
 `
 
 func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
@@ -69,6 +102,7 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Concluded,
+			&i.ExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -81,4 +115,26 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateTodoStatusByName = `-- name: UpdateTodoStatusByName :one
+UPDATE todos 
+SET concluded = true 
+WHERE name LIKE ?
+RETURNING id, name, description, created_at, updated_at, concluded, expires_at
+`
+
+func (q *Queries) UpdateTodoStatusByName(ctx context.Context, name string) (Todo, error) {
+	row := q.db.QueryRowContext(ctx, updateTodoStatusByName, name)
+	var i Todo
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Concluded,
+		&i.ExpiresAt,
+	)
+	return i, err
 }
