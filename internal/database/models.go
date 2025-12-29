@@ -16,4 +16,5 @@ type Todo struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	Concluded   bool
+	ExpiresAt   sql.NullTime
 }

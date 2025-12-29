@@ -1,12 +1,26 @@
 -- name: AddTodo :one 
-INSERT INTO todos (id, name, description, created_at, updated_at, concluded)
+INSERT INTO todos (id, name, description, created_at, updated_at, concluded, expires_at)
 VALUES (
-  ?, ?, ?, ?, ?, ?
+  ?, ?, ?, ?, ?, ?, ?
 )
 RETURNING *;
 
 -- name: GetTodos :many 
 SELECT * FROM todos; 
+
+-- name: GetTodoByName :one 
+SELECT * FROM todos 
+WHERE name LIKE ?; 
+
+-- name: UpdateTodoStatusByName :one 
+UPDATE todos 
+SET concluded = true 
+WHERE name LIKE ?
+RETURNING *;
+
+-- name: DeleteConcluded :exec 
+DELETE FROM todos 
+WHERE concluded = true; 
 
 
 

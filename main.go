@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"os"
 
@@ -30,7 +29,6 @@ func main() {
 	defer db.Close()
 
 	queries := database.New(db)
-	fmt.Println("Ok til here...")
 	cfg.Queries = queries
 
 	// initialize cobra root command
