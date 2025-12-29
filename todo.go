@@ -1,72 +1,53 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
+	"log"
 	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/luis-octavius/akrasia/internal/database"
 )
 
-type Todo struct {
-	id          int
-	description string
-	createdAt   time.Time
-	Status      bool
-}
+func (cfg *Config) addTodo(name, description string) error {
+	descriptionField := sql.NullString{}
 
-type TodoManager struct {
-	Todos map[int]Todo
-	Id    int
-}
-
-func CreateTodoManager() *TodoManager {
-	todoManager := TodoManager{
-		Todos: map[int]Todo{},
-		Id:    1,
-	}
-	return &todoManager
-}
-
-func (t *TodoManager) Add(description string) error {
 	if description == "" {
-		return fmt.Errorf("empty value, please use a description")
-	}
-	newTodo := Todo{
-		id:          t.Id,
-		description: description,
-		createdAt:   time.Now(),
-		Status:      false,
+		descriptionField.String = ""
+		descriptionField.Valid = false
+	} else {
+		descriptionField.String = description
+		descriptionField.Valid = true
 	}
 
-	t.Todos[t.Id] = newTodo
-	t.Id++
-	fmt.Println("Id: ", t.Id)
-	fmt.Println("Todo added succesfully!")
-	return nil
-}
-
-func (t *TodoManager) Get(id int) (Todo, error) {
-	todo, ok := t.Todos[id]
-	if !ok {
-		return Todo{}, fmt.Errorf("Todo with the ID provided doesn't exist")
-	}
-
-	return todo, nil
-}
-
-func (t *TodoManager) GetAll() error {
-	for _, todo := range t.Todos {
-		fmt.Printf("%v. %v %v\n", todo.id, todo.description, todo.createdAt.Format(time.RFC1123))
-	}
-
-	return nil
-}
-
-func (t *TodoManager) Delete(id int) error {
-	_, err := t.Get(id)
+	_, err := cfg.Queries.AddTodo(context.Background(), database.AddTodoParams{
+		ID:          uuid.New(),
+		Name:        name,
+		Description: descriptionField,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+		Concluded:   false,
+	})
 	if err != nil {
-		return fmt.Errorf("Todo with ID %w doesn't exists in Todo Manager", id)
+		return fmt.Errorf("error creating the todo: %v", err)
 	}
 
-	delete(t.Todos, id)
-	fmt.Printf("\nTodo with ID %v deleted succesfully\n", id)
+	log.Printf("Todo %v created successfully!\n", name)
+	return nil
+}
+
+func (cfg *Config) getTodos() error {
+	todos, err := cfg.Queries.GetTodos(context.Background())
+	if err != nil {
+		return fmt.Errorf("error getting todos from database: %v", err)
+	}
+
+	for _, todo := range todos {
+		fmt.Printf("ID: %v\nName: %v\nDescription: %v\nDate Added: %v\n", todo.ID, todo.Name, todo.Description, todo.CreatedAt)
+	}
+
 	return nil
 }
