@@ -2,128 +2,74 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"strings"
-	"strconv"
-	"time"
+	"log"
+
+	"github.com/spf13/cobra"
 )
 
-type cliCommand struct {
-	name        string
-	description string
-	usage       string 
-	callback    func(args []string) error
+var rootCmd = &cobra.Command{
+	Use:   "akrasia",
+	Short: "An app that helps with fighting akrasia",
+	Long: `Akrasia is a word in greek that means "Incontinence", which means a lack of self-control. 
+This app is constructed to simply help to fight akrasía rapidly in the terminal, by adding things to do 
+and to keep track of these things for you.`,
 }
 
-func commandExit(t *TodoManager, args []string) error {
-	fmt.Println("Closing Akrasía... Bye bye!")
-	os.Exit(0)
-	return nil
-}
-
-func commandHelp(t *TodoManager, args []string) error {
-	commands := getCommands(t)
-	for _, cmd := range commands {
-		fmt.Printf("%s: %s\n", cmd.name, cmd.usage)
-	}
-	return nil
-}
-
-func commandAdd(t *TodoManager, args []string) error {
-	taskDescription := strings.Join(args, " ")
-	fmt.Printf("Task description: %v\n", taskDescription)
-
-	err := t.Add(taskDescription); if err != nil {
-		return fmt.Errorf("error creating todo: %w\n", err)
-	}
-	
-	return nil
-}
-
-func commandDelete(t *TodoManager, args []string) error {
-	taskId, err := strconv.Atoi(args[0])
+func Execute() {
+	err := rootCmd.Execute()
 	if err != nil {
-		return fmt.Errorf("error in conversion: %w\n", err)
+		log.Fatal(err)
 	}
-	fmt.Printf("Task Id: %v\n", taskId)
-
-	err = t.Delete(taskId); if err != nil {
-		return fmt.Errorf("error deleting todo: %w\n", err)
-	}
-	return nil
 }
 
-func commandGet(t *TodoManager, args []string) error {
-	taskId, err := strconv.Atoi(args[0]); if err != nil {
-		fmt.Printf("error converting id: %w\n", err)
-	}
+var add = &cobra.Command{
+	Use:     "add <name> [description]",
+	Short:   "adds a todo in storage, description is optional",
+	Aliases: []string{"a"},
+	Args:    cobra.MaximumNArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		var name string
+		var description string
 
-	todo, err := t.Get(taskId); if err != nil {
-		fmt.Printf("error getting todo: %w\n", err)
-	}
+		lenArgs := len(args)
 
-	fmt.Printf("%v. %v\n%v\n", todo.id, todo.description, todo.createdAt.Format(time.RFC1123))
+		if lenArgs == 0 {
+			return fmt.Errorf("Not enough arguments provided")
+		}
 
-	return nil
+		if lenArgs == 1 {
+			name = args[0]
+		}
+
+		if lenArgs == 2 {
+			name = args[0]
+			description = args[1]
+		}
+
+		if err := cfg.addTodo(name, description); err != nil {
+			fmt.Println("Not worked")
+			return err
+		}
+
+		return nil
+	},
 }
 
-func commandGetAll(t *TodoManager, args []string) error {
-	err := t.GetAll(); if err != nil {
-		fmt.Printf("error generating todo list: %w", err)
-	}
+var getAll = &cobra.Command{
+	Use:     "get-all",
+	Short:   "returns all the todos saved in storage",
+	Aliases: []string{"ga"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := cfg.getTodos()
+		if err != nil {
+			log.Fatal("Error returning todos: ", err)
+		}
 
-	return nil
+		return nil
+	},
 }
 
-func getCommands(t *TodoManager) map[string]cliCommand {
-	return map[string]cliCommand{
-		"add": {
-			name:        "add",
-			description: "add a todo",
-			usage: "add study to algorithms proof (add a todo with the name 'study to algorithms proof')",
-			callback: func(args []string) error {
-				return commandAdd(t, args)
-			},
-		},
-		"help": {
-			name:        "help",
-			description: "shows how to use the commands",
-			usage: "",
-			callback: func(args []string) error {
-				return commandHelp(t, args)
-			},
-		},
-		"get-all": {
-			name:        "get all",
-			description: "show all todos",
-			usage: "get-all (shows all todos in the database)",
-			callback: func(args []string) error {
-				return commandGetAll(t, args)
-			},
-		},
-		"get": {
-			name:        "get",
-			description: "get a todo by id",
-			usage: "get 1 (return the todo with id of 1)",
-			callback: func(args []string) error {
-				return commandGet(t, args)
-			},
-		},
-		"delete": {
-			name:        "delete",
-			description: "delete a todo with the id",
-			usage: "delete 1 (delete a todo with id of 1)",
-			callback: func(args []string) error {
-				return commandDelete(t, args)
-			},
-		},
-		"exit": {
-			name:        "exit",
-			description: "close the program",
-			usage: "exit (closes the program)",
-			callback: func(args []string) error {
-				return commandExit(t, args)
-			},
-		},
-	}
+func init() {
+	rootCmd.AddCommand(add)
+	rootCmd.AddCommand(getAll)
 }
