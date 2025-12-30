@@ -72,7 +72,7 @@ func (cfg *Config) getTodos() error {
 		return fmt.Errorf("error getting todos from database: %v", err)
 	}
 
-	emojiText := emoji.AddEmoji(emoji.Bell, "Todos: ")
+	emojiText := emoji.AddEmoji(emoji.Bell, "Todos: \n")
 	fmt.Printf("%v\n", emojiText)
 
 	for _, todo := range todos {
@@ -108,6 +108,9 @@ func (cfg *Config) deleteConcluded() error {
 		return fmt.Errorf("Error deleting concluded todos: %v", err)
 	}
 
+	colorized, _ := color.ColorizeOutput("blue", "Concluded Todos deleted successfully!")
+	fmt.Println(emoji.AddEmoji(emoji.StatusDone, colorized))
+
 	return nil
 }
 
@@ -131,7 +134,12 @@ func (cfg *Config) checkExpired() error {
 
 // printTodo receives a Todo and create a readable output
 func printTodo(todo database.Todo, colorName string) {
-	expiresAt := todo.ExpiresAt.Time.UTC()
+	todoTime := todo.ExpiresAt.Time.Format(time.RFC822)
+
+	// // divide the date and time to construct a readable expiring date
+	// _, month, day := todoTime.Date()
+	// onlyTime := todoTime.Format(time.TimeOnly)
+
 	var status string
 
 	if todo.Concluded == true {
@@ -140,7 +148,7 @@ func printTodo(todo database.Todo, colorName string) {
 		status = "Not done"
 	}
 
-	s := fmt.Sprintf("%v %v | %v | %v | %v\n", emoji.Todo, todo.Name, todo.Description.String, expiresAt, status)
+	s := fmt.Sprintf("%v %v | %v | %v | %v\n", emoji.Todo, todo.Name, todo.Description.String, todoTime, status)
 
 	colorized, _ := color.ColorizeOutput(colorName, s)
 
