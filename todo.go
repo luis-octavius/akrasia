@@ -16,7 +16,28 @@ import (
 	"github.com/luis-octavius/akrasia/pkg/emoji"
 )
 
-func (cfg *Config) addTodo(name, description string) error {
+func (cfg *Config) addTodo(name, description string, expiresAt time.Time) error {
+	descriptionField := validateDescription(description)
+	expiresField := validateTime(expiresAt)
+
+	_, err := cfg.Queries.AddTodo(context.Background(), database.AddTodoParams{
+		ID:          uuid.New(),
+		Name:        name,
+		Description: descriptionField,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+		Concluded:   false,
+		ExpiresAt:   expiresField,
+	})
+	if err != nil {
+		return fmt.Errorf("%v Error creating the todo: %v", emoji.Success, err)
+	}
+
+	log.Printf("%v Todo %v created successfully!\n", emoji.Success, name)
+	return nil
+}
+
+func validateDescription(description string) sql.NullString {
 	descriptionField := sql.NullString{}
 
 	if description == "" {
@@ -27,20 +48,21 @@ func (cfg *Config) addTodo(name, description string) error {
 		descriptionField.Valid = true
 	}
 
-	_, err := cfg.Queries.AddTodo(context.Background(), database.AddTodoParams{
-		ID:          uuid.New(),
-		Name:        name,
-		Description: descriptionField,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-		Concluded:   false,
-	})
-	if err != nil {
-		return fmt.Errorf("%v Error creating the todo: %v", emoji.Success, err)
+	return descriptionField
+}
+
+func validateTime(expiresAt time.Time) sql.NullTime {
+	t := sql.NullTime{}
+
+	if expiresAt.IsZero() {
+		t.Valid = false
+		return t
 	}
 
-	log.Printf("%v Todo %v created successfully!\n", emoji.Success, name)
-	return nil
+	t.Time = expiresAt
+	t.Valid = true
+
+	return t
 }
 
 func (cfg *Config) getTodos() error {
