@@ -22,6 +22,11 @@ RETURNING *;
 DELETE FROM todos 
 WHERE concluded = true; 
 
+-- name: CheckExpired :many 
+SELECT * FROM todos 
+WHERE expires_at < datetime('now')
+ORDER BY expires_at DESC;
+
 
 
 

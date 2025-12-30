@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -26,27 +27,33 @@ var add = &cobra.Command{
 	Use:     "add <name> [description]",
 	Short:   "adds a todo in storage, description is optional",
 	Aliases: []string{"a"},
-	Args:    cobra.MaximumNArgs(2),
+	Args:    cobra.MaximumNArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var name string
 		var description string
+		var expiresAt time.Time
 
 		lenArgs := len(args)
 
-		if lenArgs == 0 {
+		switch lenArgs {
+		case 0:
 			return fmt.Errorf("Not enough arguments provided")
-		}
 
-		if lenArgs == 1 {
+		case 1:
 			name = args[0]
-		}
 
-		if lenArgs == 2 {
+		case 2:
 			name = args[0]
 			description = args[1]
+
+		case 3:
+			name = args[0]
+			description = args[1]
+			parsedTime, _ := time.Parse(time.DateTime, args[2])
+			expiresAt = parsedTime
 		}
 
-		err := cfg.addTodo(name, description)
+		err := cfg.addTodo(name, description, expiresAt)
 		if err != nil {
 			return err
 		}
@@ -104,11 +111,26 @@ var updateStatusToConcluded = &cobra.Command{
 
 var deleteConcluded = &cobra.Command{
 	Use:     "delete-concluded",
-	Short:   "delete all concluded todos in storage",
-	Aliases: []string{"dc"},
+	Short:   "delete all concluded todos",
+	Aliases: []string{"dc", "delc"},
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		err := cfg.deleteConcluded()
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var checkExpired = &cobra.Command{
+	Use:     "check-expired",
+	Short:   "check expired todos",
+	Aliases: []string{"ce"},
+	Args:    cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := cfg.checkExpired()
 		if err != nil {
 			return err
 		}
@@ -123,4 +145,5 @@ func init() {
 	rootCmd.AddCommand(getTodoByName)
 	rootCmd.AddCommand(updateStatusToConcluded)
 	rootCmd.AddCommand(deleteConcluded)
+	rootCmd.AddCommand(checkExpired)
 }
