@@ -4,12 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/luis-octavius/akrasia/internal/database"
+	"github.com/luis-octavius/akrasia/pkg/color"
+	"github.com/luis-octavius/akrasia/pkg/emoji"
 )
 
 func (cfg *Config) addTodo(name, description string) error {
@@ -32,10 +36,10 @@ func (cfg *Config) addTodo(name, description string) error {
 		Concluded:   false,
 	})
 	if err != nil {
-		return fmt.Errorf("error creating the todo: %v", err)
+		return fmt.Errorf("%v Error creating the todo: %v", emoji.Success, err)
 	}
 
-	log.Printf("Todo %v created successfully!\n", name)
+	log.Printf("%v Todo %v created successfully!\n", emoji.Success, name)
 	return nil
 }
 
@@ -44,6 +48,9 @@ func (cfg *Config) getTodos() error {
 	if err != nil {
 		return fmt.Errorf("error getting todos from database: %v", err)
 	}
+
+	emojiText := emoji.AddEmoji(emoji.Bell, "Todos: ")
+	fmt.Printf("%v\n", emojiText)
 
 	for _, todo := range todos {
 		printTodo(todo)
@@ -81,6 +88,7 @@ func (cfg *Config) deleteConcluded() error {
 	return nil
 }
 
+// printTodo receives a Todo and create a readable output
 func printTodo(todo database.Todo) {
 	expiresAt := todo.ExpiresAt.Time.UTC()
 	var status string
@@ -90,5 +98,10 @@ func printTodo(todo database.Todo) {
 	} else {
 		status = "Not done"
 	}
-	fmt.Printf("\nID: %v\nName: %v\nDescription: %v\nExpires At: %v\nStatus: %v\n", todo.ID, todo.Name, todo.Description.String, expiresAt, status)
+
+	s := fmt.Sprintf("%v %v | %v | %v | %v\n", emoji.Todo, todo.Name, todo.Description.String, expiresAt, status)
+
+	colorized, _ := color.ColorizeOutput("red", s)
+
+	io.WriteString(os.Stdout, colorized)
 }
