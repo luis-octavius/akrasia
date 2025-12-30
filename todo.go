@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -75,7 +76,7 @@ func (cfg *Config) getTodos() error {
 	fmt.Printf("%v\n", emojiText)
 
 	for _, todo := range todos {
-		printTodo(todo)
+		printTodo(todo, "blue")
 	}
 
 	return nil
@@ -87,7 +88,7 @@ func (cfg *Config) getTodoByName(name string) error {
 		return fmt.Errorf("error getting todo from provided name: %v", err)
 	}
 
-	printTodo(todo)
+	printTodo(todo, "blue")
 	return nil
 }
 
@@ -97,7 +98,7 @@ func (cfg *Config) updateToConcluded(name string) error {
 		return fmt.Errorf("Error updating status of Todo '%v': %v", name, err)
 	}
 
-	printTodo(todo)
+	printTodo(todo, "green")
 	return nil
 }
 
@@ -110,8 +111,26 @@ func (cfg *Config) deleteConcluded() error {
 	return nil
 }
 
+func (cfg *Config) checkExpired() error {
+	todos, err := cfg.Queries.CheckExpired(context.Background())
+	if err != nil {
+		return fmt.Errorf("Error checking expired todos: %v", err)
+	}
+
+	if len(todos) == 0 {
+		return errors.New("There are not expired todos")
+	}
+
+	fmt.Println(emoji.AddEmoji(emoji.StatusExpired, "EXPIRED: "))
+	for _, todo := range todos {
+		printTodo(todo, "red")
+	}
+
+	return nil
+}
+
 // printTodo receives a Todo and create a readable output
-func printTodo(todo database.Todo) {
+func printTodo(todo database.Todo, colorName string) {
 	expiresAt := todo.ExpiresAt.Time.UTC()
 	var status string
 
@@ -123,7 +142,7 @@ func printTodo(todo database.Todo) {
 
 	s := fmt.Sprintf("%v %v | %v | %v | %v\n", emoji.Todo, todo.Name, todo.Description.String, expiresAt, status)
 
-	colorized, _ := color.ColorizeOutput("red", s)
+	colorized, _ := color.ColorizeOutput(colorName, s)
 
 	io.WriteString(os.Stdout, colorized)
 }

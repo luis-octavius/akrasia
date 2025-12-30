@@ -52,6 +52,43 @@ func (q *Queries) AddTodo(ctx context.Context, arg AddTodoParams) (Todo, error) 
 	return i, err
 }
 
+const checkExpired = `-- name: CheckExpired :many
+SELECT id, name, description, created_at, updated_at, concluded, expires_at FROM todos 
+WHERE expires_at < datetime('now')
+ORDER BY expires_at DESC
+`
+
+func (q *Queries) CheckExpired(ctx context.Context) ([]Todo, error) {
+	rows, err := q.db.QueryContext(ctx, checkExpired)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Todo
+	for rows.Next() {
+		var i Todo
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Concluded,
+			&i.ExpiresAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteConcluded = `-- name: DeleteConcluded :exec
 DELETE FROM todos 
 WHERE concluded = true

@@ -111,11 +111,26 @@ var updateStatusToConcluded = &cobra.Command{
 
 var deleteConcluded = &cobra.Command{
 	Use:     "delete-concluded",
-	Short:   "delete all concluded todos in storage",
-	Aliases: []string{"dc"},
+	Short:   "delete all concluded todos",
+	Aliases: []string{"dc", "delc"},
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		err := cfg.deleteConcluded()
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var checkExpired = &cobra.Command{
+	Use:     "check-expired",
+	Short:   "check expired todos",
+	Aliases: []string{"ce"},
+	Args:    cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := cfg.checkExpired()
 		if err != nil {
 			return err
 		}
@@ -130,4 +145,5 @@ func init() {
 	rootCmd.AddCommand(getTodoByName)
 	rootCmd.AddCommand(updateStatusToConcluded)
 	rootCmd.AddCommand(deleteConcluded)
+	rootCmd.AddCommand(checkExpired)
 }
