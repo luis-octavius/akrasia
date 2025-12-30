@@ -62,7 +62,33 @@ func (cfg *Config) getTodoByName(name string) error {
 	return nil
 }
 
+func (cfg *Config) updateToConcluded(name string) error {
+	todo, err := cfg.Queries.UpdateTodoStatusByName(context.Background(), name)
+	if err != nil {
+		return fmt.Errorf("Error updating status of Todo '%v': %v", name, err)
+	}
+
+	printTodo(todo)
+	return nil
+}
+
+func (cfg *Config) deleteConcluded() error {
+	err := cfg.Queries.DeleteConcluded(context.Background())
+	if err != nil {
+		return fmt.Errorf("Error deleting concluded todos: %v", err)
+	}
+
+	return nil
+}
+
 func printTodo(todo database.Todo) {
 	expiresAt := todo.ExpiresAt.Time.UTC()
-	fmt.Printf("ID: %v\nName: %v\nDescription: %v\nExpires At: %v\n", todo.ID, todo.Name, todo.Description.String, expiresAt)
+	var status string
+
+	if todo.Concluded == true {
+		status = "Done"
+	} else {
+		status = "Not done"
+	}
+	fmt.Printf("\nID: %v\nName: %v\nDescription: %v\nExpires At: %v\nStatus: %v\n", todo.ID, todo.Name, todo.Description.String, expiresAt, status)
 }

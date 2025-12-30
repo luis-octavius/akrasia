@@ -46,8 +46,8 @@ var add = &cobra.Command{
 			description = args[1]
 		}
 
-		if err := cfg.addTodo(name, description); err != nil {
-			fmt.Println("Not worked")
+		err := cfg.addTodo(name, description)
+		if err != nil {
 			return err
 		}
 
@@ -59,10 +59,11 @@ var getAll = &cobra.Command{
 	Use:     "get-all",
 	Short:   "returns all the todos saved in storage",
 	Aliases: []string{"ga"},
+	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		err := cfg.getTodos()
 		if err != nil {
-			log.Fatal("Error returning todos: ", err)
+			return err
 		}
 
 		return nil
@@ -70,7 +71,7 @@ var getAll = &cobra.Command{
 }
 
 var getTodoByName = &cobra.Command{
-	Use:     "get-by-name",
+	Use:     "get-by-name <name>",
 	Short:   "gets a todo by name",
 	Aliases: []string{"gn", "name"},
 	Args:    cobra.ExactArgs(1),
@@ -78,7 +79,38 @@ var getTodoByName = &cobra.Command{
 		name := args[0]
 		err := cfg.getTodoByName(name)
 		if err != nil {
-			log.Fatal("Error returning todo: ", err)
+			return err
+		}
+
+		return nil
+	},
+}
+
+var updateStatusToConcluded = &cobra.Command{
+	Use:     "update-status <name>",
+	Short:   "update concluded status to true",
+	Aliases: []string{"us"},
+	Args:    cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		name := args[0]
+		err := cfg.updateToConcluded(name)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
+var deleteConcluded = &cobra.Command{
+	Use:     "delete-concluded",
+	Short:   "delete all concluded todos in storage",
+	Aliases: []string{"dc"},
+	Args:    cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := cfg.deleteConcluded()
+		if err != nil {
+			return err
 		}
 
 		return nil
@@ -89,4 +121,6 @@ func init() {
 	rootCmd.AddCommand(add)
 	rootCmd.AddCommand(getAll)
 	rootCmd.AddCommand(getTodoByName)
+	rootCmd.AddCommand(updateStatusToConcluded)
+	rootCmd.AddCommand(deleteConcluded)
 }
