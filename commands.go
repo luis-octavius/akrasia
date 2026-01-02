@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -38,19 +39,21 @@ var add = &cobra.Command{
 		switch lenArgs {
 		case 0:
 			return fmt.Errorf("Not enough arguments provided")
-
 		case 1:
 			name = args[0]
-
 		case 2:
 			name = args[0]
 			description = args[1]
-
 		case 3:
 			name = args[0]
 			description = args[1]
-			parsedTime, _ := time.Parse(time.DateTime, args[2])
-			expiresAt = parsedTime
+
+			if args[2] == "" {
+				expiresAt, _ = parseTime([]string{})
+			} else {
+				splitTime := strings.Split(args[2], " ")
+				expiresAt, _ = parseTime(splitTime)
+			}
 		}
 
 		err := cfg.addTodo(name, description, expiresAt)
