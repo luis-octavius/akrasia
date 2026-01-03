@@ -1,3 +1,6 @@
 akrasia.db
 .env
+*.env
+.env.local
+.env*.local
 .github
