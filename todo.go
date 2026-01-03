@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -36,34 +35,6 @@ func (cfg *Config) addTodo(name, description string, expiresAt time.Time) error 
 
 	log.Printf("%v Todo %v created successfully!\n", emoji.Success, name)
 	return nil
-}
-
-func validateDescription(description string) sql.NullString {
-	descriptionField := sql.NullString{}
-
-	if description == "" {
-		descriptionField.String = ""
-		descriptionField.Valid = false
-	} else {
-		descriptionField.String = description
-		descriptionField.Valid = true
-	}
-
-	return descriptionField
-}
-
-func validateTime(expiresAt time.Time) sql.NullTime {
-	t := sql.NullTime{}
-
-	if expiresAt.IsZero() {
-		t.Valid = false
-		return t
-	}
-
-	t.Time = expiresAt
-	t.Valid = true
-
-	return t
 }
 
 func (cfg *Config) getTodos() error {
