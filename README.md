@@ -26,7 +26,7 @@ DB_PATH="./akrasia.db"
 EOF
 ```
 
-3. Do the up migrations in with the `migrations_up.sh`:
+3. Do the up migrations with the `migrations_up.sh`:
 
 ```bash
 chmod +x migrations_up.sh
@@ -58,6 +58,7 @@ Usage:
 Available Commands:
   add              adds a todo in storage, description is optional
   check-expired    check expired todos
+  check-expiring   check todos that are expiring in 5 days
   completion       Generate the autocompletion script for the specified shell
   delete-concluded delete all concluded todos
   get-all          returns all the todos saved in storage

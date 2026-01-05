@@ -6,6 +6,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/luis-octavius/akrasia/internal/database"
+	"github.com/luis-octavius/akrasia/pkg/color"
+	"github.com/luis-octavius/akrasia/pkg/emoji"
 )
 
 func validateDescription(description string) sql.NullString {
@@ -51,18 +55,15 @@ func parseTime(expireDate []string) (time.Time, error) {
 	case 0:
 		day += 1
 		forwardDay := time.Date(year, month, day+1, 0, 0, 0, 0, time.UTC)
-		fmt.Println("Case 0: ", forwardDay)
 		return forwardDay, nil
 	case 1:
 		parsedDay, _ := strconv.Atoi(expireDate[0])
 		date := time.Date(year, month, parsedDay, 0, 0, 0, 0, time.UTC)
-		fmt.Println("Case 1: ", date)
 		return date, nil
 	case 2:
 		parsedDay, _ := strconv.Atoi(expireDate[0])
 		parsedMonth, _ := strconv.Atoi(expireDate[1])
 		date := time.Date(year, time.Month(parsedMonth), parsedDay, 0, 0, 0, 0, time.UTC)
-		fmt.Println("Case 2: ", date)
 		return date, nil
 	case 3:
 		// split day, month and hour
@@ -74,7 +75,6 @@ func parseTime(expireDate []string) (time.Time, error) {
 		if err != nil {
 			return time.Time{}, fmt.Errorf("Error in parsetime - %v", err)
 		}
-		fmt.Println("Case 3: ", date)
 		return date, nil
 	}
 
@@ -106,9 +106,37 @@ func checkIfTodoExpires(expiresAt time.Time) bool {
 	diff := expiresAt.Sub(actualDay).String()
 	hour, _, _ := strings.Cut(diff, "h")
 	hourToInt, _ := strconv.Atoi(hour)
-	fmt.Println("Hours: ", hourToInt)
 	if hourToInt <= (24 * 5) {
 		return true
 	}
 	return false
+}
+
+// printTodo receives a Todo and create a readable output
+func printTodo(todo database.Todo, colorName string) {
+	todoTime := todo.ExpiresAt.Time.Format(time.RFC822)
+
+	// // divide the date and time to construct a readable expiring date
+	// _, month, day := todoTime.Date()
+	// onlyTime := todoTime.Format(time.TimeOnly)
+
+	var status string
+
+	if todo.Concluded == true {
+		status = "Done"
+	} else {
+		status = "Not done"
+	}
+
+	s := fmt.Sprintf("%v %v | %v\n%v | %v\n\n", emoji.Todo, todo.Name, todo.Description.String, todoTime, status)
+
+	colorized, _ := color.ColorizeOutput(colorName, s)
+
+	fmt.Println(colorized)
+}
+
+func addColorAndEmoji(pickedEmoji, colorName, text string) string {
+	colorized, _ := color.ColorizeOutput(colorName, text)
+	strWithEmoji := emoji.AddEmoji(pickedEmoji, colorized)
+	return strWithEmoji
 }

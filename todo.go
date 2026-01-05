@@ -4,16 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/luis-octavius/akrasia/internal/database"
-	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/emoji"
+)
+
+const (
+	NoExpiring    = "Your tasks are not fleeing. You have time, yet your focus must remain steadfast."
+	SuccessDelete = "Concluded Todos deleted successfully!"
 )
 
 func (cfg *Config) addTodo(name, description string, expiresAt time.Time) error {
@@ -34,6 +36,7 @@ func (cfg *Config) addTodo(name, description string, expiresAt time.Time) error 
 	}
 
 	log.Printf("%v Todo %v created successfully!\n", emoji.Success, name)
+	log.Printf("\n%s", generateRandomQuote())
 	return nil
 }
 
@@ -70,6 +73,7 @@ func (cfg *Config) updateToConcluded(name string) error {
 	}
 
 	printTodo(todo, "green")
+	fmt.Printf("%s", generateRandomQuote())
 	return nil
 }
 
@@ -79,8 +83,8 @@ func (cfg *Config) deleteConcluded() error {
 		return fmt.Errorf("Error deleting concluded todos: %v", err)
 	}
 
-	colorized, _ := color.ColorizeOutput("blue", "Concluded Todos deleted successfully!")
-	fmt.Println(emoji.AddEmoji(emoji.StatusDone, colorized))
+	fmt.Println(addColorAndEmoji(emoji.StatusDone, "blue", SuccessDelete))
+	fmt.Printf("\n%s\n", generateRandomQuote())
 
 	return nil
 }
@@ -109,35 +113,22 @@ func (cfg *Config) checkExpiring() error {
 		return fmt.Errorf("Error getting todos: %v", err)
 	}
 
+	fmt.Println("Todos: ", len(todos))
+	var countExpiring int
+
 	for _, todo := range todos {
 		isTodoExpiring := checkIfTodoExpires(todo.ExpiresAt.Time)
 		if isTodoExpiring {
 			printTodo(todo, "red")
+			countExpiring++
 		}
 	}
 
-	return nil
-}
-
-// printTodo receives a Todo and create a readable output
-func printTodo(todo database.Todo, colorName string) {
-	todoTime := todo.ExpiresAt.Time.Format(time.RFC822)
-
-	// // divide the date and time to construct a readable expiring date
-	// _, month, day := todoTime.Date()
-	// onlyTime := todoTime.Format(time.TimeOnly)
-
-	var status string
-
-	if todo.Concluded == true {
-		status = "Done"
-	} else {
-		status = "Not done"
+	if countExpiring == 0 {
+		formatted := addColorAndEmoji(emoji.Fire, "red", NoExpiring)
+		fmt.Printf("%s\n\n", formatted)
+		fmt.Printf("%s\n", generateRandomQuote())
 	}
 
-	s := fmt.Sprintf("%v %v | %v\n%v | %v\n\n", emoji.Todo, todo.Name, todo.Description.String, todoTime, status)
-
-	colorized, _ := color.ColorizeOutput(colorName, s)
-
-	io.WriteString(os.Stdout, colorized)
+	return nil
 }
