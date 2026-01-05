@@ -14,7 +14,7 @@ WHERE name LIKE ?;
 
 -- name: UpdateTodoStatusByName :one 
 UPDATE todos 
-SET concluded = true 
+SET concluded = true, updated_at = datetime('now')
 WHERE name LIKE ?
 RETURNING *;
 

@@ -142,11 +142,27 @@ var checkExpired = &cobra.Command{
 	},
 }
 
+var checkExpiring = &cobra.Command{
+	Use:     "check-expiring",
+	Short:   "check todos that are expiring in 5 days",
+	Aliases: []string{"cx", "chex"},
+	Args:    cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := cfg.checkExpiring()
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(add)
 	rootCmd.AddCommand(getAll)
 	rootCmd.AddCommand(getTodoByName)
 	rootCmd.AddCommand(updateStatusToConcluded)
 	rootCmd.AddCommand(deleteConcluded)
+	rootCmd.AddCommand(checkExpiring)
 	rootCmd.AddCommand(checkExpired)
 }

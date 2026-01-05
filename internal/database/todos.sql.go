@@ -156,7 +156,7 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 
 const updateTodoStatusByName = `-- name: UpdateTodoStatusByName :one
 UPDATE todos 
-SET concluded = true 
+SET concluded = true, updated_at = datetime('now')
 WHERE name LIKE ?
 RETURNING id, name, description, created_at, updated_at, concluded, expires_at
 `

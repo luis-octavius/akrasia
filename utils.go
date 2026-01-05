@@ -99,3 +99,16 @@ func parseHourLayout(year, day int, month time.Month, timeLayout string) (time.T
 
 	return date, nil
 }
+
+func checkIfTodoExpires(expiresAt time.Time) bool {
+	actualDay := time.Now()
+
+	diff := expiresAt.Sub(actualDay).String()
+	hour, _, _ := strings.Cut(diff, "h")
+	hourToInt, _ := strconv.Atoi(hour)
+	fmt.Println("Hours: ", hourToInt)
+	if hourToInt <= (24 * 5) {
+		return true
+	}
+	return false
+}

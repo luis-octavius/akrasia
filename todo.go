@@ -103,6 +103,22 @@ func (cfg *Config) checkExpired() error {
 	return nil
 }
 
+func (cfg *Config) checkExpiring() error {
+	todos, err := cfg.Queries.GetTodos(context.Background())
+	if err != nil {
+		return fmt.Errorf("Error getting todos: %v", err)
+	}
+
+	for _, todo := range todos {
+		isTodoExpiring := checkIfTodoExpires(todo.ExpiresAt.Time)
+		if isTodoExpiring {
+			printTodo(todo, "red")
+		}
+	}
+
+	return nil
+}
+
 // printTodo receives a Todo and create a readable output
 func printTodo(todo database.Todo, colorName string) {
 	todoTime := todo.ExpiresAt.Time.Format(time.RFC822)
@@ -119,7 +135,7 @@ func printTodo(todo database.Todo, colorName string) {
 		status = "Not done"
 	}
 
-	s := fmt.Sprintf("%v %v | %v | %v | %v\n", emoji.Todo, todo.Name, todo.Description.String, todoTime, status)
+	s := fmt.Sprintf("%v %v | %v\n%v | %v\n\n", emoji.Todo, todo.Name, todo.Description.String, todoTime, status)
 
 	colorized, _ := color.ColorizeOutput(colorName, s)
 
