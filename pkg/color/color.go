@@ -19,6 +19,6 @@ func ColorizeOutput(colorName, text string) (string, error) {
 		return "", fmt.Errorf("Color does not exist on map")
 	}
 
-	colorizedOutput := color.Sprintf(text)
+	colorizedOutput := color.Sprint(text)
 	return colorizedOutput, nil
 }

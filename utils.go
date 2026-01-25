@@ -3,13 +3,13 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/luis-octavius/akrasia/internal/database"
 	"github.com/luis-octavius/akrasia/pkg/color"
-	"github.com/luis-octavius/akrasia/pkg/emoji"
 )
 
 func validateDescription(description string) sql.NullString {
@@ -40,62 +40,31 @@ func validateTime(expiresAt time.Time) sql.NullTime {
 	return t
 }
 
-// parseTime receives the expireDate that is an argument
-// from the command add. it returns a time that is valid
-// for saving the todo at database properly
-func parseTime(expireDate []string) (time.Time, error) {
-	lenExpire := len(expireDate)
+func parseDate(expireDate []int) (time.Time, error) {
+	lenDate := len(expireDate)
+	if lenDate > 2 {
+		log.Fatal("Not enough arguments in date")
+	}
 
-	// create a time with an added day
-	t := time.Now()
-	year, month, day := t.Date()
+	actualTime := time.Now()
+	year, month, _ := actualTime.Date()
+	date := time.Time{}
 
-	switch lenExpire {
-	// if expireDate is empty, than the todo is a daily todo
+	switch lenDate {
 	case 0:
-		day += 1
-		forwardDay := time.Date(year, month, day+1, 0, 0, 0, 0, time.UTC)
-		return forwardDay, nil
+		date = time.Now().AddDate(0, 0, 1)
+		_ = isDateBefore(date)
+		return date, nil
 	case 1:
-		parsedDay, _ := strconv.Atoi(expireDate[0])
-		date := time.Date(year, month, parsedDay, 0, 0, 0, 0, time.UTC)
+		date := time.Date(year, month, expireDate[0], 0, 0, 0, 0, time.UTC)
+		_ = isDateBefore(date)
 		return date, nil
 	case 2:
-		parsedDay, _ := strconv.Atoi(expireDate[0])
-		parsedMonth, _ := strconv.Atoi(expireDate[1])
-		date := time.Date(year, time.Month(parsedMonth), parsedDay, 0, 0, 0, 0, time.UTC)
-		return date, nil
-	case 3:
-		// split day, month and hour
-		// parse day string to int
-		parsedDay, _ := strconv.Atoi(expireDate[0])
-		// parse month string to time.Month
-		parsedMonth, _ := strconv.Atoi(expireDate[1])
-		date, err := parseHourLayout(year, parsedDay, time.Month(parsedMonth), expireDate[2])
-		if err != nil {
-			return time.Time{}, fmt.Errorf("Error in parsetime - %v", err)
-		}
+		month = getMonthByNum(expireDate[2])
+		date := time.Date(year, month, expireDate[0], 0, 0, 0, 0, time.UTC)
+		isDateBefore(date)
 		return date, nil
 	}
-
-	// default
-	return time.Time{}, nil
-}
-
-// parseHourLayout must receive a string representation of time
-// in a layout '00:00:00' and then returns a time.Time
-// that represents the string input
-func parseHourLayout(year, day int, month time.Month, timeLayout string) (time.Time, error) {
-	splitTime := strings.Split(timeLayout, ":")
-
-	if len(splitTime) != 3 {
-		return time.Time{}, fmt.Errorf("The time layout is not the expected, try with '00:00:00'")
-	}
-
-	hour, _ := strconv.Atoi(splitTime[0])
-	min, _ := strconv.Atoi(splitTime[1])
-	sec, _ := strconv.Atoi(splitTime[2])
-	date := time.Date(year, month, day, hour, min, sec, 0, time.UTC)
 
 	return date, nil
 }
@@ -128,15 +97,53 @@ func printTodo(todo database.Todo, colorName string) {
 		status = "Not done"
 	}
 
-	s := fmt.Sprintf("%v %v | %v\n%v | %v\n\n", emoji.Todo, todo.Name, todo.Description.String, todoTime, status)
+	s := fmt.Sprintf("%v | %v\n%v | %v\n\n", todo.Name, todo.Description.String, todoTime, status)
 
 	colorized, _ := color.ColorizeOutput(colorName, s)
 
 	fmt.Println(colorized)
 }
 
-func addColorAndEmoji(pickedEmoji, colorName, text string) string {
-	colorized, _ := color.ColorizeOutput(colorName, text)
-	strWithEmoji := emoji.AddEmoji(pickedEmoji, colorized)
-	return strWithEmoji
+func getMonthByNum(num int) time.Month {
+	if num <= 0 || num > 12 {
+		log.Fatal("month number is not between 1 and 12")
+	}
+
+	switch num {
+	case 1:
+		return time.January
+	case 2:
+		return time.February
+	case 3:
+		return time.March
+	case 4:
+		return time.April
+	case 5:
+		return time.May
+	case 6:
+		return time.June
+	case 7:
+		return time.July
+	case 8:
+		return time.August
+	case 9:
+		return time.September
+	case 10:
+		return time.October
+	case 11:
+		return time.November
+	case 12:
+		return time.December
+	}
+
+	return time.Now().Month()
+}
+
+func isDateBefore(date time.Time) bool {
+	isBefore := date.Before(time.Now())
+	if isBefore == true {
+		log.Fatalf("date %v is before right now - put a valid date", date)
+	}
+
+	return isBefore
 }

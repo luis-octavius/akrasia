@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/luis-octavius/akrasia/internal/database"
-	"github.com/luis-octavius/akrasia/pkg/emoji"
+	"github.com/luis-octavius/akrasia/pkg/color"
 )
 
 const (
@@ -32,10 +32,10 @@ func (cfg *Config) addTodo(name, description string, expiresAt time.Time) error 
 		ExpiresAt:   expiresField,
 	})
 	if err != nil {
-		return fmt.Errorf("%v Error creating the todo: %v", emoji.Success, err)
+		return fmt.Errorf("Error creating the todo: %v", err)
 	}
 
-	log.Printf("%v Todo %v created successfully!\n", emoji.Success, name)
+	log.Printf("Todo %v created successfully!\n", name)
 	log.Printf("\n%s", generateRandomQuote())
 	return nil
 }
@@ -46,8 +46,7 @@ func (cfg *Config) getTodos() error {
 		return fmt.Errorf("error getting todos from database: %v", err)
 	}
 
-	emojiText := emoji.AddEmoji(emoji.Bell, "Todos: \n")
-	fmt.Printf("%v\n", emojiText)
+	fmt.Println("Todos: ")
 
 	for _, todo := range todos {
 		printTodo(todo, "blue")
@@ -83,7 +82,8 @@ func (cfg *Config) deleteConcluded() error {
 		return fmt.Errorf("Error deleting concluded todos: %v", err)
 	}
 
-	fmt.Println(addColorAndEmoji(emoji.StatusDone, "blue", SuccessDelete))
+	colorized, _ := color.ColorizeOutput("blue", SuccessDelete)
+	fmt.Println(colorized)
 	fmt.Printf("\n%s\n", generateRandomQuote())
 
 	return nil
@@ -99,7 +99,7 @@ func (cfg *Config) checkExpired() error {
 		return errors.New("There are not expired todos")
 	}
 
-	fmt.Println(emoji.AddEmoji(emoji.StatusExpired, "EXPIRED: "))
+	fmt.Println("EXPIRED: ")
 	for _, todo := range todos {
 		printTodo(todo, "red")
 	}
@@ -125,8 +125,8 @@ func (cfg *Config) checkExpiring() error {
 	}
 
 	if countExpiring == 0 {
-		formatted := addColorAndEmoji(emoji.Fire, "red", NoExpiring)
-		fmt.Printf("%s\n\n", formatted)
+		colored, _ := color.ColorizeOutput("red", NoExpiring)
+		fmt.Printf("%s\n\n", colored)
 		fmt.Printf("%s\n", generateRandomQuote())
 	}
 

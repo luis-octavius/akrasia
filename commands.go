@@ -1,12 +1,18 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
-	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
+)
+
+var (
+	name        string
+	description string
+	// todoTime    []int
+	date []int
 )
 
 var rootCmd = &cobra.Command{
@@ -28,35 +34,16 @@ var add = &cobra.Command{
 	Use:     "add <name> [description]",
 	Short:   "adds a todo in storage, description is optional",
 	Aliases: []string{"a"},
-	Args:    cobra.MaximumNArgs(3),
+	Args:    cobra.MaximumNArgs(4),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var name string
-		var description string
-		var expiresAt time.Time
-
-		lenArgs := len(args)
-
-		switch lenArgs {
-		case 0:
-			return fmt.Errorf("Not enough arguments provided")
-		case 1:
-			name = args[0]
-		case 2:
-			name = args[0]
-			description = args[1]
-		case 3:
-			name = args[0]
-			description = args[1]
-
-			if args[2] == "" {
-				expiresAt, _ = parseTime([]string{})
-			} else {
-				splitTime := strings.Split(args[2], " ")
-				expiresAt, _ = parseTime(splitTime)
-			}
+		expiresAt, err := parseDate(date)
+		if err != nil {
+			return err
 		}
 
-		err := cfg.addTodo(name, description, expiresAt)
+		fmt.Printf("Slice is: %v\n", date)
+
+		err = cfg.addTodo(name, description, expiresAt)
 		if err != nil {
 			return err
 		}
@@ -86,7 +73,10 @@ var getTodoByName = &cobra.Command{
 	Aliases: []string{"gn", "name"},
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		name := args[0]
+		if name == "" {
+			return errors.New("name cannot be empty")
+		}
+
 		err := cfg.getTodoByName(name)
 		if err != nil {
 			return err
@@ -102,7 +92,6 @@ var updateStatusToConcluded = &cobra.Command{
 	Aliases: []string{"us"},
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		name := args[0]
 		err := cfg.updateToConcluded(name)
 		if err != nil {
 			return err
@@ -157,12 +146,42 @@ var checkExpiring = &cobra.Command{
 	},
 }
 
+var initCmd = &cobra.Command{
+	Use:   "init",
+	Short: "initialize akrasia app",
+	Run: func(cmd *cobra.Command, args []string) {
+		_, err := initDB()
+		if err != nil {
+			log.Fatal("Error opening database: ", err)
+		}
+
+		fmt.Printf("Akrasia App initialized successfully!")
+	},
+}
+
 func init() {
+	// add flags
+	add.Flags().IntSliceVar(&date, "date", []int{}, "add date to todo")
+	add.Flags().StringVar(&name, "name", "", "todo name")
+
+	// mark as required
+	if err := add.MarkFlagRequired("name"); err != nil {
+		panic(err)
+	}
+	add.Flags().StringVar(&description, "desc", "", "todo description")
+	// add.Flags().IntSliceVar(&todoTime, "t", []int{}, "add a specific time")
 	rootCmd.AddCommand(add)
+
 	rootCmd.AddCommand(getAll)
+
+	// getTodoByName flag
+	getTodoByName.Flags().StringVar(&name, "name", "", "todo name")
 	rootCmd.AddCommand(getTodoByName)
+
+	updateStatusToConcluded.Flags().StringVar(&name, "name", "", "todo name")
 	rootCmd.AddCommand(updateStatusToConcluded)
 	rootCmd.AddCommand(deleteConcluded)
 	rootCmd.AddCommand(checkExpiring)
 	rootCmd.AddCommand(checkExpired)
+	rootCmd.AddCommand(initCmd)
 }
