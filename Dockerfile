@@ -15,8 +15,6 @@ FROM alpine:latest
 
 RUN apk add --no-cache sqlite 
 
-CMD ["go", "install", "akrasia"] 
-
 WORKDIR /root/
 
 COPY --from=builder /app/akrasia . 

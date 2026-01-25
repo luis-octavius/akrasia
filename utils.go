@@ -42,6 +42,7 @@ func validateTime(expiresAt time.Time) sql.NullTime {
 
 func parseDate(expireDate []int) (time.Time, error) {
 	lenDate := len(expireDate)
+	fmt.Println("Len Date: ", lenDate)
 	if lenDate > 2 {
 		log.Fatal("Not enough arguments in date")
 	}
@@ -60,7 +61,7 @@ func parseDate(expireDate []int) (time.Time, error) {
 		_ = isDateBefore(date)
 		return date, nil
 	case 2:
-		month = getMonthByNum(expireDate[2])
+		month = getMonthByNum(expireDate[1])
 		date := time.Date(year, month, expireDate[0], 0, 0, 0, 0, time.UTC)
 		isDateBefore(date)
 		return date, nil

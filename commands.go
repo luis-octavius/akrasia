@@ -90,7 +90,6 @@ var updateStatusToConcluded = &cobra.Command{
 	Use:     "update-status <name>",
 	Short:   "update concluded status to true",
 	Aliases: []string{"us"},
-	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		err := cfg.updateToConcluded(name)
 		if err != nil {

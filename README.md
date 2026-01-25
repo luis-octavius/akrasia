@@ -6,13 +6,18 @@ _Akrasía_ is a Greek word meaning "incontinence" or lack of self-control. This 
 As Plato wrote in _Laws_, humans are engaged in a never-ending internal war within their own souls — **a battle against pleasure-seeking**. Today, as we scroll through endless feeds of videos and posts, we chase instant gratification while neglecting the meaningful goals we should pursue.    
 This app aims to help you regain self-control in your daily life.  
 
+## Motivation
+Yes, there are many applications for task management out there, but in my experience using them, I found that none truly met my needs. I have tried numerous productivity apps, each with different approaches to organizing tasks and sending reminders. Yet, none retained my engagement for more than a short period.
+
+This gap between available tools and my personal workflow led me to develop my own application. I wanted a tool that was intuitive, aligned with how I think about productivity, and motivating enough to use consistently.
+
 ## Requirements 
 - [Go 1.25 or later](https://go.dev/doc/install)
 - SQLite3
 - [Goose](https://pressly.github.io/goose/installation/)
 - A terminal
 
-## Quick start
+## Quick Start
 1. Clone the repo
 ```bash
 git clone git@github.com:luis-octavius/akrasia.git && cd akrasia
