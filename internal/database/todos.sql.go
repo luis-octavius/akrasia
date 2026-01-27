@@ -99,6 +99,16 @@ func (q *Queries) DeleteConcluded(ctx context.Context) error {
 	return err
 }
 
+const deleteTodoByName = `-- name: DeleteTodoByName :exec
+DELETE FROM todos 
+WHERE name LIKE ?
+`
+
+func (q *Queries) DeleteTodoByName(ctx context.Context, name string) error {
+	_, err := q.db.ExecContext(ctx, deleteTodoByName, name)
+	return err
+}
+
 const getTodoByName = `-- name: GetTodoByName :one
 SELECT id, name, description, created_at, updated_at, concluded, expires_at FROM todos 
 WHERE name LIKE ?

@@ -41,8 +41,6 @@ var add = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("Slice is: %v\n", date)
-
 		err = cfg.addTodo(name, description, expiresAt)
 		if err != nil {
 			return err
@@ -158,6 +156,20 @@ var initCmd = &cobra.Command{
 	},
 }
 
+var delByName = &cobra.Command{
+	Use:     "delete-by-name",
+	Short:   "delete a todo by name",
+	Aliases: []string{"deln", "dn"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := cfg.deleteByName(name)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
 func init() {
 	// add flags
 	add.Flags().IntSliceVar(&date, "date", []int{}, "add date to todo")
@@ -183,4 +195,6 @@ func init() {
 	rootCmd.AddCommand(checkExpiring)
 	rootCmd.AddCommand(checkExpired)
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(delByName)
+	delByName.Flags().StringVar(&name, "name", "", "todo name")
 }

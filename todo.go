@@ -132,3 +132,14 @@ func (cfg *Config) checkExpiring() error {
 
 	return nil
 }
+
+func (cfg *Config) deleteByName(name string) error {
+	err := cfg.Queries.DeleteTodoByName(context.Background(), name)
+	if err != nil {
+		return fmt.Errorf("Error deleting todo: %v", err)
+	}
+
+	fmt.Println(SuccessDelete)
+
+	return nil
+}

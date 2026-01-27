@@ -42,7 +42,6 @@ func validateTime(expiresAt time.Time) sql.NullTime {
 
 func parseDate(expireDate []int) (time.Time, error) {
 	lenDate := len(expireDate)
-	fmt.Println("Len Date: ", lenDate)
 	if lenDate > 2 {
 		log.Fatal("Not enough arguments in date")
 	}

@@ -4,6 +4,11 @@ _Akrasía_ é uma palavra grega que significa "incontinência" ou falta de autoc
 Como Platão escreveu em _Leis_, os humanos estão engajados em uma guerra interna interminável dentro de suas próprias almas — uma batalha contra a busca por prazer. Hoje, enquanto rolamos feeds infinitos de vídeos e posts, perseguimos gratificação instantânea enquanto negligenciamos os objetivos significativos que deveríamos buscar.
 Este aplicativo visa ajudá-lo a recuperar o autocontrole em sua vida diária.
 
+### Motivação  
+Sim, há inúmeros aplicativos para controlar tarefas, mas em minha experiência usando esses aplicativos, descobri que nenhum deles realmente sanava todas as minhas necessidades. Eu tentei vários aplicativos de produtividade, cada um com diferentes métodos para organizar tarefas e enviar lembretes. Ainda assim, nenhum deles manteve meu engajamento por mais de um curto período de tempo. 
+
+Esse abismo entre as ferramentas disponíveis e o meu fluxo de trabalho pessoal me levou a desenvolver meu próprio aplicativo. Eu queria uma ferramenta que seria intuitiva, alinhada ao modo como penso produtividade, e que motivasse o bastante para uso consistente. 
+
 ### Requisitos
 
 - Go 1.25 ou superior
@@ -19,38 +24,19 @@ Este aplicativo visa ajudá-lo a recuperar o autocontrole em sua vida diária.
 git clone git@github.com:luis-octavius/akrasia.git && cd akrasia
 ```
 
-2. Crie um arquivo de banco de dados sqlite3 e um arquivo .env com a variável DB_PATH apontando para o arquivo:
+2. Instale
 
 ```bash
-# Recomendo criar o arquivo na raiz do aplicativo
-touch akrasia.db
-cat > .env << 'EOF'
-DB_PATH="./akrasia.db"
-EOF
+go install . 
 ```
 
-3. Execute as migrações com migrations_up.sh:
+3. Inicialize o banco de dados 
 
 ```bash
-chmod +x migrations_up.sh
-./migrations_up.sh
-
+akrasia init
 ```
 
-4. Instale o aplicativo:
-
-```
-go install .
-```
-
-5. Use-o:
-
-```bash
-akrasia add "Fazer lição" "Semântica - Filosofia da Linguagem" "12 02"
-
-```
-
-6. (Opcional) Crie um alias:
+4. (Opcional Linux) Crie um alias:
 
 ```
 echo "akr='akrasia'" >> ~/.zshrc # ou .bashrc
@@ -70,6 +56,7 @@ Comandos disponíveis:
   get-all          retorna todas as tarefas salvas no armazenamento
   get-by-name      obtém uma tarefa pelo nome
   help             ajuda sobre qualquer comando
+  init             inicializa o aplicativo
   update-status    atualiza status de concluído para verdadeiro
 
 Flags:
@@ -84,28 +71,31 @@ Use "akrasia [comando] --help" para mais informações sobre um comando.
 
 ```bash
 # comando add
-akrasia add "Stendhal" "Terminar o livro O Vermelho e o Negro" "13 02" # Terminar até 13-Fev
-akrasia add "Stendhal" "Terminar o livro O Vermelho e o Negro" "13" # Terminar até dia 13 do mês atual
-akrasia add "Stendhal" "Terminar o livro O Vermelho e o Negro" "" # Tarefa diária (sem prazo)
-akrasia add "Stendhal" "Terminar o livro O Vermelho e o Negro" "13 02 20:00:00" # Terminar até 13-Fev às 20:00
-2026/01/04 11:38:31 ✅ Tarefa Stendhal criada com sucesso!
+akrasia add --name Stendhal --desc "Terminar o livro O Vermelho e o Negro" --date 13,02
+2026/01/04 11:38:31 Tarefa Stendhal criada com sucesso!
 
-akrasia update-status "stendhal" # case-insensitive, marca tarefa como concluída
-📋 Stendhal | Terminar o livro O Vermelho e o Negro | 13 Fev 26 00:00 UTC | Concluída
+akrasia update-status --name stendhal # case-insensitive, marca tarefa como concluída
+Stendhal | Terminar o livro O Vermelho e o Negro |
+13 Fev 26 00:00 UTC | Done 
 
 akrasia get-all # 
-🔔 Tarefas:
+Todos:
 
-📋 Stendhal | Terminar o livro O Vermelho e o Negro | 13 Fev 26 00:00 UTC | Concluída
+Stendhal | Terminar o livro O Vermelho e o Negro |
+13 Fev 26 00:00 UTC | Concluída
 
 akrasia delete-concluded # autoexplicativo
-✅ Tarefas concluídas excluídas com sucesso!
+Tarefas concluídas excluídas com sucesso!
 
 ```  
 
 ### Contribuindo
-Contribuições são bem-vindas!
+Contribuições são bem-vindas! Se gostaria de contribuir, apenas faça o fork do projeto e abra uma pull request na main.
 
 ### Licença
 Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENÇA](LICENSE.md) para detalhes.
+
+### Reconhecimentos
+- Inspirado pela filosofia grega antiga sobre autocontrole 
+- Construído com Go
 

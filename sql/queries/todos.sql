@@ -18,6 +18,10 @@ SET concluded = true, updated_at = datetime('now')
 WHERE name LIKE ?
 RETURNING *;
 
+-- name: DeleteTodoByName :exec 
+DELETE FROM todos 
+WHERE name LIKE ?;
+
 -- name: DeleteConcluded :exec 
 DELETE FROM todos 
 WHERE concluded = true; 
