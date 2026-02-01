@@ -11,6 +11,7 @@ import (
 var (
 	name        string
 	description string
+	priority    string
 	// todoTime    []int
 	date []int
 )
@@ -18,6 +19,13 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "akrasia",
 	Short: "An app that helps with fighting akrasia",
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		err := cfg.checkExpiring()
+		if err != nil {
+			log.Printf("Error: %v", err)
+		}
+	},
+
 	Long: `Akrasia is a word in greek that means "Incontinence", which means a lack of self-control. 
 This app is constructed to simply help to fight akrasía rapidly in the terminal, by adding things to do 
 and to keep track of these things for you.`,
@@ -41,7 +49,9 @@ var add = &cobra.Command{
 			return err
 		}
 
-		err = cfg.addTodo(name, description, expiresAt)
+		isDaily, err := cmd.Flags().GetBool("daily")
+
+		err = cfg.addTodo(name, description, priority, isDaily, expiresAt)
 		if err != nil {
 			return err
 		}
@@ -172,24 +182,26 @@ var delByName = &cobra.Command{
 
 func init() {
 	// add flags
-	add.Flags().IntSliceVar(&date, "date", []int{}, "add date to todo")
-	add.Flags().StringVar(&name, "name", "", "todo name")
+	add.Flags().IntSliceVar(&date, "date", []int{}, "add date to task")
+	add.Flags().StringVar(&name, "name", "", "task name")
+	add.Flags().StringVar(&priority, "priority", "", "task priority")
+	add.Flags().Bool("daily", false, "daily task")
 
 	// mark as required
 	if err := add.MarkFlagRequired("name"); err != nil {
 		panic(err)
 	}
-	add.Flags().StringVar(&description, "desc", "", "todo description")
+	add.Flags().StringVar(&description, "desc", "", "task description")
 	// add.Flags().IntSliceVar(&todoTime, "t", []int{}, "add a specific time")
 	rootCmd.AddCommand(add)
 
 	rootCmd.AddCommand(getAll)
 
 	// getTodoByName flag
-	getTodoByName.Flags().StringVar(&name, "name", "", "todo name")
+	getTodoByName.Flags().StringVar(&name, "name", "", "task name")
 	rootCmd.AddCommand(getTodoByName)
 
-	updateStatusToConcluded.Flags().StringVar(&name, "name", "", "todo name")
+	updateStatusToConcluded.Flags().StringVar(&name, "name", "", "task name")
 	rootCmd.AddCommand(updateStatusToConcluded)
 	rootCmd.AddCommand(deleteConcluded)
 	rootCmd.AddCommand(checkExpiring)

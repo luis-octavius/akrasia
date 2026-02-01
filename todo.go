@@ -18,7 +18,7 @@ const (
 	SuccessDelete = "Concluded Todos deleted successfully!"
 )
 
-func (cfg *Config) addTodo(name, description string, expiresAt time.Time) error {
+func (cfg *Config) addTodo(name, description, priority string, isDaily bool, expiresAt time.Time) error {
 	descriptionField := validateDescription(description)
 	expiresField := validateTime(expiresAt)
 
@@ -30,6 +30,8 @@ func (cfg *Config) addTodo(name, description string, expiresAt time.Time) error 
 		UpdatedAt:   time.Now(),
 		Concluded:   false,
 		ExpiresAt:   expiresField,
+		Priority:    priority,
+		IsDaily:     isDaily,
 	})
 	if err != nil {
 		return fmt.Errorf("Error creating the todo: %v", err)
@@ -113,12 +115,12 @@ func (cfg *Config) checkExpiring() error {
 		return fmt.Errorf("Error getting todos: %v", err)
 	}
 
-	fmt.Println("Todos: ", len(todos))
 	var countExpiring int
 
 	for _, todo := range todos {
 		isTodoExpiring := checkIfTodoExpires(todo.ExpiresAt.Time)
 		if isTodoExpiring {
+			fmt.Println("Expiring...")
 			printTodo(todo, "red")
 			countExpiring++
 		}
@@ -127,7 +129,6 @@ func (cfg *Config) checkExpiring() error {
 	if countExpiring == 0 {
 		colored, _ := color.ColorizeOutput("red", NoExpiring)
 		fmt.Printf("%s\n\n", colored)
-		fmt.Printf("%s\n", generateRandomQuote())
 	}
 
 	return nil

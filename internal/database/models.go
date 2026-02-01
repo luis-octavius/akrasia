@@ -17,4 +17,6 @@ type Todo struct {
 	UpdatedAt   time.Time
 	Concluded   bool
 	ExpiresAt   sql.NullTime
+	Priority    string
+	IsDaily     bool
 }

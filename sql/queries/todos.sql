@@ -1,7 +1,7 @@
 -- name: AddTodo :one 
-INSERT INTO todos (id, name, description, created_at, updated_at, concluded, expires_at)
+INSERT INTO todos (id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily)
 VALUES (
-  ?, ?, ?, ?, ?, ?, ?
+  ?, ?, ?, ?, ?, ?, ?, ?, ? 
 )
 RETURNING *;
 
