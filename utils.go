@@ -53,16 +53,25 @@ func parseDate(expireDate []int) (time.Time, error) {
 	switch lenDate {
 	case 0:
 		date = time.Now().AddDate(0, 0, 1)
-		_ = isDateBefore(date)
+		_, err := isDateBefore(date)
+		if err != nil {
+			log.Fatalf("Error: %v", err)
+		}
 		return date, nil
 	case 1:
 		date := time.Date(year, month, expireDate[0], 0, 0, 0, 0, time.UTC)
-		_ = isDateBefore(date)
+		_, err := isDateBefore(date)
+		if err != nil {
+			log.Fatalf("Error: %v", err)
+		}
 		return date, nil
 	case 2:
 		month = getMonthByNum(expireDate[1])
 		date := time.Date(year, month, expireDate[0], 0, 0, 0, 0, time.UTC)
-		isDateBefore(date)
+		_, err := isDateBefore(date)
+		if err != nil {
+			log.Fatalf("Error: %v", err)
+		}
 		return date, nil
 	}
 
@@ -139,11 +148,11 @@ func getMonthByNum(num int) time.Month {
 	return time.Now().Month()
 }
 
-func isDateBefore(date time.Time) bool {
+func isDateBefore(date time.Time) (bool, error) {
 	isBefore := date.Before(time.Now())
 	if isBefore == true {
-		log.Fatalf("date %v is before right now - put a valid date", date)
+		return isBefore, fmt.Errorf("date %v is before right now - put a valid date", date)
 	}
 
-	return isBefore
+	return isBefore, nil
 }
