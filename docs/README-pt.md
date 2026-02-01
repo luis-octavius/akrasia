@@ -56,6 +56,7 @@ Comandos disponíveis:
   get-all          retorna todas as tarefas salvas no armazenamento
   get-by-name      obtém uma tarefa pelo nome
   help             ajuda sobre qualquer comando
+  delete-by-name   exclui um todo pelo nome
   init             inicializa o aplicativo
   update-status    atualiza status de concluído para verdadeiro
 

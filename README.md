@@ -55,6 +55,7 @@ Available Commands:
   get-all          returns all the todos saved in storage                 
   get-by-name      gets a todo by name                                  
   help             Help about any command                                                                                                
+  delete-by-name   delete a todo by name
   init             initialize akrasia app                                  
   update-status    update concluded status to true 
 
