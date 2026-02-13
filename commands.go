@@ -4,6 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -36,6 +40,31 @@ func Execute() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+var detached = &cobra.Command{
+	Use:   "detached",
+	Short: "Initialize the daemon that executes in background",
+	Long:  "detached mode enables the program to run in the background to update the daily todos everyday",
+	Run: func(cmd *cobra.Command, args []string) {
+		ticker := time.NewTicker(24 * time.Hour)
+		sigChan := make(chan os.Signal, 1)
+
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				cfg.updateDailyTodo()
+			case sig := <-sigChan:
+				fmt.Printf("\nsignal received: %v\n", sig)
+				fmt.Println("shutting down detached mode gracefully...")
+				return
+			}
+		}
+	},
 }
 
 var add = &cobra.Command{
@@ -208,5 +237,6 @@ func init() {
 	rootCmd.AddCommand(checkExpired)
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(delByName)
+	rootCmd.AddCommand(detached)
 	delByName.Flags().StringVar(&name, "name", "", "todo name")
 }

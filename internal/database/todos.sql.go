@@ -58,6 +58,19 @@ func (q *Queries) AddTodo(ctx context.Context, arg AddTodoParams) (Todo, error) 
 	return i, err
 }
 
+const autoCompleteDelete = `-- name: AutoCompleteDelete :one
+SELECT name FROM todos 
+WHERE NAME LIKE ? || '%'
+ORDER BY NAME LIMIT 5
+`
+
+func (q *Queries) AutoCompleteDelete(ctx context.Context, dollar_1 sql.NullString) (string, error) {
+	row := q.db.QueryRowContext(ctx, autoCompleteDelete, dollar_1)
+	var name string
+	err := row.Scan(&name)
+	return name, err
+}
+
 const checkExpired = `-- name: CheckExpired :many
 SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily FROM todos 
 WHERE expires_at < datetime('now')
@@ -117,6 +130,18 @@ func (q *Queries) DeleteTodoByName(ctx context.Context, name string) error {
 	return err
 }
 
+const getIDByName = `-- name: GetIDByName :one
+SELECT id FROM todos 
+WHERE name = ?
+`
+
+func (q *Queries) GetIDByName(ctx context.Context, name string) (interface{}, error) {
+	row := q.db.QueryRowContext(ctx, getIDByName, name)
+	var id interface{}
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getTodoByName = `-- name: GetTodoByName :one
 SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily FROM todos 
 WHERE name LIKE ?
@@ -145,6 +170,46 @@ SELECT id, name, description, created_at, updated_at, concluded, expires_at, pri
 
 func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 	rows, err := q.db.QueryContext(ctx, getTodos)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Todo
+	for rows.Next() {
+		var i Todo
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Concluded,
+			&i.ExpiresAt,
+			&i.Priority,
+			&i.IsDaily,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateDailyTodo = `-- name: UpdateDailyTodo :many
+UPDATE todos 
+SET expires_at = ?, updated_at = datetime('now')
+WHERE is_daily = true
+RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily
+`
+
+func (q *Queries) UpdateDailyTodo(ctx context.Context, expiresAt sql.NullTime) ([]Todo, error) {
+	rows, err := q.db.QueryContext(ctx, updateDailyTodo, expiresAt)
 	if err != nil {
 		return nil, err
 	}

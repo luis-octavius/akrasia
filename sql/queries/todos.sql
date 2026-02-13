@@ -12,11 +12,21 @@ SELECT * FROM todos;
 SELECT * FROM todos 
 WHERE name LIKE ?; 
 
+-- name: GetIDByName :one 
+SELECT id FROM todos 
+WHERE name = ?;
+
 -- name: UpdateTodoStatusByName :one 
 UPDATE todos 
 SET concluded = true, updated_at = datetime('now')
 WHERE name LIKE ?
 RETURNING *;
+
+-- name: UpdateDailyTodo :many
+UPDATE todos 
+SET expires_at = ?, updated_at = datetime('now')
+WHERE is_daily = true
+RETURNING *;  
 
 -- name: DeleteTodoByName :exec 
 DELETE FROM todos 
@@ -31,6 +41,7 @@ SELECT * FROM todos
 WHERE expires_at < datetime('now')
 ORDER BY expires_at DESC;
 
-
-
-
+-- name: AutoCompleteDelete :one 
+SELECT name FROM todos 
+WHERE NAME LIKE ? || '%'
+ORDER BY NAME LIMIT 5;
