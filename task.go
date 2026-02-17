@@ -48,7 +48,7 @@ func (cfg *Config) getTodos() error {
 		return fmt.Errorf("error getting todos from database: %w", err)
 	}
 
-	fmt.Println("Todos: ")
+	fmt.Println("Tasks: ")
 
 	for _, todo := range todos {
 		printTodo(todo, "blue")
