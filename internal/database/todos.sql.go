@@ -73,7 +73,7 @@ func (q *Queries) AutoCompleteDelete(ctx context.Context, dollar_1 sql.NullStrin
 
 const checkExpired = `-- name: CheckExpired :many
 SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily FROM todos 
-WHERE expires_at < datetime('now')
+WHERE expires_at < datetime('now') AND is_daily = false
 ORDER BY expires_at DESC
 `
 
@@ -204,7 +204,7 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 const updateDailyTodo = `-- name: UpdateDailyTodo :many
 UPDATE todos 
 SET expires_at = ?, updated_at = datetime('now')
-WHERE is_daily = true
+WHERE is_daily = true AND date(expires_at) <= date('now') 
 RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily
 `
 

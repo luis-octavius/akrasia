@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
+	"os/user"
+	"path"
 
+	"github.com/luis-octavius/akrasia/pkg/cron"
 	"github.com/spf13/cobra"
 )
 
@@ -16,8 +16,7 @@ var (
 	name        string
 	description string
 	priority    string
-	// todoTime    []int
-	date []int
+	date        []int
 )
 
 var rootCmd = &cobra.Command{
@@ -42,28 +41,60 @@ func Execute() {
 	}
 }
 
-var detached = &cobra.Command{
-	Use:   "detached",
-	Short: "Initialize the daemon that executes in background",
-	Long:  "detached mode enables the program to run in the background to update the daily todos everyday",
-	Run: func(cmd *cobra.Command, args []string) {
-		ticker := time.NewTicker(24 * time.Hour)
-		sigChan := make(chan os.Signal, 1)
-
-		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				cfg.updateDailyTodo()
-			case sig := <-sigChan:
-				fmt.Printf("\nsignal received: %v\n", sig)
-				fmt.Println("shutting down detached mode gracefully...")
-				return
-			}
+var createDailyUpdate = &cobra.Command{
+	Use:     "create-cron",
+	Short:   "create the cron job to update daily tasks",
+	Aliases: []string{"cc"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		user, err := user.Current()
+		if err != nil {
+			return fmt.Errorf("error getting user: %v", err)
 		}
+
+		schedule := "00 15 * * *"
+
+		homePath, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("error getting home dir: %v", err)
+		}
+
+		akrasiaCommand := path.Join(homePath, "go/bin/akrasia") + " upd"
+
+		name := "createUpdateDaily"
+
+		comment := "update daily todos in akrasia app"
+
+		manager := cron.NewManager()
+
+		if err := manager.ValidateSchedule(schedule); err != nil {
+			return fmt.Errorf("invalid schedule format: %v", err)
+		}
+
+		err = manager.AddJob(name, schedule, akrasiaCommand, user.Username, comment)
+		if err != nil {
+			return fmt.Errorf("invalid job format: %v", err)
+		}
+
+		fmt.Printf("cron job '%s' created successfully\n", name)
+		if user.Username != "" {
+			fmt.Printf("\nUser: %s\n", user)
+		}
+
+		return nil
+	},
+}
+
+var updateDailyTodo = &cobra.Command{
+	Use:     "update-daily",
+	Short:   "update daily todos",
+	Aliases: []string{"upd"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := cfg.updateDailyTodo()
+		if err != nil {
+			return fmt.Errorf("error in update daily todo: %v", err)
+		}
+
+		return nil
 	},
 }
 
@@ -237,6 +268,7 @@ func init() {
 	rootCmd.AddCommand(checkExpired)
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(delByName)
-	rootCmd.AddCommand(detached)
+	rootCmd.AddCommand(updateDailyTodo)
+	rootCmd.AddCommand(createDailyUpdate)
 	delByName.Flags().StringVar(&name, "name", "", "todo name")
 }
