@@ -154,9 +154,16 @@ func (cfg *Config) updateDailyTodo() error {
 		Time:  time.Now().Add(24 * time.Hour),
 		Valid: true,
 	}
+
 	todos, err := cfg.Queries.UpdateDailyTodo(context.Background(), expiresAt)
 	if err != nil {
 		return fmt.Errorf("error updating daily todos: %w", err)
+	}
+
+	if len(todos) == 0 {
+		fmt.Println("no tasks to be updated")
+	} else {
+		fmt.Println("tasks updated successfully!")
 	}
 
 	// just for debugging

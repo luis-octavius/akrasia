@@ -25,7 +25,7 @@ RETURNING *;
 -- name: UpdateDailyTodo :many
 UPDATE todos 
 SET expires_at = ?, updated_at = datetime('now')
-WHERE is_daily = true
+WHERE is_daily = true AND date(expires_at) <= date('now') 
 RETURNING *;  
 
 -- name: DeleteTodoByName :exec 
@@ -38,7 +38,7 @@ WHERE concluded = true;
 
 -- name: CheckExpired :many 
 SELECT * FROM todos 
-WHERE expires_at < datetime('now')
+WHERE expires_at < datetime('now') AND is_daily = false
 ORDER BY expires_at DESC;
 
 -- name: AutoCompleteDelete :one 
