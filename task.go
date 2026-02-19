@@ -119,7 +119,7 @@ func (cfg *Config) checkExpiring() error {
 
 	for _, todo := range todos {
 		isTodoExpiring := checkIfTodoExpires(todo.ExpiresAt.Time)
-		if isTodoExpiring {
+		if isTodoExpiring && !todo.Concluded {
 			fmt.Println("Expiring...")
 			printTodo(todo, "red")
 			countExpiring++

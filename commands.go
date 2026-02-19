@@ -22,13 +22,6 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "akrasia",
 	Short: "An app that helps with fighting akrasia",
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		err := cfg.checkExpiring()
-		if err != nil {
-			log.Printf("Error: %v", err)
-		}
-	},
-
 	Long: `Akrasia is a word in greek that means "Incontinence", which means a lack of self-control. 
 This app is constructed to simply help to fight akrasía rapidly in the terminal, by adding things to do 
 and to keep track of these things for you.`,
