@@ -24,7 +24,7 @@ RETURNING *;
 
 -- name: UpdateDailyTodo :many
 UPDATE todos 
-SET expires_at = ?, updated_at = datetime('now')
+SET expires_at = ?, updated_at = datetime('now'), concluded = false
 WHERE is_daily = true AND date(expires_at) <= date('now') 
 RETURNING *;  
 

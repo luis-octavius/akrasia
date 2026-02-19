@@ -44,7 +44,7 @@ var createDailyUpdate = &cobra.Command{
 			return fmt.Errorf("error getting user: %v", err)
 		}
 
-		schedule := "00 15 * * *"
+		schedule := "00 13 * * *"
 
 		homePath, err := os.UserHomeDir()
 		if err != nil {
