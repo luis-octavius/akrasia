@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -37,8 +36,8 @@ func (cfg *Config) addTodo(name, description, priority string, isDaily bool, exp
 		return fmt.Errorf("Error creating the todo: %w", err)
 	}
 
-	log.Printf("Todo %v created successfully!\n", name)
-	log.Printf("\n%s\n", generateRandomQuote())
+	fmt.Printf("Todo %v created successfully!\n", name)
+	fmt.Printf("\n%s\n", generateRandomQuote())
 	return nil
 }
 

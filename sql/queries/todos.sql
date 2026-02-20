@@ -6,7 +6,8 @@ VALUES (
 RETURNING *;
 
 -- name: GetTodos :many 
-SELECT * FROM todos; 
+SELECT * FROM todos
+ORDER BY expires_at; 
 
 -- name: GetTodoByName :one 
 SELECT * FROM todos 

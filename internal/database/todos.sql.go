@@ -166,6 +166,7 @@ func (q *Queries) GetTodoByName(ctx context.Context, name string) (Todo, error) 
 
 const getTodos = `-- name: GetTodos :many
 SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily FROM todos
+ORDER BY expires_at
 `
 
 func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
