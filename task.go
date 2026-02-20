@@ -33,10 +33,10 @@ func (cfg *Config) addTodo(name, description, priority string, isDaily bool, exp
 		IsDaily:     isDaily,
 	})
 	if err != nil {
-		return fmt.Errorf("Error creating the todo: %w", err)
+		return fmt.Errorf("Error creating task: %w", err)
 	}
 
-	fmt.Printf("Todo %v created successfully!\n", name)
+	fmt.Printf("Task %v created successfully!\n", name)
 	fmt.Printf("\n%s\n", generateRandomQuote())
 	return nil
 }
@@ -44,7 +44,7 @@ func (cfg *Config) addTodo(name, description, priority string, isDaily bool, exp
 func (cfg *Config) getTodos() error {
 	todos, err := cfg.Queries.GetTodos(context.Background())
 	if err != nil {
-		return fmt.Errorf("error getting todos from database: %w", err)
+		return fmt.Errorf("error getting tasks from database: %w", err)
 	}
 
 	fmt.Println("Tasks: ")
@@ -59,7 +59,7 @@ func (cfg *Config) getTodos() error {
 func (cfg *Config) getTodoByName(name string) error {
 	todo, err := cfg.Queries.GetTodoByName(context.Background(), name)
 	if err != nil {
-		return fmt.Errorf("error getting todo from provided name: %w", err)
+		return fmt.Errorf("error getting task from provided name: %w", err)
 	}
 
 	printTodo(todo, "blue")
@@ -69,7 +69,7 @@ func (cfg *Config) getTodoByName(name string) error {
 func (cfg *Config) updateToConcluded(name string) error {
 	todo, err := cfg.Queries.UpdateTodoStatusByName(context.Background(), name)
 	if err != nil {
-		return fmt.Errorf("Error updating status of Todo '%v': %w", name, err)
+		return fmt.Errorf("Error updating status of task '%v': %w", name, err)
 	}
 
 	printTodo(todo, "green")
@@ -80,7 +80,7 @@ func (cfg *Config) updateToConcluded(name string) error {
 func (cfg *Config) deleteConcluded() error {
 	err := cfg.Queries.DeleteConcluded(context.Background())
 	if err != nil {
-		return fmt.Errorf("Error deleting concluded todos: %w", err)
+		return fmt.Errorf("Error deleting concluded tasks: %w", err)
 	}
 
 	colorized, _ := color.ColorizeOutput("blue", SuccessDelete)
@@ -93,7 +93,7 @@ func (cfg *Config) deleteConcluded() error {
 func (cfg *Config) checkExpired() error {
 	todos, err := cfg.Queries.CheckExpired(context.Background())
 	if err != nil {
-		return fmt.Errorf("Error checking expired todos: %w", err)
+		return fmt.Errorf("Error checking expired tasks: %w", err)
 	}
 
 	if len(todos) == 0 {
@@ -111,7 +111,7 @@ func (cfg *Config) checkExpired() error {
 func (cfg *Config) checkExpiring() error {
 	todos, err := cfg.Queries.GetTodos(context.Background())
 	if err != nil {
-		return fmt.Errorf("Error getting todos: %w", err)
+		return fmt.Errorf("Error getting tasks: %w", err)
 	}
 
 	var countExpiring int
@@ -136,7 +136,7 @@ func (cfg *Config) checkExpiring() error {
 func (cfg *Config) deleteByName(name string) error {
 	err := cfg.Queries.DeleteTodoByName(context.Background(), name)
 	if err != nil {
-		return fmt.Errorf("Error deleting todo: %w", err)
+		return fmt.Errorf("Error deleting task: %w", err)
 	}
 
 	fmt.Println(SuccessDelete)
@@ -156,7 +156,7 @@ func (cfg *Config) updateDailyTodo() error {
 
 	todos, err := cfg.Queries.UpdateDailyTodo(context.Background(), expiresAt)
 	if err != nil {
-		return fmt.Errorf("error updating daily todos: %w", err)
+		return fmt.Errorf("error updating daily tasks: %w", err)
 	}
 
 	if len(todos) == 0 {
