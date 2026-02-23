@@ -97,7 +97,8 @@ func (cfg *Config) checkExpired() error {
 	}
 
 	if len(todos) == 0 {
-		return fmt.Errorf(NoExpiring)
+		fmt.Println(NoExpiring)
+		return nil
 	}
 
 	fmt.Println("EXPIRED: ")
