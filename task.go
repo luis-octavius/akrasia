@@ -162,31 +162,35 @@ func (cfg *Config) deleteByName(name string) error {
 // it handles the logic for the detached command
 func (cfg *Config) updateDailyTodo() error {
 	now := time.Now()
-	fmt.Printf("executing daily todo update at: %s\n", now.Format(time.DateTime))
+	fmt.Printf("Executing daily todo update at: %s\n", now.Format(time.DateTime))
 
 	expiresAt := sql.NullTime{
 		Time:  now.Add(24 * time.Hour),
 		Valid: true,
 	}
 
-	fmt.Printf("setting new expires_at to: %s\n", expiresAt.Time.Format(time.DateTime))
+	fmt.Printf("Setting new expires_at to: %s\n", expiresAt.Time.Format(time.DateTime))
 
 	todos, err := cfg.Queries.UpdateDailyTodo(context.Background(), expiresAt)
 	if err != nil {
-		return fmt.Errorf("error updating daily tasks: %w", err)
+		return fmt.Errorf("Error updating daily tasks: %w", err)
 	}
 
+	message := ""
+
 	if len(todos) == 0 {
-		fmt.Println("no daily tasks to be updated")
+		message, _ = color.ColorizeOutput("red", "No daily tasks to be updated")
 	} else {
-		fmt.Println("tasks updated successfully!")
+		message, _ = color.ColorizeOutput("blue", "Tasks updated successfully!")
 	}
+
+	fmt.Println(message)
 
 	// just for debugging
 	for i, todo := range todos {
 		fmt.Printf(" %d. Task #%d: %s\n", i+1, todo.ID, todo.Name)
 		fmt.Printf(" Old expires: %v -> New expires: %v\n", todo.ExpiresAt, expiresAt.Time)
-		fmt.Printf(" Concluded: %v -> false\n", todo.Concluded)
+		fmt.Printf(" Concluded: %v -> false\n\n", todo.Concluded)
 	}
 
 	return nil
