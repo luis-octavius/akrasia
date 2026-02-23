@@ -233,35 +233,54 @@ var delByName = &cobra.Command{
 	},
 }
 
+var getAllDaily = &cobra.Command{
+	Use:     "get-daily",
+	Short:   "show all daily tasks",
+	Aliases: []string{"gd"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := cfg.getAllDailyTodos()
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
 func init() {
 	// add flags
+
+	commands := map[string]*cobra.Command{
+		"add":                     add,
+		"getAll":                  getAll,
+		"getTodoByName":           getTodoByName,
+		"updateStatusToConcluded": updateStatusToConcluded,
+		"deleteConcluded":         deleteConcluded,
+		"checkExpiring":           checkExpiring,
+		"checkExpired":            checkExpired,
+		"initCmd":                 initCmd,
+		"delByName":               delByName,
+		"updateDailyTodo":         updateDailyTodo,
+		"createDailyUpdate":       createDailyUpdate,
+		"getAllDaily":             getAllDaily,
+	}
+
+	for _, cmd := range commands {
+		rootCmd.AddCommand(cmd)
+	}
+
+	// flags for commands - add; getTodoByName; delByName; updateStatusToConcluded
 	add.Flags().IntSliceVar(&date, "date", []int{}, "add date to task")
 	add.Flags().StringVar(&name, "name", "", "task name")
 	add.Flags().StringVar(&priority, "priority", "", "task priority")
 	add.Flags().Bool("daily", false, "daily task")
+	add.Flags().StringVar(&description, "desc", "", "task description")
+	getTodoByName.Flags().StringVar(&name, "name", "", "task name")
+	delByName.Flags().StringVar(&name, "name", "", "todo name")
+	updateStatusToConcluded.Flags().StringVar(&name, "name", "", "task name")
 
 	// mark as required
 	if err := add.MarkFlagRequired("name"); err != nil {
 		panic(err)
 	}
-	add.Flags().StringVar(&description, "desc", "", "task description")
-	// add.Flags().IntSliceVar(&todoTime, "t", []int{}, "add a specific time")
-	rootCmd.AddCommand(add)
-
-	rootCmd.AddCommand(getAll)
-
-	// getTodoByName flag
-	getTodoByName.Flags().StringVar(&name, "name", "", "task name")
-	rootCmd.AddCommand(getTodoByName)
-
-	updateStatusToConcluded.Flags().StringVar(&name, "name", "", "task name")
-	rootCmd.AddCommand(updateStatusToConcluded)
-	rootCmd.AddCommand(deleteConcluded)
-	rootCmd.AddCommand(checkExpiring)
-	rootCmd.AddCommand(checkExpired)
-	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(delByName)
-	rootCmd.AddCommand(updateDailyTodo)
-	rootCmd.AddCommand(createDailyUpdate)
-	delByName.Flags().StringVar(&name, "name", "", "todo name")
 }

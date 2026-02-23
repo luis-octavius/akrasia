@@ -130,6 +130,44 @@ func (q *Queries) DeleteTodoByName(ctx context.Context, name string) error {
 	return err
 }
 
+const getDailyTodos = `-- name: GetDailyTodos :many
+SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily FROM todos 
+WHERE is_daily = true
+`
+
+func (q *Queries) GetDailyTodos(ctx context.Context) ([]Todo, error) {
+	rows, err := q.db.QueryContext(ctx, getDailyTodos)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Todo
+	for rows.Next() {
+		var i Todo
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Concluded,
+			&i.ExpiresAt,
+			&i.Priority,
+			&i.IsDaily,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getIDByName = `-- name: GetIDByName :one
 SELECT id FROM todos 
 WHERE name = ?

@@ -90,6 +90,19 @@ func (cfg *Config) deleteConcluded() error {
 	return nil
 }
 
+func (cfg *Config) getAllDailyTodos() error {
+	todos, err := cfg.Queries.GetDailyTodos(context.Background())
+	if err != nil {
+		return fmt.Errorf("error in getAllDailyTodos: %v", err)
+	}
+
+	for _, todo := range todos {
+		printTodo(todo, "blue")
+	}
+
+	return nil
+}
+
 func (cfg *Config) checkExpired() error {
 	todos, err := cfg.Queries.CheckExpired(context.Background())
 	if err != nil {

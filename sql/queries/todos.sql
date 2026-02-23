@@ -9,6 +9,10 @@ RETURNING *;
 SELECT * FROM todos
 ORDER BY expires_at; 
 
+-- name: GetDailyTodos :many 
+SELECT * FROM todos 
+WHERE is_daily = true; 
+
 -- name: GetTodoByName :one 
 SELECT * FROM todos 
 WHERE name LIKE ?; 
