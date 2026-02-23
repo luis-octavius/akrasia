@@ -29,9 +29,15 @@ RETURNING *;
 
 -- name: UpdateDailyTodo :many
 UPDATE todos 
-SET expires_at = ?, updated_at = datetime('now'), concluded = false
-WHERE is_daily = true AND date(expires_at) <= date('now') 
-RETURNING *;  
+SET 
+  expires_at = ?, 
+  updated_at = CURRENT_TIMESTAMP, 
+  concluded = false 
+WHERE 
+  is_daily = true 
+  AND expires_at IS NOT NULL 
+  AND date(expires_at) <= date('now', 'localtime')
+RETURNING *;
 
 -- name: DeleteTodoByName :exec 
 DELETE FROM todos 
