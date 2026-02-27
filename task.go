@@ -56,12 +56,18 @@ func (cfg *Config) getTodos() error {
 }
 
 func (cfg *Config) getTodoByName(name string) error {
-	todo, err := cfg.Queries.GetTodoByName(context.Background(), name)
+	todo, err := cfg.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
+		LOWER:   name,
+		LOWER_2: name,
+		LOWER_3: name,
+		LOWER_4: name,
+	})
 	if err != nil {
 		return fmt.Errorf("error getting task from provided name: %w", err)
 	}
 
-	printTodo(todo, "blue")
+	fmt.Printf("Name: %s | Description: %s\nExpires: %s", todo.Name, todo.Description.String, todo.ExpiresAt)
+
 	return nil
 }
 

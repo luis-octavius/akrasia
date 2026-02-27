@@ -181,13 +181,52 @@ func (q *Queries) GetIDByName(ctx context.Context, name string) (interface{}, er
 }
 
 const getTodoByName = `-- name: GetTodoByName :one
-SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily FROM todos 
-WHERE name LIKE ?
+WITH ranked_todos AS (
+  SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily,
+    CASE
+    -- same text 
+    WHEN LOWER(title) = LOWER(?) THEN 1
+    -- begins with the term 
+    WHEN LOWER(title) LIKE LOWER(?) || '%' THEN 2
+    WHEN LOWER(title) LIKE '%' || LOWER(?) || '%' THEN 3
+    ELSE 4 
+    END as relevance
+  FROM todos
+  WHERE LOWER(title) LIKE '%' || LOWER(?) || '%'
+) 
+SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, relevance FROM ranked_todos
+ORDER BY relevance, title COLLATE NOCASE
+LIMIT 1
 `
 
-func (q *Queries) GetTodoByName(ctx context.Context, name string) (Todo, error) {
-	row := q.db.QueryRowContext(ctx, getTodoByName, name)
-	var i Todo
+type GetTodoByNameParams struct {
+	LOWER   string
+	LOWER_2 string
+	LOWER_3 string
+	LOWER_4 string
+}
+
+type GetTodoByNameRow struct {
+	ID          interface{}
+	Name        string
+	Description sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Concluded   bool
+	ExpiresAt   time.Time
+	Priority    string
+	IsDaily     bool
+	Relevance   int64
+}
+
+func (q *Queries) GetTodoByName(ctx context.Context, arg GetTodoByNameParams) (GetTodoByNameRow, error) {
+	row := q.db.QueryRowContext(ctx, getTodoByName,
+		arg.LOWER,
+		arg.LOWER_2,
+		arg.LOWER_3,
+		arg.LOWER_4,
+	)
+	var i GetTodoByNameRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -198,6 +237,7 @@ func (q *Queries) GetTodoByName(ctx context.Context, name string) (Todo, error) 
 		&i.ExpiresAt,
 		&i.Priority,
 		&i.IsDaily,
+		&i.Relevance,
 	)
 	return i, err
 }
