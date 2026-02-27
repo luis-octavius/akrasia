@@ -26,20 +26,6 @@ func validateDescription(description string) sql.NullString {
 	return descriptionField
 }
 
-// func validateTime(expiresAt time.Time) sql.NullTime {
-// 	t := sql.NullTime{}
-//
-// 	if expiresAt.IsZero() {
-// 		t.Valid = false
-// 		return t
-// 	}
-//
-// 	t.Time = expiresAt
-// 	t.Valid = true
-//
-// 	return t
-// }
-
 func parseDate(expireDate []int) (time.Time, error) {
 	lenDate := len(expireDate)
 	if lenDate > 2 {
