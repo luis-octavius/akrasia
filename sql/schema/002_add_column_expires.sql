@@ -1,6 +1,6 @@
 -- +goose Up 
 ALTER TABLE todos
-ADD COLUMN expires_at TIMESTAMP DEFAULT NULL; 
+ADD COLUMN expires_at TIMESTAMP NOT NULL; 
 
 -- +goose Down
 ALTER TABLE todos 

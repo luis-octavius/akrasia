@@ -14,6 +14,7 @@ import (
 
 var (
 	name        string
+	notes       string
 	description string
 	priority    string
 	date        []int
@@ -152,7 +153,7 @@ var updateStatusToConcluded = &cobra.Command{
 	Short:   "update concluded status to true",
 	Aliases: []string{"us"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cfg.updateToConcluded(name)
+		err := cfg.updateToConcluded(name, notes)
 		if err != nil {
 			return err
 		}
@@ -278,6 +279,7 @@ func init() {
 	getTodoByName.Flags().StringVar(&name, "name", "", "task name")
 	delByName.Flags().StringVar(&name, "name", "", "todo name")
 	updateStatusToConcluded.Flags().StringVar(&name, "name", "", "task name")
+	updateStatusToConcluded.Flags().StringVar(&notes, "notes", "", "daily notes")
 
 	// mark as required
 	if err := add.MarkFlagRequired("name"); err != nil {

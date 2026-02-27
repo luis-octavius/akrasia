@@ -26,7 +26,7 @@ type AddTodoParams struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	Concluded   bool
-	ExpiresAt   sql.NullTime
+	ExpiresAt   time.Time
 	Priority    string
 	IsDaily     bool
 }
@@ -248,12 +248,11 @@ SET
   concluded = false 
 WHERE 
   is_daily = true 
-  AND expires_at IS NOT NULL 
-  AND date(expires_at) <= date('now', 'localtime')
+  AND expires_at < datetime('now', 'start of day', 'localtime')
 RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily
 `
 
-func (q *Queries) UpdateDailyTodo(ctx context.Context, expiresAt sql.NullTime) ([]Todo, error) {
+func (q *Queries) UpdateDailyTodo(ctx context.Context, expiresAt time.Time) ([]Todo, error) {
 	rows, err := q.db.QueryContext(ctx, updateDailyTodo, expiresAt)
 	if err != nil {
 		return nil, err

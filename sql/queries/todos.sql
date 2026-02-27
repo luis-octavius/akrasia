@@ -35,8 +35,7 @@ SET
   concluded = false 
 WHERE 
   is_daily = true 
-  AND expires_at IS NOT NULL 
-  AND date(expires_at) <= date('now', 'localtime')
+  AND expires_at < datetime('now', 'start of day', 'localtime')
 RETURNING *;
 
 -- name: DeleteTodoByName :exec 

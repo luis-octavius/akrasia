@@ -16,7 +16,16 @@ type Todo struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	Concluded   bool
-	ExpiresAt   sql.NullTime
+	ExpiresAt   time.Time
 	Priority    string
 	IsDaily     bool
+}
+
+type TodosHistory struct {
+	ID          interface{}
+	TodoID      interface{}
+	Date        sql.NullTime
+	Completed   sql.NullBool
+	CompletedAt sql.NullTime
+	Notes       sql.NullString
 }
