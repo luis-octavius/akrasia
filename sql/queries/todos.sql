@@ -14,8 +14,22 @@ SELECT * FROM todos
 WHERE is_daily = true; 
 
 -- name: GetTodoByName :one 
-SELECT * FROM todos 
-WHERE name LIKE ?; 
+WITH ranked_todos AS (
+  SELECT *,
+    CASE
+    -- same text 
+    WHEN LOWER(name) = LOWER(?) THEN 1
+    -- begins with the term 
+    WHEN LOWER(name) LIKE LOWER(?) || '%' THEN 2
+    WHEN LOWER(name) LIKE '%' || LOWER(?) || '%' THEN 3
+    ELSE 4 
+    END as relevance
+  FROM todos
+  WHERE LOWER(name) LIKE '%' || LOWER(?) || '%'
+) 
+SELECT * FROM ranked_todos
+ORDER BY relevance, name COLLATE NOCASE
+LIMIT 1;
 
 -- name: GetIDByName :one 
 SELECT id FROM todos 
@@ -35,8 +49,7 @@ SET
   concluded = false 
 WHERE 
   is_daily = true 
-  AND expires_at IS NOT NULL 
-  AND date(expires_at) <= date('now', 'localtime')
+  AND expires_at < datetime('now', 'start of day', 'localtime')
 RETURNING *;
 
 -- name: DeleteTodoByName :exec 

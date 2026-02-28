@@ -26,20 +26,6 @@ func validateDescription(description string) sql.NullString {
 	return descriptionField
 }
 
-func validateTime(expiresAt time.Time) sql.NullTime {
-	t := sql.NullTime{}
-
-	if expiresAt.IsZero() {
-		t.Valid = false
-		return t
-	}
-
-	t.Time = expiresAt
-	t.Valid = true
-
-	return t
-}
-
 func parseDate(expireDate []int) (time.Time, error) {
 	lenDate := len(expireDate)
 	if lenDate > 2 {
@@ -92,11 +78,7 @@ func checkIfTodoExpires(expiresAt time.Time) bool {
 
 // printTodo receives a Todo and create a readable output
 func printTodo(todo database.Todo, colorName string) {
-	todoTime := todo.ExpiresAt.Time.Format(time.RFC822)
-
-	// // divide the date and time to construct a readable expiring date
-	// _, month, day := todoTime.Date()
-	// onlyTime := todoTime.Format(time.TimeOnly)
+	todoTime := todo.ExpiresAt.Format(time.RFC822)
 
 	var status string
 

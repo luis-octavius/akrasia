@@ -14,6 +14,7 @@ import (
 
 var (
 	name        string
+	notes       string
 	description string
 	priority    string
 	date        []int
@@ -132,7 +133,7 @@ var getTodoByName = &cobra.Command{
 	Use:     "get-by-name <name>",
 	Short:   "gets a todo by name",
 	Aliases: []string{"gn", "name"},
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if name == "" {
 			return errors.New("name cannot be empty")
@@ -152,7 +153,7 @@ var updateStatusToConcluded = &cobra.Command{
 	Short:   "update concluded status to true",
 	Aliases: []string{"us"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cfg.updateToConcluded(name)
+		err := cfg.updateToConcluded(name, notes)
 		if err != nil {
 			return err
 		}
@@ -247,6 +248,33 @@ var getAllDaily = &cobra.Command{
 	},
 }
 
+var getTodoCurrentStreak = &cobra.Command{
+	Use:     "streak",
+	Short:   "get the current streak of provided todo",
+	Aliases: []string{"curr", "cs"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := cfg.getCurrentStreak(name)
+		if err != nil {
+			return err
+		}
+		return nil
+	},
+}
+
+var getTodoStreakHistory = &cobra.Command{
+	Use:     "history",
+	Short:   "get the streak history of provided todo",
+	Aliases: []string{"his", "sh"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := cfg.getStreakHistory(name)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
 func init() {
 	// add flags
 
@@ -263,6 +291,8 @@ func init() {
 		"updateDailyTodo":         updateDailyTodo,
 		"createDailyUpdate":       createDailyUpdate,
 		"getAllDaily":             getAllDaily,
+		"getTodoCurrentStreak":    getTodoCurrentStreak,
+		"getTodoStreakHistory":    getTodoStreakHistory,
 	}
 
 	for _, cmd := range commands {
@@ -278,6 +308,9 @@ func init() {
 	getTodoByName.Flags().StringVar(&name, "name", "", "task name")
 	delByName.Flags().StringVar(&name, "name", "", "todo name")
 	updateStatusToConcluded.Flags().StringVar(&name, "name", "", "task name")
+	updateStatusToConcluded.Flags().StringVar(&notes, "notes", "", "daily notes")
+	getTodoCurrentStreak.Flags().StringVar(&name, "name", "", "current streak")
+	getTodoStreakHistory.Flags().StringVar(&name, "name", "", "todo streak history")
 
 	// mark as required
 	if err := add.MarkFlagRequired("name"); err != nil {

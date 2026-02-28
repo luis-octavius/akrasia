@@ -26,7 +26,7 @@ type AddTodoParams struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	Concluded   bool
-	ExpiresAt   sql.NullTime
+	ExpiresAt   time.Time
 	Priority    string
 	IsDaily     bool
 }
@@ -181,13 +181,52 @@ func (q *Queries) GetIDByName(ctx context.Context, name string) (interface{}, er
 }
 
 const getTodoByName = `-- name: GetTodoByName :one
-SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily FROM todos 
-WHERE name LIKE ?
+WITH ranked_todos AS (
+  SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily,
+    CASE
+    -- same text 
+    WHEN LOWER(name) = LOWER(?) THEN 1
+    -- begins with the term 
+    WHEN LOWER(name) LIKE LOWER(?) || '%' THEN 2
+    WHEN LOWER(name) LIKE '%' || LOWER(?) || '%' THEN 3
+    ELSE 4 
+    END as relevance
+  FROM todos
+  WHERE LOWER(name) LIKE '%' || LOWER(?) || '%'
+) 
+SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, relevance FROM ranked_todos
+ORDER BY relevance, name COLLATE NOCASE
+LIMIT 1
 `
 
-func (q *Queries) GetTodoByName(ctx context.Context, name string) (Todo, error) {
-	row := q.db.QueryRowContext(ctx, getTodoByName, name)
-	var i Todo
+type GetTodoByNameParams struct {
+	LOWER   string
+	LOWER_2 string
+	LOWER_3 string
+	LOWER_4 string
+}
+
+type GetTodoByNameRow struct {
+	ID          interface{}
+	Name        string
+	Description sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Concluded   bool
+	ExpiresAt   time.Time
+	Priority    string
+	IsDaily     bool
+	Relevance   int64
+}
+
+func (q *Queries) GetTodoByName(ctx context.Context, arg GetTodoByNameParams) (GetTodoByNameRow, error) {
+	row := q.db.QueryRowContext(ctx, getTodoByName,
+		arg.LOWER,
+		arg.LOWER_2,
+		arg.LOWER_3,
+		arg.LOWER_4,
+	)
+	var i GetTodoByNameRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -198,6 +237,7 @@ func (q *Queries) GetTodoByName(ctx context.Context, name string) (Todo, error) 
 		&i.ExpiresAt,
 		&i.Priority,
 		&i.IsDaily,
+		&i.Relevance,
 	)
 	return i, err
 }
@@ -248,12 +288,11 @@ SET
   concluded = false 
 WHERE 
   is_daily = true 
-  AND expires_at IS NOT NULL 
-  AND date(expires_at) <= date('now', 'localtime')
+  AND expires_at < datetime('now', 'start of day', 'localtime')
 RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily
 `
 
-func (q *Queries) UpdateDailyTodo(ctx context.Context, expiresAt sql.NullTime) ([]Todo, error) {
+func (q *Queries) UpdateDailyTodo(ctx context.Context, expiresAt time.Time) ([]Todo, error) {
 	rows, err := q.db.QueryContext(ctx, updateDailyTodo, expiresAt)
 	if err != nil {
 		return nil, err

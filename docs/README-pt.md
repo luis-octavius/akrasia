@@ -61,12 +61,15 @@ Comandos disponíveis:
   check-expired    verifica tarefas expiradas
   completion       gera script de autocompletar para o shell especificado
   create-cron      cria o cron job para atualizar tarefas diárias
+  delete-by-name   exclui um todo pelo nome
   delete-concluded exclui todas as tarefas concluídas
   get-all          retorna todas as tarefas salvas no armazenamento
   get-by-name      obtém uma tarefa pelo nome
+  get-daily        exibe todas as tarefas diárias
   help             ajuda sobre qualquer comando
-  delete-by-name   exclui um todo pelo nome
+  history          exibe a história de ofensivas da tarefa buscada
   init             inicializa o aplicativo
+  streak           exibe a ofensiva atual da tarefa buscada
   update-daily     atualiza tarefas diárias # não é criado no intuito de uso para o usuário, somente para o comando create-cron
   update-status    atualiza status de concluído para verdadeiro
 

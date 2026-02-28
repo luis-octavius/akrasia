@@ -67,9 +67,12 @@ Available Commands:
   delete-concluded delete all concluded todos
   get-all          returns all the todos saved in storage
   get-by-name      gets a todo by name
+  get-daily        show all daily tasks
   help             Help about any command
+  history          get the streak history of provided todo
   delete-by-name   delete a todo by name
   init             initialize akrasia app
+  streak           get the current streak of provided todo
   update-daily     update daily todos # it is not intended to use of the user, just the create-cron command
   update-status    update concluded status to true
 
