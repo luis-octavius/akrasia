@@ -18,17 +18,17 @@ WITH ranked_todos AS (
   SELECT *,
     CASE
     -- same text 
-    WHEN LOWER(title) = LOWER(?) THEN 1
+    WHEN LOWER(name) = LOWER(?) THEN 1
     -- begins with the term 
-    WHEN LOWER(title) LIKE LOWER(?) || '%' THEN 2
-    WHEN LOWER(title) LIKE '%' || LOWER(?) || '%' THEN 3
+    WHEN LOWER(name) LIKE LOWER(?) || '%' THEN 2
+    WHEN LOWER(name) LIKE '%' || LOWER(?) || '%' THEN 3
     ELSE 4 
     END as relevance
   FROM todos
-  WHERE LOWER(title) LIKE '%' || LOWER(?) || '%'
+  WHERE LOWER(name) LIKE '%' || LOWER(?) || '%'
 ) 
 SELECT * FROM ranked_todos
-ORDER BY relevance, title COLLATE NOCASE
+ORDER BY relevance, name COLLATE NOCASE
 LIMIT 1;
 
 -- name: GetIDByName :one 

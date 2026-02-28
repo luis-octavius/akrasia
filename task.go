@@ -66,7 +66,7 @@ func (cfg *Config) getTodoByName(name string) error {
 		return fmt.Errorf("error getting task from provided name: %w", err)
 	}
 
-	fmt.Printf("Name: %s | Description: %s\nExpires: %s", todo.Name, todo.Description.String, todo.ExpiresAt)
+	fmt.Printf("Name: %s | Description: %s\nExpires: %v\n", todo.Name, todo.Description.String, todo.ExpiresAt.Format(time.RFC1123))
 
 	return nil
 }
@@ -199,8 +199,51 @@ func (cfg *Config) updateDailyTodo() error {
 	// just for debugging
 	for i, todo := range todos {
 		fmt.Printf(" %d. Task #%d: %s\n", i+1, todo.ID, todo.Name)
-		fmt.Printf(" Old expires: %v -> New expires: %v\n", todo.ExpiresAt)
+		fmt.Printf(" Old expires: %v -> New expires: \n", todo.ExpiresAt)
 		fmt.Printf(" Concluded: %v -> false\n\n", todo.Concluded)
+	}
+
+	return nil
+}
+
+func (cfg *Config) getCurrentStreak(name string) error {
+	todo, err := cfg.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
+		LOWER:   name,
+		LOWER_2: name,
+		LOWER_3: name,
+		LOWER_4: name,
+	})
+	if err != nil {
+		return fmt.Errorf("Error getting todo by name")
+	}
+
+	streak, err := cfg.Queries.GetCurrentStreak(context.Background(), todo.ID)
+	if err != nil {
+		return fmt.Errorf("Error getting current todo streak")
+	}
+
+	fmt.Printf("\nYour current streak with %s is: %d\n", todo.Name, streak)
+	return nil
+}
+
+func (cfg *Config) getStreakHistory(name string) error {
+	todo, err := cfg.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
+		LOWER:   name,
+		LOWER_2: name,
+		LOWER_3: name,
+		LOWER_4: name,
+	})
+	if err != nil {
+		return fmt.Errorf("Error getting todo by name")
+	}
+
+	streak_history, err := cfg.Queries.GetStreakHistory(context.Background(), todo.ID)
+	if err != nil {
+		return fmt.Errorf("Error getting todo streak history")
+	}
+
+	for i, streak := range streak_history {
+		fmt.Printf("\n%d. Started Date: %v | End Date: %v | Total Days: %d\n", i+1, streak.StartDate, streak.EndDate, streak.StreakLength)
 	}
 
 	return nil
