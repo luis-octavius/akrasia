@@ -35,8 +35,8 @@ func (cfg *Config) addTodo(name, description, priority string, isDaily bool, exp
 		return fmt.Errorf("Error creating task: %w", err)
 	}
 
-	fmt.Printf("Task %v created successfully!\n", name)
-	fmt.Printf("\n%s\n", generateRandomQuote())
+	color.MsgSuccess(fmt.Sprintf("Task %v created successfully!\n", name))
+	generateRandomQuote()
 	return nil
 }
 
@@ -49,7 +49,7 @@ func (cfg *Config) getTodos() error {
 	fmt.Println("Tasks: ")
 
 	for _, todo := range todos {
-		printTodo(todo, "blue")
+		printTodo(todo)
 	}
 
 	return nil
@@ -66,8 +66,8 @@ func (cfg *Config) getTodoByName(name string) error {
 		return fmt.Errorf("error getting task from provided name: %w", err)
 	}
 
-	fmt.Printf("Name: %s | Description: %s\nExpires: %v\n", todo.Name, todo.Description.String, todo.ExpiresAt.Format(time.RFC1123))
-
+	s := fmt.Sprintf("Name: %s | Description: %s\nExpires: %v\n", todo.Name, todo.Description.String, todo.ExpiresAt.Format(time.RFC1123))
+	color.MsgSuccess(s)
 	return nil
 }
 
@@ -90,7 +90,7 @@ func (cfg *Config) updateToConcluded(name, notes string) error {
 	}
 
 	fmt.Println("Updated successfully")
-	fmt.Printf("\n%s\n", generateRandomQuote())
+	generateRandomQuote()
 	return nil
 }
 
@@ -100,9 +100,8 @@ func (cfg *Config) deleteConcluded() error {
 		return fmt.Errorf("Error deleting concluded tasks: %w", err)
 	}
 
-	colorized, _ := color.ColorizeOutput("blue", SuccessDelete)
-	fmt.Println(colorized)
-	fmt.Printf("\n%s\n", generateRandomQuote())
+	color.MsgSuccess(SuccessDelete)
+	generateRandomQuote()
 
 	return nil
 }
@@ -114,7 +113,7 @@ func (cfg *Config) getAllDailyTodos() error {
 	}
 
 	for _, todo := range todos {
-		printTodo(todo, "blue")
+		printTodo(todo)
 	}
 
 	return nil
@@ -133,7 +132,7 @@ func (cfg *Config) checkExpired() error {
 
 	fmt.Println("EXPIRED: ")
 	for _, todo := range todos {
-		printTodo(todo, "red")
+		printTodo(todo)
 	}
 
 	return nil
@@ -151,14 +150,13 @@ func (cfg *Config) checkExpiring() error {
 		isTodoExpiring := checkIfTodoExpires(todo.ExpiresAt)
 		if isTodoExpiring && !todo.Concluded {
 			fmt.Println("Expiring...")
-			printTodo(todo, "red")
+			printTodo(todo)
 			countExpiring++
 		}
 	}
 
 	if countExpiring == 0 {
-		colored, _ := color.ColorizeOutput("red", NoExpiring)
-		fmt.Printf("%s\n\n", colored)
+		color.MsgError(NoExpiring)
 	}
 
 	return nil
@@ -170,7 +168,7 @@ func (cfg *Config) deleteByName(name string) error {
 		return fmt.Errorf("Error deleting task: %w", err)
 	}
 
-	fmt.Println(SuccessDelete)
+	color.MsgSuccess(SuccessDelete)
 
 	return nil
 }
@@ -186,15 +184,11 @@ func (cfg *Config) updateDailyTodo() error {
 		return fmt.Errorf("Error updating daily tasks: %w", err)
 	}
 
-	message := ""
-
 	if len(todos) == 0 {
-		message, _ = color.ColorizeOutput("red", "No daily tasks to be updated")
+		color.MsgError("No daily tasks to be updated")
 	} else {
-		message, _ = color.ColorizeOutput("blue", "Tasks updated successfully!")
+		color.MsgSuccess("Tasks updated successfully")
 	}
-
-	fmt.Println(message)
 
 	// just for debugging
 	for i, todo := range todos {

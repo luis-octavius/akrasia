@@ -1,24 +1,25 @@
 package color
 
 import (
-	"fmt"
-
 	"github.com/fatih/color"
 )
 
-var colors = map[string]*color.Color{
-	"red":   color.New(color.FgRed),
-	"green": color.New(color.FgGreen),
-	"blue":  color.New(color.FgBlue),
-	"cyan":  color.New(color.FgCyan),
+func MsgError(text string) {
+	c := color.New(color.BgBlack).Add(color.FgRed)
+	c.Println(text)
 }
 
-func ColorizeOutput(colorName, text string) (string, error) {
-	color, ok := colors[colorName]
-	if !ok {
-		return "", fmt.Errorf("Color does not exist on map")
-	}
+func MsgWarning(text string) {
+	c := color.New(color.BgBlack).Add(color.FgYellow)
+	c.Println(text)
+}
 
-	colorizedOutput := color.Sprint(text)
-	return colorizedOutput, nil
+func MsgSuccess(text string) {
+	c := color.New(color.FgBlue)
+	c.Println(text)
+}
+
+func MsgQuote(text string) {
+	c := color.New(color.BgWhite).Add(color.FgWhite, color.Underline)
+	c.Println(text)
 }

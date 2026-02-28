@@ -77,7 +77,7 @@ func checkIfTodoExpires(expiresAt time.Time) bool {
 }
 
 // printTodo receives a Todo and create a readable output
-func printTodo(todo database.Todo, colorName string) {
+func printTodo(todo database.Todo) {
 	todoTime := todo.ExpiresAt.Format(time.RFC822)
 
 	var status string
@@ -90,9 +90,12 @@ func printTodo(todo database.Todo, colorName string) {
 
 	s := fmt.Sprintf("%v | %v\n%v | %v\n\n", todo.Name, todo.Description.String, todoTime, status)
 
-	colorized, _ := color.ColorizeOutput(colorName, s)
+	if ok := checkIfTodoExpires(todo.ExpiresAt); !ok {
+		color.MsgSuccess(s)
+		return
+	}
 
-	fmt.Println(colorized)
+	color.MsgWarning(s)
 }
 
 func getMonthByNum(num int) time.Month {

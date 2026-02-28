@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
+
+	"github.com/luis-octavius/akrasia/pkg/color"
 )
 
 var quotes = []string{
@@ -20,6 +23,7 @@ var quotes = []string{
 	`"How long will you wait before you demand the best for yourself?" - Epictetus, Discourses`,
 }
 
-func generateRandomQuote() string {
-	return quotes[rand.Intn(len(quotes))]
+func generateRandomQuote() {
+	quote := fmt.Sprintf("\n%s\n", quotes[rand.Intn(len(quotes))])
+	color.MsgQuote(quote)
 }
