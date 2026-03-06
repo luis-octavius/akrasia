@@ -5,12 +5,12 @@ import (
 )
 
 func MsgError(text string) {
-	c := color.New(color.BgBlack).Add(color.FgRed)
+	c := color.New(color.FgRed)
 	c.Println(text)
 }
 
 func MsgWarning(text string) {
-	c := color.New(color.BgBlack).Add(color.FgYellow)
+	c := color.New(color.FgYellow)
 	c.Println(text)
 }
 
@@ -20,6 +20,6 @@ func MsgSuccess(text string) {
 }
 
 func MsgQuote(text string) {
-	c := color.New(color.BgWhite).Add(color.FgWhite, color.Underline)
+	c := color.New(color.BgWhite).Add(color.FgBlack, color.Underline)
 	c.Println(text)
 }
