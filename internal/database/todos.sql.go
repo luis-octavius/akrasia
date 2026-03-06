@@ -282,18 +282,13 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 
 const updateDailyTodo = `-- name: UpdateDailyTodo :many
 UPDATE todos 
-SET 
-  expires_at = ?, 
-  updated_at = CURRENT_TIMESTAMP, 
-  concluded = false 
-WHERE 
-  is_daily = true 
-  AND expires_at < datetime('now', 'start of day', 'localtime')
+SET expires_at = datetime('now', '-1 day')
+WHERE is_daily = true
 RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily
 `
 
-func (q *Queries) UpdateDailyTodo(ctx context.Context, expiresAt time.Time) ([]Todo, error) {
-	rows, err := q.db.QueryContext(ctx, updateDailyTodo, expiresAt)
+func (q *Queries) UpdateDailyTodo(ctx context.Context) ([]Todo, error) {
+	rows, err := q.db.QueryContext(ctx, updateDailyTodo)
 	if err != nil {
 		return nil, err
 	}

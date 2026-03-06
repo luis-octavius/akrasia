@@ -179,7 +179,7 @@ func (cfg *Config) updateDailyTodo() error {
 	now := time.Now()
 	fmt.Printf("Executing daily todo update at: %s\n", now.Format(time.DateTime))
 
-	todos, err := cfg.Queries.UpdateDailyTodo(context.Background(), time.Now().Add(24*time.Hour))
+	todos, err := cfg.Queries.UpdateDailyTodo(context.Background())
 	if err != nil {
 		return fmt.Errorf("Error updating daily tasks: %w", err)
 	}
@@ -188,13 +188,6 @@ func (cfg *Config) updateDailyTodo() error {
 		color.MsgError("No daily tasks to be updated")
 	} else {
 		color.MsgSuccess("Tasks updated successfully")
-	}
-
-	// just for debugging
-	for i, todo := range todos {
-		fmt.Printf(" %d. Task #%d: %s\n", i+1, todo.ID, todo.Name)
-		fmt.Printf(" Old expires: %v -> New expires: \n", todo.ExpiresAt)
-		fmt.Printf(" Concluded: %v -> false\n\n", todo.Concluded)
 	}
 
 	return nil

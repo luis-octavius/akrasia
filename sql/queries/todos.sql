@@ -43,15 +43,9 @@ RETURNING *;
 
 -- name: UpdateDailyTodo :many
 UPDATE todos 
-SET 
-  expires_at = ?, 
-  updated_at = CURRENT_TIMESTAMP, 
-  concluded = false 
-WHERE 
-  is_daily = true 
-  AND expires_at < datetime('now', 'start of day', 'localtime')
+SET expires_at = datetime('now', '-1 day')
+WHERE is_daily = true
 RETURNING *;
-
 -- name: DeleteTodoByName :exec 
 DELETE FROM todos 
 WHERE name LIKE ?;
