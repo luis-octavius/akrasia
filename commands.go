@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"os/user"
-	"path"
 
 	"github.com/luis-octavius/akrasia/pkg/cron"
 	"github.com/spf13/cobra"
@@ -47,12 +46,12 @@ var createDailyUpdate = &cobra.Command{
 
 		schedule := "00 21 * * *"
 
-		homePath, err := os.UserHomeDir()
+		executablePath, err := os.Executable()
 		if err != nil {
-			return fmt.Errorf("error getting home dir: %v", err)
+			return fmt.Errorf("error getting executable path: %v", err)
 		}
 
-		akrasiaCommand := path.Join(homePath, "go/bin/akrasia") + " upd"
+		akrasiaCommand := fmt.Sprintf("%s upd", executablePath)
 
 		name := "createUpdateDaily"
 

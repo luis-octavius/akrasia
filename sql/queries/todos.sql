@@ -43,7 +43,10 @@ RETURNING *;
 
 -- name: UpdateDailyTodo :many
 UPDATE todos 
-SET expires_at = datetime('now', '-1 day')
+SET
+  expires_at = datetime('now', '+1 day'),
+  updated_at = datetime('now'),
+  concluded = false
 WHERE is_daily = true
 RETURNING *;
 -- name: DeleteTodoByName :exec 
