@@ -47,6 +47,45 @@ func (q *Queries) AddDailyTaskHistory(ctx context.Context, arg AddDailyTaskHisto
 	return i, err
 }
 
+const addDailyTaskHistoryForDate = `-- name: AddDailyTaskHistoryForDate :one
+INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
+VALUES (
+  ?, ?, ?, ?, ?, ?
+) 
+ON CONFLICT(todo_id, date) DO NOTHING
+RETURNING id, todo_id, date, completed, completed_at, notes
+`
+
+type AddDailyTaskHistoryForDateParams struct {
+	ID          interface{}
+	TodoID      interface{}
+	Date        sql.NullTime
+	Completed   sql.NullBool
+	CompletedAt sql.NullTime
+	Notes       sql.NullString
+}
+
+func (q *Queries) AddDailyTaskHistoryForDate(ctx context.Context, arg AddDailyTaskHistoryForDateParams) (TodosHistory, error) {
+	row := q.db.QueryRowContext(ctx, addDailyTaskHistoryForDate,
+		arg.ID,
+		arg.TodoID,
+		arg.Date,
+		arg.Completed,
+		arg.CompletedAt,
+		arg.Notes,
+	)
+	var i TodosHistory
+	err := row.Scan(
+		&i.ID,
+		&i.TodoID,
+		&i.Date,
+		&i.Completed,
+		&i.CompletedAt,
+		&i.Notes,
+	)
+	return i, err
+}
+
 const addTodoHistory = `-- name: AddTodoHistory :one
 INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
 VALUES (

@@ -1,13 +1,15 @@
--- name: AddTodoHistory :one 
-INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
-VALUES (
-  ?, ?, ?, ?, ?, ?
-) RETURNING *;
-
 -- name: AddDailyTaskHistory :one
 INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
 VALUES (
   ?, ?, date('now'), ?, ?, ?
+) 
+ON CONFLICT(todo_id, date) DO NOTHING
+RETURNING *;
+
+-- name: AddDailyTaskHistoryForDate :one
+INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
+VALUES (
+  ?, ?, ?, ?, ?, ?
 ) 
 ON CONFLICT(todo_id, date) DO NOTHING
 RETURNING *;

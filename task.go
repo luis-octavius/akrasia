@@ -272,3 +272,101 @@ func (cfg *Config) getStreakHistory(name string) error {
 
 	return nil
 }
+
+// backfillDailyHistory fills missing history entries for daily tasks from their creation date up to N days ago.
+// This is useful when the update-daily command wasn't running due to system downtime or other issues.
+func (cfg *Config) backfillDailyHistory(daysBack int, taskName string) error {
+	ctx := context.Background()
+	now := time.Now()
+	startDate := now.AddDate(0, 0, -daysBack)
+
+	// Get all daily tasks, or a specific one if taskName is provided
+	var dailyTasks []database.Todo
+	var err error
+
+	if taskName != "" {
+		// Get specific task by name
+		todo, err := cfg.Queries.GetTodoByName(ctx, database.GetTodoByNameParams{
+			LOWER:   taskName,
+			LOWER_2: taskName,
+			LOWER_3: taskName,
+			LOWER_4: taskName,
+		})
+		if err != nil {
+			return fmt.Errorf("Error finding task '%s': %w", taskName, err)
+		}
+
+		if !todo.IsDaily {
+			return fmt.Errorf("Task '%s' is not a daily task", taskName)
+		}
+
+		dailyTasks = []database.Todo{
+			{
+				ID:          todo.ID,
+				Name:        todo.Name,
+				Description: todo.Description,
+				CreatedAt:   todo.CreatedAt,
+				UpdatedAt:   todo.UpdatedAt,
+				Concluded:   todo.Concluded,
+				ExpiresAt:   todo.ExpiresAt,
+				Priority:    todo.Priority,
+				IsDaily:     todo.IsDaily,
+			},
+		}
+	} else {
+		// Get all daily tasks
+		dailyTasks, err = cfg.Queries.GetDailyTodos(ctx)
+		if err != nil {
+			return fmt.Errorf("Error getting daily tasks: %w", err)
+		}
+	}
+
+	if len(dailyTasks) == 0 {
+		color.MsgError("No daily tasks found to backfill")
+		return nil
+	}
+
+	totalBackfilled := 0
+
+	for _, task := range dailyTasks {
+		// Start from the later of: task creation date or (now - daysBack)
+		backfillStart := task.CreatedAt
+		if startDate.After(backfillStart) {
+			backfillStart = startDate
+		}
+
+		// Create a history entry for each day from backfillStart to now
+		currentDate := backfillStart
+		for currentDate.Before(now) || currentDate.Equal(now) {
+			dateOnly := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, time.UTC)
+
+			// Try to insert; ON CONFLICT DO NOTHING will silently skip if already exists
+			_, err := cfg.Queries.AddDailyTaskHistoryForDate(ctx, database.AddDailyTaskHistoryForDateParams{
+				ID:          uuid.New(),
+				TodoID:      task.ID,
+				Date:        sql.NullTime{Time: dateOnly, Valid: true},
+				Completed:   sql.NullBool{Bool: false, Valid: true}, // Default to not completed
+				CompletedAt: sql.NullTime{},
+				Notes:       sql.NullString{String: "backfilled", Valid: true},
+			})
+
+			if err != nil {
+				// Might be a conflict (already exists) or real error
+				// For now, just log warnings and continue
+				fmt.Printf("Warning: Could not backfill %s for date %s: %v\n", task.Name, dateOnly.Format(time.DateOnly), err)
+			} else {
+				totalBackfilled++
+			}
+
+			currentDate = currentDate.AddDate(0, 0, 1)
+		}
+	}
+
+	if taskName != "" {
+		color.MsgSuccess(fmt.Sprintf("Backfilled %d history entries for task '%s'", totalBackfilled, taskName))
+	} else {
+		color.MsgSuccess(fmt.Sprintf("Backfilled %d history entries for %d daily task(s)", totalBackfilled, len(dailyTasks)))
+	}
+
+	return nil
+}

@@ -59,22 +59,23 @@ Usage:
 
 Available Commands:
 
-  add              adds a todo in storage, description is optional
-  check-expired    check expired todos
-  check-expiring   check todos that are expiring in 5 days
-  completion       Generate the autocompletion script for the specified shell
-  create-cron      create the cron job to update daily tasks
-  delete-concluded delete all concluded todos
-  get-all          returns all the todos saved in storage
-  get-by-name      gets a todo by name
-  get-daily        show all daily tasks
-  help             Help about any command
-  history          get the streak history of provided todo
-  delete-by-name   delete a todo by name
-  init             initialize akrasia app
-  streak           get the current streak of provided todo
-  update-daily     update daily todos # it is not intended to use of the user, just the create-cron command
-  update-status    update concluded status to true
+  add                adds a todo in storage, description is optional
+  backfill-history   backfill missing daily task history entries
+  check-expired      check expired todos
+  check-expiring     check todos that are expiring in 5 days
+  completion         Generate the autocompletion script for the specified shell
+  create-cron        create the cron job to update daily tasks
+  delete-concluded   delete all concluded todos
+  get-all            returns all the todos saved in storage
+  get-by-name        gets a todo by name
+  get-daily          show all daily tasks
+  help               Help about any command
+  history            get the streak history of provided todo
+  delete-by-name     delete a todo by name
+  init               initialize akrasia app
+  streak             get the current streak of provided todo
+  update-daily       update daily todos (used by cron, not intended for manual use)
+  update-status      update concluded status to true
 
 Flags:
   -h, --help   help for akrasia
@@ -89,6 +90,10 @@ Use "akrasia [command] --help" for more information about a command.
 akrasia add --name Stendhal --desc "Finish the book The Red and The Black" 13
 2026/01/04 11:38:31 Todo Stendhal created successfully!
 
+# add a daily task
+akrasia add --name "Morning run" --daily
+2026/03/08 08:15:20 Task Morning run created successfully!
+
 akrasia update-status --name stendhal # case-insensitive, mark Todo as done
 Stendhal | Finish the book The Red and The Black |
 13 Feb 26 00:00 UTC | Done
@@ -101,6 +106,23 @@ Stendhal | Finish the book The Red and The Black |
 
 akrasia delete-concluded # self-explanatory
 Concluded Todos deleted successfully!
+
+# backfill history for the last 30 days (default)
+akrasia backfill-history
+Backfilled 90 history entries for 3 daily task(s)
+
+# backfill history for a specific task and 60 days back
+akrasia backfill-history --task "Morning run" --days 60
+Backfilled 60 history entries for task 'Morning run'
+
+# get streak for a daily task
+akrasia streak --name "Morning run"
+Your current streak with Morning run is: 5
+
+# get streak history  
+akrasia history --name "Morning run"
+1. Started Date: 2026-02-15 | End Date: 2026-02-20 | Total Days: 6
+2. Started Date: 2026-01-10 | End Date: 2026-01-15 | Total Days: 6
 ```
 
 ## Contributing

@@ -12,11 +12,12 @@ import (
 )
 
 var (
-	name        string
-	notes       string
-	description string
-	priority    string
-	date        []int
+	name         string
+	notes        string
+	description  string
+	priority     string
+	date         []int
+	daysBackfill int
 )
 
 var rootCmd = &cobra.Command{
@@ -274,6 +275,20 @@ var getTodoStreakHistory = &cobra.Command{
 	},
 }
 
+var backfillHistory = &cobra.Command{
+	Use:     "backfill-history",
+	Short:   "backfill missing daily task history entries",
+	Aliases: []string{"bf"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := cfg.backfillDailyHistory(daysBackfill, name)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
 func init() {
 	// add flags
 
@@ -292,6 +307,7 @@ func init() {
 		"getAllDaily":             getAllDaily,
 		"getTodoCurrentStreak":    getTodoCurrentStreak,
 		"getTodoStreakHistory":    getTodoStreakHistory,
+		"backfillHistory":         backfillHistory,
 	}
 
 	for _, cmd := range commands {
@@ -310,6 +326,8 @@ func init() {
 	updateStatusToConcluded.Flags().StringVar(&notes, "notes", "", "daily notes")
 	getTodoCurrentStreak.Flags().StringVar(&name, "name", "", "current streak")
 	getTodoStreakHistory.Flags().StringVar(&name, "name", "", "todo streak history")
+	backfillHistory.Flags().IntVar(&daysBackfill, "days", 30, "number of days back to backfill (default 30)")
+	backfillHistory.Flags().StringVar(&name, "task", "", "specific task name to backfill (optional, fills all daily tasks if not set)")
 
 	// mark as required
 	if err := add.MarkFlagRequired("name"); err != nil {

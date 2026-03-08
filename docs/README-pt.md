@@ -57,21 +57,23 @@ Uso:
   akrasia [comando]
 
 Comandos disponíveis:
-  add              adiciona uma tarefa no armazenamento, descrição é opcional
-  check-expired    verifica tarefas expiradas
-  completion       gera script de autocompletar para o shell especificado
-  create-cron      cria o cron job para atualizar tarefas diárias
-  delete-by-name   exclui um todo pelo nome
-  delete-concluded exclui todas as tarefas concluídas
-  get-all          retorna todas as tarefas salvas no armazenamento
-  get-by-name      obtém uma tarefa pelo nome
-  get-daily        exibe todas as tarefas diárias
-  help             ajuda sobre qualquer comando
-  history          exibe a história de ofensivas da tarefa buscada
-  init             inicializa o aplicativo
-  streak           exibe a ofensiva atual da tarefa buscada
-  update-daily     atualiza tarefas diárias # não é criado no intuito de uso para o usuário, somente para o comando create-cron
-  update-status    atualiza status de concluído para verdadeiro
+  add               adiciona uma tarefa no armazenamento, descrição é opcional
+  backfill-history  preenche histórico ausente de tarefas diárias
+  check-expired     verifica tarefas expiradas
+  check-expiring    verifica tarefas que expiram em 5 dias
+  completion        gera script de autocompletar para o shell especificado
+  create-cron       cria o cron job para atualizar tarefas diárias
+  delete-by-name    exclui um todo pelo nome
+  delete-concluded  exclui todas as tarefas concluídas
+  get-all           retorna todas as tarefas salvas no armazenamento
+  get-by-name       obtém uma tarefa pelo nome
+  get-daily         exibe todas as tarefas diárias
+  help              ajuda sobre qualquer comando
+  history           exibe a história de ofensivas da tarefa buscada
+  init              inicializa o aplicativo
+  streak            exibe a ofensiva atual da tarefa buscada
+  update-daily      atualiza tarefas diárias (usado por cron, não é destinado ao uso manual)
+  update-status     atualiza status de concluído para verdadeiro
 
 Flags:
   -h, --help   ajuda para akrasia
@@ -88,9 +90,13 @@ Use "akrasia [comando] --help" para mais informações sobre um comando.
 akrasia add --name Stendhal --desc "Terminar o livro O Vermelho e o Negro" --date 13,02
 2026/01/04 11:38:31 Tarefa Stendhal criada com sucesso!
 
+# adiciona uma tarefa diária
+akrasia add --name "Corrida matinal" --daily
+2026/03/08 08:15:20 Tarefa Corrida matinal criada com sucesso!
+
 akrasia update-status --name stendhal # case-insensitive, marca tarefa como concluída
 Stendhal | Terminar o livro O Vermelho e o Negro |
-13 Fev 26 00:00 UTC | Done
+13 Fev 26 00:00 UTC | Concluída
 
 akrasia get-all #
 Todos:
@@ -100,6 +106,23 @@ Stendhal | Terminar o livro O Vermelho e o Negro |
 
 akrasia delete-concluded # autoexplicativo
 Tarefas concluídas excluídas com sucesso!
+
+# preenche o histórico para os últimos 30 dias (padrão)
+akrasia backfill-history
+Preenchido 90 entradas de histórico para 3 tarefa(s) diária(s)
+
+# preenche o histórico para uma tarefa específica e 60 dias atrás
+akrasia backfill-history --task "Corrida matinal" --days 60
+Preenchido 60 entradas de histórico para a tarefa 'Corrida matinal'
+
+# obtém a ofensiva atual para uma tarefa diária
+akrasia streak --name "Corrida matinal"
+A sua ofensiva atual com Corrida matinal é: 5
+
+# obtém o histórico de ofensivas
+akrasia history --name "Corrida matinal"
+1. Data de Início: 2026-02-15 | Data de Término: 2026-02-20 | Total de Dias: 6
+2. Data de Início: 2026-01-10 | Data de Término: 2026-01-15 | Total de Dias: 6
 
 ```
 
