@@ -283,9 +283,9 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 const updateDailyTodo = `-- name: UpdateDailyTodo :many
 UPDATE todos 
 SET
-	expires_at = datetime('now', '+1 day'),
-	updated_at = datetime('now'),
-	concluded = false
+  expires_at = datetime('now', '+1 day'),
+  updated_at = datetime('now'),
+  concluded = false
 WHERE is_daily = true
 RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily
 `
