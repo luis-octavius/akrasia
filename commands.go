@@ -80,7 +80,7 @@ var createDailyUpdate = &cobra.Command{
 
 var updateDailyTodo = &cobra.Command{
 	Use:     "update-daily",
-	Short:   "update daily todos",
+	Short:   "reset daily tasks for a new day and record completion history (runs via cron)",
 	Aliases: []string{"upd"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		err := cfg.updateDailyTodo()
@@ -94,7 +94,7 @@ var updateDailyTodo = &cobra.Command{
 
 var add = &cobra.Command{
 	Use:     "add <name> [description]",
-	Short:   "adds a todo in storage, description is optional",
+	Short:   "create a new task with optional description, priority, and expiration date",
 	Aliases: []string{"a"},
 	Args:    cobra.MaximumNArgs(4),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -131,7 +131,7 @@ var getAll = &cobra.Command{
 
 var getTodoByName = &cobra.Command{
 	Use:     "get-by-name <name>",
-	Short:   "gets a todo by name",
+	Short:   "search for a task by name (case-insensitive, fuzzy match)",
 	Aliases: []string{"gn", "name"},
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -150,7 +150,7 @@ var getTodoByName = &cobra.Command{
 
 var updateStatusToConcluded = &cobra.Command{
 	Use:     "update-status <name>",
-	Short:   "update concluded status to true",
+	Short:   "mark a task as completed and record it in history with optional notes",
 	Aliases: []string{"us"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		err := cfg.updateToConcluded(name, notes)
@@ -179,7 +179,7 @@ var deleteConcluded = &cobra.Command{
 
 var checkExpired = &cobra.Command{
 	Use:     "check-expired",
-	Short:   "check expired todos",
+	Short:   "show tasks that have passed their expiration date",
 	Aliases: []string{"ce"},
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
