@@ -179,16 +179,53 @@ func (cfg *Config) updateDailyTodo() error {
 	now := time.Now()
 	fmt.Printf("Executing daily todo update at: %s\n", now.Format(time.DateTime))
 
-	todos, err := cfg.Queries.UpdateDailyTodo(context.Background())
+	ctx := context.Background()
+
+	// First, get all daily tasks BEFORE resetting them
+	dailyTasks, err := cfg.Queries.GetDailyTodos(ctx)
+	if err != nil {
+		return fmt.Errorf("Error getting daily tasks: %w", err)
+	}
+
+	if len(dailyTasks) == 0 {
+		color.MsgError("No daily tasks to be updated")
+		return nil
+	}
+
+	// Record one history snapshot per task/day before resetting statuses.
+	recordedCount := 0
+
+	for _, task := range dailyTasks {
+		// Skip if we already have a history entry for this date (prevents duplicates)
+		// Create history entry: completed = task.Concluded (true if done, false if not)
+		completedAt := sql.NullTime{}
+		if task.Concluded {
+			completedAt = sql.NullTime{Time: task.UpdatedAt, Valid: true}
+		}
+
+		_, err := cfg.Queries.AddDailyTaskHistory(ctx, database.AddDailyTaskHistoryParams{
+			ID:          uuid.New(),
+			TodoID:      task.ID,
+			Completed:   sql.NullBool{Bool: task.Concluded, Valid: true},
+			CompletedAt: completedAt,
+			Notes:       sql.NullString{},
+		})
+		if err != nil {
+			fmt.Printf("Warning: Could not record history for task '%s': %v\n", task.Name, err)
+			continue
+		}
+		recordedCount++
+	}
+
+	fmt.Printf("Recorded history for %d daily tasks\n", recordedCount)
+
+	// Now reset all daily tasks for the new day
+	_, err = cfg.Queries.UpdateDailyTodo(ctx)
 	if err != nil {
 		return fmt.Errorf("Error updating daily tasks: %w", err)
 	}
 
-	if len(todos) == 0 {
-		color.MsgError("No daily tasks to be updated")
-	} else {
-		color.MsgSuccess("Tasks updated successfully")
-	}
+	color.MsgSuccess(fmt.Sprintf("Tasks updated successfully (%d history entries recorded)", recordedCount))
 
 	return nil
 }

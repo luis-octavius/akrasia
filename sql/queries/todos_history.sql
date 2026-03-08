@@ -4,6 +4,14 @@ VALUES (
   ?, ?, ?, ?, ?, ?
 ) RETURNING *;
 
+-- name: AddDailyTaskHistory :one
+INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
+VALUES (
+  ?, ?, date('now'), ?, ?, ?
+) 
+ON CONFLICT(todo_id, date) DO NOTHING
+RETURNING *;
+
 -- name: GetCurrentStreak :one
 WITH daily_completions AS (
     SELECT 

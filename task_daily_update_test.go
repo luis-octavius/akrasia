@@ -29,12 +29,13 @@ func TestUpdateDailyTodoResetsAndPushesExpiration(t *testing.T) {
 	cfg := Config{Queries: queries}
 	ctx := context.Background()
 
-	_, err = queries.AddTodo(ctx, database.AddTodoParams{
+	// Create a completed daily task
+	completedTask, err := queries.AddTodo(ctx, database.AddTodoParams{
 		ID:        uuid.New(),
-		Name:      "daily-test-task",
+		Name:      "daily-completed",
 		CreatedAt: time.Now().Add(-48 * time.Hour),
 		UpdatedAt: time.Now().Add(-48 * time.Hour),
-		Concluded: true,
+		Concluded: true, // This task was completed
 		ExpiresAt: time.Now().Add(-24 * time.Hour),
 		Priority:  "medium",
 		IsDaily:   true,
@@ -43,31 +44,72 @@ func TestUpdateDailyTodoResetsAndPushesExpiration(t *testing.T) {
 		t.Fatalf("AddTodo() error = %v", err)
 	}
 
+	// Create an incomplete daily task
+	incompleteTask, err := queries.AddTodo(ctx, database.AddTodoParams{
+		ID:        uuid.New(),
+		Name:      "daily-incomplete",
+		CreatedAt: time.Now().Add(-48 * time.Hour),
+		UpdatedAt: time.Now().Add(-48 * time.Hour),
+		Concluded: false, // This task was NOT completed
+		ExpiresAt: time.Now().Add(-24 * time.Hour),
+		Priority:  "medium",
+		IsDaily:   true,
+	})
+	if err != nil {
+		t.Fatalf("AddTodo() error = %v", err)
+	}
+
+	// Run daily update
 	err = cfg.updateDailyTodo()
 	if err != nil {
 		t.Fatalf("updateDailyTodo() error = %v", err)
 	}
 
+	// Verify tasks were reset
 	dailyTodos, err := queries.GetDailyTodos(ctx)
 	if err != nil {
 		t.Fatalf("GetDailyTodos() error = %v", err)
 	}
 
-	if len(dailyTodos) != 1 {
-		t.Fatalf("expected 1 daily todo, got %d", len(dailyTodos))
+	if len(dailyTodos) != 2 {
+		t.Fatalf("expected 2 daily todos, got %d", len(dailyTodos))
 	}
 
-	updated := dailyTodos[0]
-
-	if updated.Concluded {
-		t.Fatalf("expected concluded to be false after daily update")
+	for _, todo := range dailyTodos {
+		if todo.Concluded {
+			t.Errorf("task %s: expected concluded=false after daily update", todo.Name)
+		}
+		if !todo.ExpiresAt.After(time.Now()) {
+			t.Errorf("task %s: expected expires_at to be in the future, got %v", todo.Name, todo.ExpiresAt)
+		}
 	}
 
-	if !updated.ExpiresAt.After(time.Now()) {
-		t.Fatalf("expected expires_at to be in the future, got %v", updated.ExpiresAt)
+	// Verify history snapshot rows were recorded.
+	rows, err := db.QueryContext(ctx, "SELECT todo_id, completed FROM todos_history")
+	if err != nil {
+		t.Fatalf("Query history error = %v", err)
+	}
+	defer rows.Close()
+
+	historyByTodo := map[string]bool{}
+	for rows.Next() {
+		var todoID string
+		var completed bool
+		if err := rows.Scan(&todoID, &completed); err != nil {
+			t.Fatalf("Scan error = %v", err)
+		}
+		historyByTodo[todoID] = completed
 	}
 
-	if !updated.UpdatedAt.After(time.Now().Add(-10 * time.Second)) {
-		t.Fatalf("expected updated_at to be refreshed, got %v", updated.UpdatedAt)
+	if len(historyByTodo) != 2 {
+		t.Fatalf("expected 2 history entries, got %d", len(historyByTodo))
+	}
+
+	if done, ok := historyByTodo[completedTask.ID.(string)]; !ok || !done {
+		t.Fatalf("expected completed task history row with completed=true")
+	}
+
+	if done, ok := historyByTodo[incompleteTask.ID.(string)]; !ok || done {
+		t.Fatalf("expected incomplete task history row with completed=false")
 	}
 }
