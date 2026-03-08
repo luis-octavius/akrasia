@@ -129,6 +129,21 @@ var getAll = &cobra.Command{
 	},
 }
 
+var today = &cobra.Command{
+	Use:     "today",
+	Short:   "show a daily focus dashboard (overdue, due today, daily pending, expiring soon)",
+	Aliases: []string{"td"},
+	Args:    cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := cfg.getTodayFocus()
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
 var getTodoByName = &cobra.Command{
 	Use:     "get-by-name <name>",
 	Short:   "search for a task by name (case-insensitive, fuzzy match)",
@@ -295,6 +310,7 @@ func init() {
 	commands := map[string]*cobra.Command{
 		"add":                     add,
 		"getAll":                  getAll,
+		"today":                   today,
 		"getTodoByName":           getTodoByName,
 		"updateStatusToConcluded": updateStatusToConcluded,
 		"deleteConcluded":         deleteConcluded,

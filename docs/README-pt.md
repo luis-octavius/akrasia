@@ -72,6 +72,7 @@ Comandos disponíveis:
   history           exibe a história de ofensivas da tarefa buscada
   init              inicializa o aplicativo
   streak            exibe a ofensiva atual da tarefa buscada
+  today             exibe um painel de foco diário
   update-daily      atualiza tarefas diárias (usado por cron, não é destinado ao uso manual)
   update-status     atualiza status de concluído para verdadeiro
 
@@ -114,6 +115,19 @@ Preenchido 90 entradas de histórico para 3 tarefa(s) diária(s)
 # preenche o histórico para uma tarefa específica e 60 dias atrás
 akrasia backfill-history --task "Corrida matinal" --days 60
 Preenchido 60 entradas de histórico para a tarefa 'Corrida matinal'
+
+# vê o que precisa de atenção hoje
+akrasia today
+TODAY FOCUS
+
+OVERDUE (1)
+Pagar conta de luz | ...
+
+DUE TODAY (2)
+Preparar relatório semanal | ...
+
+DAILY PENDING (1)
+Corrida matinal | ...
 
 # obtém a ofensiva atual para uma tarefa diária
 akrasia streak --name "Corrida matinal"

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,6 +17,13 @@ const (
 	NoExpiring    = "Your tasks are not fleeing. You have time, yet your focus must remain steadfast."
 	SuccessDelete = "Concluded Todos deleted successfully!"
 )
+
+type todayView struct {
+	Overdue      []database.Todo
+	DueToday     []database.Todo
+	Daily        []database.Todo
+	ExpiringSoon []database.Todo
+}
 
 func (cfg *Config) addTodo(name, description, priority string, isDaily bool, expiresAt time.Time) error {
 	descriptionField := validateDescription(description)
@@ -53,6 +61,105 @@ func (cfg *Config) getTodos() error {
 	}
 
 	return nil
+}
+
+func (cfg *Config) getTodayFocus() error {
+	todos, err := cfg.Queries.GetTodos(context.Background())
+	if err != nil {
+		return fmt.Errorf("error getting tasks from database: %w", err)
+	}
+
+	view := buildTodayView(todos, time.Now())
+
+	if len(view.Overdue) == 0 && len(view.DueToday) == 0 && len(view.Daily) == 0 && len(view.ExpiringSoon) == 0 {
+		color.MsgSuccess("You are clear for today. No pending items need attention.")
+		return nil
+	}
+
+	fmt.Println("TODAY FOCUS")
+
+	printTodaySection("OVERDUE", view.Overdue)
+	printTodaySection("DUE TODAY", view.DueToday)
+	printTodaySection("DAILY PENDING", view.Daily)
+	printTodaySection("EXPIRING SOON", view.ExpiringSoon)
+
+	return nil
+}
+
+func buildTodayView(todos []database.Todo, now time.Time) todayView {
+	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	dayEnd := dayStart.Add(24 * time.Hour)
+
+	view := todayView{}
+
+	for _, todo := range todos {
+		if todo.Concluded {
+			continue
+		}
+
+		if todo.IsDaily {
+			view.Daily = append(view.Daily, todo)
+			continue
+		}
+
+		if todo.ExpiresAt.Before(dayStart) {
+			view.Overdue = append(view.Overdue, todo)
+			continue
+		}
+
+		if !todo.ExpiresAt.Before(dayStart) && todo.ExpiresAt.Before(dayEnd) {
+			view.DueToday = append(view.DueToday, todo)
+			continue
+		}
+
+		if todo.ExpiresAt.Before(now.Add(5 * 24 * time.Hour)) {
+			view.ExpiringSoon = append(view.ExpiringSoon, todo)
+		}
+	}
+
+	sortTodayTodos(view.Overdue)
+	sortTodayTodos(view.DueToday)
+	sortTodayTodos(view.Daily)
+	sortTodayTodos(view.ExpiringSoon)
+
+	return view
+}
+
+func sortTodayTodos(todos []database.Todo) {
+	sort.Slice(todos, func(i, j int) bool {
+		leftPriority := priorityRank(todos[i].Priority)
+		rightPriority := priorityRank(todos[j].Priority)
+
+		if leftPriority != rightPriority {
+			return leftPriority < rightPriority
+		}
+
+		return todos[i].ExpiresAt.Before(todos[j].ExpiresAt)
+	})
+}
+
+func priorityRank(priority string) int {
+	switch priority {
+	case "high":
+		return 1
+	case "medium":
+		return 2
+	case "low":
+		return 3
+	default:
+		return 4
+	}
+}
+
+func printTodaySection(title string, todos []database.Todo) {
+	if len(todos) == 0 {
+		return
+	}
+
+	fmt.Printf("\n%s (%d)\n", title, len(todos))
+	for _, todo := range todos {
+		printTodo(todo)
+	}
 }
 
 func (cfg *Config) getTodoByName(name string) error {
