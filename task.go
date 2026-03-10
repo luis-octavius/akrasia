@@ -187,7 +187,6 @@ func (cfg *Config) updateToConcluded(name, notes string) error {
 	_, err = cfg.Queries.AddTodoHistory(context.Background(), database.AddTodoHistoryParams{
 		ID:          uuid.New(),
 		TodoID:      todo.ID,
-		Date:        sql.NullTime{Time: time.Now(), Valid: true},
 		Completed:   sql.NullBool{Bool: true, Valid: true},
 		CompletedAt: sql.NullTime{Time: time.Now(), Valid: true},
 		Notes:       sql.NullString{String: notes, Valid: true},
@@ -445,13 +444,13 @@ func (cfg *Config) backfillDailyHistory(daysBack int, taskName string) error {
 		// Create a history entry for each day from backfillStart to now
 		currentDate := backfillStart
 		for currentDate.Before(now) || currentDate.Equal(now) {
-			dateOnly := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, time.UTC)
+			dateOnly := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, now.Location())
 
 			// Try to insert; ON CONFLICT DO NOTHING will silently skip if already exists
 			_, err := cfg.Queries.AddDailyTaskHistoryForDate(ctx, database.AddDailyTaskHistoryForDateParams{
 				ID:          uuid.New(),
 				TodoID:      task.ID,
-				Date:        sql.NullTime{Time: dateOnly, Valid: true},
+				Date:        dateOnly.Format(time.DateOnly),
 				Completed:   sql.NullBool{Bool: false, Valid: true}, // Default to not completed
 				CompletedAt: sql.NullTime{},
 				Notes:       sql.NullString{String: "backfilled", Valid: true},

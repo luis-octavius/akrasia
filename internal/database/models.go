@@ -24,6 +24,15 @@ type Todo struct {
 type TodosHistory struct {
 	ID          interface{}
 	TodoID      interface{}
+	Date        string
+	Completed   sql.NullBool
+	CompletedAt sql.NullTime
+	Notes       sql.NullString
+}
+
+type TodosHistoryLegacyBackup005 struct {
+	ID          interface{}
+	TodoID      interface{}
 	Date        sql.NullTime
 	Completed   sql.NullBool
 	CompletedAt sql.NullTime
