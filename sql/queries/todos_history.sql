@@ -1,7 +1,7 @@
 -- name: AddDailyTaskHistory :one
 INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
 VALUES (
-  ?, ?, date('now'), ?, ?, ?
+    ?, ?, date('now', 'localtime'), ?, ?, ?
 ) 
 ON CONFLICT(todo_id, date) DO NOTHING
 RETURNING *;
@@ -9,9 +9,20 @@ RETURNING *;
 -- name: AddDailyTaskHistoryForDate :one
 INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
 VALUES (
-  ?, ?, ?, ?, ?, ?
+    ?, ?, date(?), ?, ?, ?
 ) 
 ON CONFLICT(todo_id, date) DO NOTHING
+RETURNING *;
+
+-- name: AddTodoHistory :one
+INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
+VALUES (
+    ?, ?, date('now', 'localtime'), ?, ?, ?
+) 
+ON CONFLICT(todo_id, date) DO UPDATE SET
+    completed = excluded.completed,
+    completed_at = excluded.completed_at,
+    notes = excluded.notes
 RETURNING *;
 
 -- name: GetCurrentStreak :one
@@ -41,7 +52,7 @@ streak_calc AS (
             ELSE 0 
         END) OVER (ORDER BY date DESC ROWS UNBOUNDED PRECEDING) as streak_group
     FROM daily_completions
-    WHERE date <= date('now')
+    WHERE date <= date('now', 'localtime')
 )
 SELECT 
     COUNT(*) as current_streak
@@ -51,10 +62,10 @@ WHERE
     AND streak_group = (
         SELECT streak_group 
         FROM streak_calc 
-        WHERE date = date('now')
+        WHERE date = date('now', 'localtime')
         LIMIT 1
     )
-AND date <= date('now');
+AND date <= date('now', 'localtime');
 
 -- name: GetStreakHistory :many
 WITH streak_groups AS (

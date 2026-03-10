@@ -74,6 +74,7 @@ Available Commands:
   delete-by-name     delete a todo by name
   init               initialize akrasia app
   streak             get the current streak of provided todo
+  today              show a daily focus dashboard
   update-daily       update daily todos (used by cron, not intended for manual use)
   update-status      update concluded status to true
 
@@ -114,6 +115,19 @@ Backfilled 90 history entries for 3 daily task(s)
 # backfill history for a specific task and 60 days back
 akrasia backfill-history --task "Morning run" --days 60
 Backfilled 60 history entries for task 'Morning run'
+
+# see what needs attention now
+akrasia today
+TODAY FOCUS
+
+OVERDUE (1)
+Pay electricity bill | ...
+
+DUE TODAY (2)
+Prepare weekly report | ...
+
+DAILY PENDING (1)
+Morning run | ...
 
 # get streak for a daily task
 akrasia streak --name "Morning run"

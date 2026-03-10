@@ -13,7 +13,7 @@ import (
 const addDailyTaskHistory = `-- name: AddDailyTaskHistory :one
 INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
 VALUES (
-  ?, ?, date('now'), ?, ?, ?
+    ?, ?, date('now', 'localtime'), ?, ?, ?
 ) 
 ON CONFLICT(todo_id, date) DO NOTHING
 RETURNING id, todo_id, date, completed, completed_at, notes
@@ -50,7 +50,7 @@ func (q *Queries) AddDailyTaskHistory(ctx context.Context, arg AddDailyTaskHisto
 const addDailyTaskHistoryForDate = `-- name: AddDailyTaskHistoryForDate :one
 INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
 VALUES (
-  ?, ?, ?, ?, ?, ?
+    ?, ?, date(?), ?, ?, ?
 ) 
 ON CONFLICT(todo_id, date) DO NOTHING
 RETURNING id, todo_id, date, completed, completed_at, notes
@@ -59,7 +59,7 @@ RETURNING id, todo_id, date, completed, completed_at, notes
 type AddDailyTaskHistoryForDateParams struct {
 	ID          interface{}
 	TodoID      interface{}
-	Date        sql.NullTime
+	Date        interface{}
 	Completed   sql.NullBool
 	CompletedAt sql.NullTime
 	Notes       sql.NullString
@@ -89,14 +89,18 @@ func (q *Queries) AddDailyTaskHistoryForDate(ctx context.Context, arg AddDailyTa
 const addTodoHistory = `-- name: AddTodoHistory :one
 INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
 VALUES (
-  ?, ?, ?, ?, ?, ?
-) RETURNING id, todo_id, date, completed, completed_at, notes
+    ?, ?, date('now', 'localtime'), ?, ?, ?
+) 
+ON CONFLICT(todo_id, date) DO UPDATE SET
+    completed = excluded.completed,
+    completed_at = excluded.completed_at,
+    notes = excluded.notes
+RETURNING id, todo_id, date, completed, completed_at, notes
 `
 
 type AddTodoHistoryParams struct {
 	ID          interface{}
 	TodoID      interface{}
-	Date        sql.NullTime
 	Completed   sql.NullBool
 	CompletedAt sql.NullTime
 	Notes       sql.NullString
@@ -106,7 +110,6 @@ func (q *Queries) AddTodoHistory(ctx context.Context, arg AddTodoHistoryParams) 
 	row := q.db.QueryRowContext(ctx, addTodoHistory,
 		arg.ID,
 		arg.TodoID,
-		arg.Date,
 		arg.Completed,
 		arg.CompletedAt,
 		arg.Notes,
@@ -150,7 +153,7 @@ streak_calc AS (
             ELSE 0 
         END) OVER (ORDER BY date DESC ROWS UNBOUNDED PRECEDING) as streak_group
     FROM daily_completions
-    WHERE date <= date('now')
+    WHERE date <= date('now', 'localtime')
 )
 SELECT 
     COUNT(*) as current_streak
@@ -160,10 +163,10 @@ WHERE
     AND streak_group = (
         SELECT streak_group 
         FROM streak_calc 
-        WHERE date = date('now')
+        WHERE date = date('now', 'localtime')
         LIMIT 1
     )
-AND date <= date('now')
+AND date <= date('now', 'localtime')
 `
 
 func (q *Queries) GetCurrentStreak(ctx context.Context, todoID interface{}) (int64, error) {
