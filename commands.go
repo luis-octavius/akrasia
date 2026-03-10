@@ -18,6 +18,9 @@ var (
 	priority     string
 	date         []int
 	daysBackfill int
+	todayOnly    string
+	todayLimit   int
+	todayJSON    bool
 )
 
 var rootCmd = &cobra.Command{
@@ -135,7 +138,19 @@ var today = &cobra.Command{
 	Aliases: []string{"td"},
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cfg.getTodayFocus()
+		if todayOnly != "" && todayOnly != "overdue" && todayOnly != "today" && todayOnly != "daily" && todayOnly != "soon" {
+			return fmt.Errorf("invalid value for --only: %q (use overdue|today|daily|soon)", todayOnly)
+		}
+
+		if todayLimit < 0 {
+			return fmt.Errorf("--limit cannot be negative")
+		}
+
+		err := cfg.getTodayFocus(todayOptions{
+			Only:  todayOnly,
+			Limit: todayLimit,
+			JSON:  todayJSON,
+		})
 		if err != nil {
 			return err
 		}
@@ -344,6 +359,9 @@ func init() {
 	getTodoStreakHistory.Flags().StringVar(&name, "name", "", "todo streak history")
 	backfillHistory.Flags().IntVar(&daysBackfill, "days", 30, "number of days back to backfill (default 30)")
 	backfillHistory.Flags().StringVar(&name, "task", "", "specific task name to backfill (optional, fills all daily tasks if not set)")
+	today.Flags().StringVar(&todayOnly, "only", "", "show only one section: overdue|today|daily|soon")
+	today.Flags().IntVar(&todayLimit, "limit", 0, "limit items per section (0 = no limit)")
+	today.Flags().BoolVar(&todayJSON, "json", false, "print today output as JSON")
 
 	// mark as required
 	if err := add.MarkFlagRequired("name"); err != nil {

@@ -42,3 +42,38 @@ func TestBuildTodayView(t *testing.T) {
 		t.Fatalf("unexpected expiring-soon view: %#v", view.ExpiringSoon)
 	}
 }
+
+func TestApplyTodayOptionsOnly(t *testing.T) {
+	view := todayView{
+		Overdue:      []database.Todo{{Name: "o1"}},
+		DueToday:     []database.Todo{{Name: "t1"}},
+		Daily:        []database.Todo{{Name: "d1"}},
+		ExpiringSoon: []database.Todo{{Name: "s1"}},
+	}
+
+	filtered := applyTodayOptions(view, todayOptions{Only: "daily"})
+
+	if len(filtered.Daily) != 1 {
+		t.Fatalf("expected daily section to remain")
+	}
+
+	if len(filtered.Overdue) != 0 || len(filtered.DueToday) != 0 || len(filtered.ExpiringSoon) != 0 {
+		t.Fatalf("expected non-daily sections to be empty")
+	}
+}
+
+func TestApplyTodayOptionsLimit(t *testing.T) {
+	view := todayView{
+		DueToday: []database.Todo{
+			{Name: "a"},
+			{Name: "b"},
+			{Name: "c"},
+		},
+	}
+
+	limited := applyTodayOptions(view, todayOptions{Limit: 2})
+
+	if len(limited.DueToday) != 2 {
+		t.Fatalf("expected 2 due-today tasks after limit, got %d", len(limited.DueToday))
+	}
+}

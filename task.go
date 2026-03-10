@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -23,6 +24,12 @@ type todayView struct {
 	DueToday     []database.Todo
 	Daily        []database.Todo
 	ExpiringSoon []database.Todo
+}
+
+type todayOptions struct {
+	Only  string
+	Limit int
+	JSON  bool
 }
 
 func (cfg *Config) addTodo(name, description, priority string, isDaily bool, expiresAt time.Time) error {
@@ -63,13 +70,24 @@ func (cfg *Config) getTodos() error {
 	return nil
 }
 
-func (cfg *Config) getTodayFocus() error {
+func (cfg *Config) getTodayFocus(opts todayOptions) error {
 	todos, err := cfg.Queries.GetTodos(context.Background())
 	if err != nil {
 		return fmt.Errorf("error getting tasks from database: %w", err)
 	}
 
 	view := buildTodayView(todos, time.Now())
+	view = applyTodayOptions(view, opts)
+
+	if opts.JSON {
+		payload, err := json.MarshalIndent(view, "", "  ")
+		if err != nil {
+			return fmt.Errorf("error encoding today output to json: %w", err)
+		}
+
+		fmt.Println(string(payload))
+		return nil
+	}
 
 	if len(view.Overdue) == 0 && len(view.DueToday) == 0 && len(view.Daily) == 0 && len(view.ExpiringSoon) == 0 {
 		color.MsgSuccess("You are clear for today. No pending items need attention.")
@@ -123,6 +141,44 @@ func buildTodayView(todos []database.Todo, now time.Time) todayView {
 	sortTodayTodos(view.ExpiringSoon)
 
 	return view
+}
+
+func applyTodayOptions(view todayView, opts todayOptions) todayView {
+	if opts.Limit > 0 {
+		view.Overdue = limitTodos(view.Overdue, opts.Limit)
+		view.DueToday = limitTodos(view.DueToday, opts.Limit)
+		view.Daily = limitTodos(view.Daily, opts.Limit)
+		view.ExpiringSoon = limitTodos(view.ExpiringSoon, opts.Limit)
+	}
+
+	switch opts.Only {
+	case "overdue":
+		view.DueToday = nil
+		view.Daily = nil
+		view.ExpiringSoon = nil
+	case "today":
+		view.Overdue = nil
+		view.Daily = nil
+		view.ExpiringSoon = nil
+	case "daily":
+		view.Overdue = nil
+		view.DueToday = nil
+		view.ExpiringSoon = nil
+	case "soon":
+		view.Overdue = nil
+		view.DueToday = nil
+		view.Daily = nil
+	}
+
+	return view
+}
+
+func limitTodos(todos []database.Todo, limit int) []database.Todo {
+	if limit <= 0 || len(todos) <= limit {
+		return todos
+	}
+
+	return todos[:limit]
 }
 
 func sortTodayTodos(todos []database.Todo) {
