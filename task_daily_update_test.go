@@ -75,16 +75,19 @@ func TestUpdateDailyTodoResetsAndPushesExpiration(t *testing.T) {
 		t.Fatalf("expected 2 daily todos, got %d", len(dailyTodos))
 	}
 
+	var expectedNextDay string
+	err = db.QueryRowContext(ctx, "SELECT date('now', 'localtime', '+1 day')").Scan(&expectedNextDay)
+	if err != nil {
+		t.Fatalf("failed to calculate expected next day: %v", err)
+	}
+
 	for _, todo := range dailyTodos {
 		if todo.Concluded {
 			t.Errorf("task %s: expected concluded=false after daily update", todo.Name)
 		}
 
-		now := time.Now()
-		tomorrowStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).Add(24 * time.Hour)
-		dayAfterTomorrowStart := tomorrowStart.Add(24 * time.Hour)
-		if todo.ExpiresAt.Before(tomorrowStart) || !todo.ExpiresAt.Before(dayAfterTomorrowStart) {
-			t.Errorf("task %s: expected expires_at to be tomorrow at day boundary, got %v", todo.Name, todo.ExpiresAt)
+		if todo.ExpiresAt.Format(time.DateOnly) != expectedNextDay {
+			t.Errorf("task %s: expected expires_at date %s, got %v", todo.Name, expectedNextDay, todo.ExpiresAt)
 		}
 	}
 
