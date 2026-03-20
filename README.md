@@ -59,24 +59,25 @@ Usage:
 
 Available Commands:
 
-  add                adds a todo in storage, description is optional
+  add                create a new task with optional description, priority, and expiration date
   backfill-history   backfill missing daily task history entries
-  check-expired      check expired todos
+  check-expired      show tasks that have passed their expiration date
   check-expiring     check todos that are expiring in 5 days
   completion         Generate the autocompletion script for the specified shell
   create-cron        create the cron job to update daily tasks
   delete-concluded   delete all concluded todos
+  focus              show top 1-3 priority items to focus on right now
   get-all            returns all the todos saved in storage
-  get-by-name        gets a todo by name
+  get-by-name        search for a task by name (case-insensitive, fuzzy match)
   get-daily          show all daily tasks
   help               Help about any command
   history            get the streak history of provided todo
   delete-by-name     delete a todo by name
   init               initialize akrasia app
   streak             get the current streak of provided todo
-  today              show a daily focus dashboard
+  today              show a daily focus dashboard (overdue, due today, daily pending, expiring soon)
   update-daily       update daily todos (used by cron, not intended for manual use)
-  update-status      update concluded status to true
+  update-status      mark a task as completed and record it in history with optional notes
 
 Flags:
   -h, --help   help for akrasia
@@ -92,20 +93,20 @@ akrasia add --name Stendhal --desc "Finish the book The Red and The Black" 13
 2026/01/04 11:38:31 Todo Stendhal created successfully!
 
 # add a daily task
-akrasia add --name "Morning run" --daily
+akrasia add --name "Morning run" --daily --priority high
 2026/03/08 08:15:20 Task Morning run created successfully!
 
 akrasia update-status --name stendhal # case-insensitive, mark Todo as done
 Stendhal | Finish the book The Red and The Black |
 13 Feb 26 00:00 UTC | Done
 
-akrasia get-all #
+akrasia get-all --priority high #
 Todos:
 
 Stendhal | Finish the book The Red and The Black |
 13 Feb 26 00:00 UTC | Done
 
-akrasia delete-concluded # self-explanatory
+akrasia delete-concluded --yes # self-explanatory (requires confirmation)
 Concluded Todos deleted successfully!
 
 # backfill history for the last 30 days (default)
@@ -117,7 +118,7 @@ akrasia backfill-history --task "Morning run" --days 60
 Backfilled 60 history entries for task 'Morning run'
 
 # see what needs attention now
-akrasia today
+akrasia today --only overdue --limit 5 --priority high
 TODAY FOCUS
 
 OVERDUE (1)
@@ -127,6 +128,13 @@ DUE TODAY (2)
 Prepare weekly report | ...
 
 DAILY PENDING (1)
+Morning run | ...
+
+# pick top items to execute now
+akrasia focus --limit 3 --priority high
+FOCUS (3)
+Pay electricity bill | ...
+Prepare weekly report | ...
 Morning run | ...
 
 # get streak for a daily task
