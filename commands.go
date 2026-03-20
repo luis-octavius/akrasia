@@ -48,7 +48,7 @@ var createDailyUpdate = &cobra.Command{
 			return fmt.Errorf("error getting user: %v", err)
 		}
 
-		schedule := "00 21 * * *"
+		schedule := "00 22 * * *"
 
 		executablePath, err := os.Executable()
 		if err != nil {
@@ -74,7 +74,7 @@ var createDailyUpdate = &cobra.Command{
 
 		fmt.Printf("cron job '%s' created successfully\n", name)
 		if user.Username != "" {
-			fmt.Printf("\nUser: %s\n", user)
+			fmt.Printf("\nUser: %v\n", user)
 		}
 
 		return nil
