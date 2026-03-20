@@ -21,6 +21,9 @@ var (
 	todayOnly    string
 	todayLimit   int
 	todayJSON    bool
+	filterPriority string
+	deleteYes      bool
+	focusLimit     int
 )
 
 var rootCmd = &cobra.Command{
@@ -99,6 +102,7 @@ var add = &cobra.Command{
 	Use:     "add <name> [description]",
 	Short:   "create a new task with optional description, priority, and expiration date",
 	Aliases: []string{"a"},
+	Example: "akrasia add --name \"Morning run\" --daily --priority high",
 	Args:    cobra.MaximumNArgs(4),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		expiresAt, err := parseDate(date)
@@ -121,9 +125,10 @@ var getAll = &cobra.Command{
 	Use:     "get-all",
 	Short:   "returns all the todos saved in storage",
 	Aliases: []string{"ga"},
+	Example: "akrasia get-all --priority high",
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cfg.getTodos()
+		err := cfg.getTodos(filterPriority)
 		if err != nil {
 			return err
 		}
@@ -136,8 +141,13 @@ var today = &cobra.Command{
 	Use:     "today",
 	Short:   "show a daily focus dashboard (overdue, due today, daily pending, expiring soon)",
 	Aliases: []string{"td"},
+	Example: "akrasia today --only overdue --limit 5 --priority high",
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if filterPriority != "" && filterPriority != "high" && filterPriority != "medium" && filterPriority != "low" {
+			return fmt.Errorf("invalid value for --priority: %q (use high|medium|low)", filterPriority)
+		}
+
 		if todayOnly != "" && todayOnly != "overdue" && todayOnly != "today" && todayOnly != "daily" && todayOnly != "soon" {
 			return fmt.Errorf("invalid value for --only: %q (use overdue|today|daily|soon)", todayOnly)
 		}
@@ -150,12 +160,32 @@ var today = &cobra.Command{
 			Only:  todayOnly,
 			Limit: todayLimit,
 			JSON:  todayJSON,
+			Priority: filterPriority,
 		})
 		if err != nil {
 			return err
 		}
 
 		return nil
+	},
+}
+
+var focus = &cobra.Command{
+	Use:     "focus",
+	Short:   "show top 1-3 priority items to focus on right now",
+	Aliases: []string{"fc"},
+	Example: "akrasia focus --limit 3 --priority high",
+	Args:    cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if focusLimit < 1 || focusLimit > 3 {
+			return fmt.Errorf("--limit must be between 1 and 3")
+		}
+
+		if filterPriority != "" && filterPriority != "high" && filterPriority != "medium" && filterPriority != "low" {
+			return fmt.Errorf("invalid value for --priority: %q (use high|medium|low)", filterPriority)
+		}
+
+		return cfg.getFocus(focusLimit, filterPriority)
 	},
 }
 
@@ -182,6 +212,7 @@ var updateStatusToConcluded = &cobra.Command{
 	Use:     "update-status <name>",
 	Short:   "mark a task as completed and record it in history with optional notes",
 	Aliases: []string{"us"},
+	Example: "akrasia update-status --name \"Morning run\" --notes \"Done after lunch\"",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		err := cfg.updateToConcluded(name, notes)
 		if err != nil {
@@ -196,8 +227,13 @@ var deleteConcluded = &cobra.Command{
 	Use:     "delete-concluded",
 	Short:   "delete all concluded todos",
 	Aliases: []string{"dc", "delc"},
+	Example: "akrasia delete-concluded --yes",
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if !deleteYes {
+			return errors.New("destructive action blocked: use --yes to confirm")
+		}
+
 		err := cfg.deleteConcluded()
 		if err != nil {
 			return err
@@ -326,6 +362,7 @@ func init() {
 		"add":                     add,
 		"getAll":                  getAll,
 		"today":                   today,
+		"focus":                   focus,
 		"getTodoByName":           getTodoByName,
 		"updateStatusToConcluded": updateStatusToConcluded,
 		"deleteConcluded":         deleteConcluded,
@@ -351,10 +388,15 @@ func init() {
 	add.Flags().StringVar(&priority, "priority", "", "task priority")
 	add.Flags().Bool("daily", false, "daily task")
 	add.Flags().StringVar(&description, "desc", "", "task description")
+	getAll.Flags().StringVar(&filterPriority, "priority", "", "filter tasks by priority: high|medium|low")
+	today.Flags().StringVar(&filterPriority, "priority", "", "filter tasks by priority: high|medium|low")
+	focus.Flags().IntVar(&focusLimit, "limit", 3, "number of focus items (1-3)")
+	focus.Flags().StringVar(&filterPriority, "priority", "", "filter tasks by priority: high|medium|low")
 	getTodoByName.Flags().StringVar(&name, "name", "", "task name")
 	delByName.Flags().StringVar(&name, "name", "", "todo name")
 	updateStatusToConcluded.Flags().StringVar(&name, "name", "", "task name")
 	updateStatusToConcluded.Flags().StringVar(&notes, "notes", "", "daily notes")
+	deleteConcluded.Flags().BoolVar(&deleteYes, "yes", false, "confirm destructive deletion of concluded tasks")
 	getTodoCurrentStreak.Flags().StringVar(&name, "name", "", "current streak")
 	getTodoStreakHistory.Flags().StringVar(&name, "name", "", "todo streak history")
 	backfillHistory.Flags().IntVar(&daysBackfill, "days", 30, "number of days back to backfill (default 30)")

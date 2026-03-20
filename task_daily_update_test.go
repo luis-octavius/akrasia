@@ -79,8 +79,12 @@ func TestUpdateDailyTodoResetsAndPushesExpiration(t *testing.T) {
 		if todo.Concluded {
 			t.Errorf("task %s: expected concluded=false after daily update", todo.Name)
 		}
-		if !todo.ExpiresAt.After(time.Now()) {
-			t.Errorf("task %s: expected expires_at to be in the future, got %v", todo.Name, todo.ExpiresAt)
+
+		now := time.Now()
+		tomorrowStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).Add(24 * time.Hour)
+		dayAfterTomorrowStart := tomorrowStart.Add(24 * time.Hour)
+		if todo.ExpiresAt.Before(tomorrowStart) || !todo.ExpiresAt.Before(dayAfterTomorrowStart) {
+			t.Errorf("task %s: expected expires_at to be tomorrow at day boundary, got %v", todo.Name, todo.ExpiresAt)
 		}
 	}
 

@@ -27,9 +27,10 @@ type todayView struct {
 }
 
 type todayOptions struct {
-	Only  string
-	Limit int
-	JSON  bool
+	Only     string
+	Limit    int
+	JSON     bool
+	Priority string
 }
 
 func (cfg *Config) addTodo(name, description, priority string, isDaily bool, expiresAt time.Time) error {
@@ -55,11 +56,13 @@ func (cfg *Config) addTodo(name, description, priority string, isDaily bool, exp
 	return nil
 }
 
-func (cfg *Config) getTodos() error {
+func (cfg *Config) getTodos(priorityFilter string) error {
 	todos, err := cfg.Queries.GetTodos(context.Background())
 	if err != nil {
 		return fmt.Errorf("error getting tasks from database: %w", err)
 	}
+
+	todos = filterTodosByPriority(todos, priorityFilter)
 
 	fmt.Println("Tasks: ")
 
@@ -76,6 +79,7 @@ func (cfg *Config) getTodayFocus(opts todayOptions) error {
 		return fmt.Errorf("error getting tasks from database: %w", err)
 	}
 
+	todos = filterTodosByPriority(todos, opts.Priority)
 	view := buildTodayView(todos, time.Now())
 	view = applyTodayOptions(view, opts)
 
@@ -102,6 +106,56 @@ func (cfg *Config) getTodayFocus(opts todayOptions) error {
 	printTodaySection("EXPIRING SOON", view.ExpiringSoon)
 
 	return nil
+}
+
+func (cfg *Config) getFocus(limit int, priorityFilter string) error {
+	todos, err := cfg.Queries.GetTodos(context.Background())
+	if err != nil {
+		return fmt.Errorf("error getting tasks from database: %w", err)
+	}
+
+	todos = filterTodosByPriority(todos, priorityFilter)
+	view := buildTodayView(todos, time.Now())
+
+	focus := make([]database.Todo, 0, limit)
+	for _, section := range [][]database.Todo{view.Overdue, view.DueToday, view.Daily, view.ExpiringSoon} {
+		for _, todo := range section {
+			if len(focus) >= limit {
+				break
+			}
+			focus = append(focus, todo)
+		}
+		if len(focus) >= limit {
+			break
+		}
+	}
+
+	if len(focus) == 0 {
+		color.MsgSuccess("No focus items for now. You are clear.")
+		return nil
+	}
+
+	fmt.Printf("FOCUS (%d)\n", len(focus))
+	for _, todo := range focus {
+		printTodo(todo)
+	}
+
+	return nil
+}
+
+func filterTodosByPriority(todos []database.Todo, priorityFilter string) []database.Todo {
+	if priorityFilter == "" {
+		return todos
+	}
+
+	filtered := make([]database.Todo, 0, len(todos))
+	for _, todo := range todos {
+		if todo.Priority == priorityFilter {
+			filtered = append(filtered, todo)
+		}
+	}
+
+	return filtered
 }
 
 func buildTodayView(todos []database.Todo, now time.Time) todayView {
