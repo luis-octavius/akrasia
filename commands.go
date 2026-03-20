@@ -12,20 +12,21 @@ import (
 )
 
 var (
-	name         string
-	notes        string
-	description  string
-	priority     string
-	date         []int
-	daysBackfill int
-	todayOnly    string
-	todayLimit   int
-	todayJSON    bool
+	name           string
+	notes          string
+	description    string
+	priority       string
+	date           []int
+	daysBackfill   int
+	todayOnly      string
+	todayLimit     int
+	todayJSON      bool
 	filterPriority string
 	deleteYes      bool
 	focusLimit     int
 )
 
+// rootCmd is the CLI entrypoint that registers all Akrasia subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "akrasia",
 	Short: "An app that helps with fighting akrasia",
@@ -34,6 +35,7 @@ This app is constructed to simply help to fight akrasía rapidly in the terminal
 and to keep track of these things for you.`,
 }
 
+// Execute runs the root command and exits the process on fatal command errors.
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
@@ -41,6 +43,7 @@ func Execute() {
 	}
 }
 
+// createDailyUpdate installs a system cron job that runs the daily update command.
 var createDailyUpdate = &cobra.Command{
 	Use:     "create-cron",
 	Short:   "create the cron job to update daily tasks",
@@ -84,6 +87,7 @@ var createDailyUpdate = &cobra.Command{
 	},
 }
 
+// updateDailyTodo triggers the daily reset flow used by cron.
 var updateDailyTodo = &cobra.Command{
 	Use:     "update-daily",
 	Short:   "reset daily tasks for a new day and record completion history (runs via cron)",
@@ -98,6 +102,7 @@ var updateDailyTodo = &cobra.Command{
 	},
 }
 
+// add creates a new task with optional metadata such as priority and daily mode.
 var add = &cobra.Command{
 	Use:     "add <name> [description]",
 	Short:   "create a new task with optional description, priority, and expiration date",
@@ -121,6 +126,7 @@ var add = &cobra.Command{
 	},
 }
 
+// getAll lists all tasks, optionally filtered by priority.
 var getAll = &cobra.Command{
 	Use:     "get-all",
 	Short:   "returns all the todos saved in storage",
@@ -137,6 +143,7 @@ var getAll = &cobra.Command{
 	},
 }
 
+// today shows a categorized dashboard for what needs attention today.
 var today = &cobra.Command{
 	Use:     "today",
 	Short:   "show a daily focus dashboard (overdue, due today, daily pending, expiring soon)",
@@ -157,9 +164,9 @@ var today = &cobra.Command{
 		}
 
 		err := cfg.getTodayFocus(todayOptions{
-			Only:  todayOnly,
-			Limit: todayLimit,
-			JSON:  todayJSON,
+			Only:     todayOnly,
+			Limit:    todayLimit,
+			JSON:     todayJSON,
 			Priority: filterPriority,
 		})
 		if err != nil {
@@ -170,6 +177,7 @@ var today = &cobra.Command{
 	},
 }
 
+// focus shows the top actionable tasks to execute now.
 var focus = &cobra.Command{
 	Use:     "focus",
 	Short:   "show top 1-3 priority items to focus on right now",
@@ -189,6 +197,7 @@ var focus = &cobra.Command{
 	},
 }
 
+// getTodoByName searches for a task using case-insensitive fuzzy matching.
 var getTodoByName = &cobra.Command{
 	Use:     "get-by-name <name>",
 	Short:   "search for a task by name (case-insensitive, fuzzy match)",
@@ -208,6 +217,7 @@ var getTodoByName = &cobra.Command{
 	},
 }
 
+// updateStatusToConcluded marks a task as completed and records completion history.
 var updateStatusToConcluded = &cobra.Command{
 	Use:     "update-status <name>",
 	Short:   "mark a task as completed and record it in history with optional notes",
@@ -223,6 +233,7 @@ var updateStatusToConcluded = &cobra.Command{
 	},
 }
 
+// deleteConcluded removes all concluded tasks after explicit confirmation.
 var deleteConcluded = &cobra.Command{
 	Use:     "delete-concluded",
 	Short:   "delete all concluded todos",
@@ -243,6 +254,7 @@ var deleteConcluded = &cobra.Command{
 	},
 }
 
+// checkExpired lists expired non-daily tasks.
 var checkExpired = &cobra.Command{
 	Use:     "check-expired",
 	Short:   "show tasks that have passed their expiration date",
@@ -258,6 +270,7 @@ var checkExpired = &cobra.Command{
 	},
 }
 
+// checkExpiring lists tasks that are approaching expiration.
 var checkExpiring = &cobra.Command{
 	Use:     "check-expiring",
 	Short:   "check todos that are expiring in 5 days",
@@ -273,6 +286,7 @@ var checkExpiring = &cobra.Command{
 	},
 }
 
+// initCmd initializes the local database schema and storage.
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "initialize akrasia app",
@@ -286,6 +300,7 @@ var initCmd = &cobra.Command{
 	},
 }
 
+// delByName deletes a single task by name.
 var delByName = &cobra.Command{
 	Use:     "delete-by-name",
 	Short:   "delete a todo by name",
@@ -300,6 +315,7 @@ var delByName = &cobra.Command{
 	},
 }
 
+// getAllDaily shows all tasks marked as daily.
 var getAllDaily = &cobra.Command{
 	Use:     "get-daily",
 	Short:   "show all daily tasks",
@@ -314,6 +330,7 @@ var getAllDaily = &cobra.Command{
 	},
 }
 
+// getTodoCurrentStreak returns the current completion streak for a task.
 var getTodoCurrentStreak = &cobra.Command{
 	Use:     "streak",
 	Short:   "get the current streak of provided todo",
@@ -327,6 +344,7 @@ var getTodoCurrentStreak = &cobra.Command{
 	},
 }
 
+// getTodoStreakHistory returns the streak history timeline for a task.
 var getTodoStreakHistory = &cobra.Command{
 	Use:     "history",
 	Short:   "get the streak history of provided todo",
@@ -341,6 +359,7 @@ var getTodoStreakHistory = &cobra.Command{
 	},
 }
 
+// backfillHistory inserts missing history snapshots for daily tasks.
 var backfillHistory = &cobra.Command{
 	Use:     "backfill-history",
 	Short:   "backfill missing daily task history entries",
@@ -355,6 +374,7 @@ var backfillHistory = &cobra.Command{
 	},
 }
 
+// init wires subcommands, flags, and required arguments into the root command.
 func init() {
 	// add flags
 

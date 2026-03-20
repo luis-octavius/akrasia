@@ -19,6 +19,7 @@ const (
 	SuccessDelete = "Concluded Todos deleted successfully!"
 )
 
+// todayView groups tasks into sections used by today/focus outputs.
 type todayView struct {
 	Overdue      []database.Todo
 	DueToday     []database.Todo
@@ -26,6 +27,7 @@ type todayView struct {
 	ExpiringSoon []database.Todo
 }
 
+// todayOptions configures section filtering, limits, and output format.
 type todayOptions struct {
 	Only     string
 	Limit    int
@@ -33,6 +35,7 @@ type todayOptions struct {
 	Priority string
 }
 
+// addTodo persists a new task record and prints success feedback.
 func (cfg *Config) addTodo(name, description, priority string, isDaily bool, expiresAt time.Time) error {
 	descriptionField := validateDescription(description)
 
@@ -56,6 +59,7 @@ func (cfg *Config) addTodo(name, description, priority string, isDaily bool, exp
 	return nil
 }
 
+// getTodos lists all tasks, optionally filtered by priority.
 func (cfg *Config) getTodos(priorityFilter string) error {
 	todos, err := cfg.Queries.GetTodos(context.Background())
 	if err != nil {
@@ -73,6 +77,7 @@ func (cfg *Config) getTodos(priorityFilter string) error {
 	return nil
 }
 
+// getTodayFocus builds and prints the daily dashboard, or JSON when requested.
 func (cfg *Config) getTodayFocus(opts todayOptions) error {
 	todos, err := cfg.Queries.GetTodos(context.Background())
 	if err != nil {
@@ -108,6 +113,7 @@ func (cfg *Config) getTodayFocus(opts todayOptions) error {
 	return nil
 }
 
+// getFocus returns the top actionable items across today sections.
 func (cfg *Config) getFocus(limit int, priorityFilter string) error {
 	todos, err := cfg.Queries.GetTodos(context.Background())
 	if err != nil {
@@ -143,6 +149,7 @@ func (cfg *Config) getFocus(limit int, priorityFilter string) error {
 	return nil
 }
 
+// filterTodosByPriority keeps only tasks matching the provided priority.
 func filterTodosByPriority(todos []database.Todo, priorityFilter string) []database.Todo {
 	if priorityFilter == "" {
 		return todos
@@ -158,6 +165,7 @@ func filterTodosByPriority(todos []database.Todo, priorityFilter string) []datab
 	return filtered
 }
 
+// buildTodayView classifies pending tasks into today-oriented sections.
 func buildTodayView(todos []database.Todo, now time.Time) todayView {
 	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	dayEnd := dayStart.Add(24 * time.Hour)
@@ -197,6 +205,7 @@ func buildTodayView(todos []database.Todo, now time.Time) todayView {
 	return view
 }
 
+// applyTodayOptions applies limit and section filters to a today view.
 func applyTodayOptions(view todayView, opts todayOptions) todayView {
 	if opts.Limit > 0 {
 		view.Overdue = limitTodos(view.Overdue, opts.Limit)
@@ -227,6 +236,7 @@ func applyTodayOptions(view todayView, opts todayOptions) todayView {
 	return view
 }
 
+// limitTodos truncates a slice to the requested size when needed.
 func limitTodos(todos []database.Todo, limit int) []database.Todo {
 	if limit <= 0 || len(todos) <= limit {
 		return todos
@@ -235,6 +245,7 @@ func limitTodos(todos []database.Todo, limit int) []database.Todo {
 	return todos[:limit]
 }
 
+// sortTodayTodos orders tasks by priority first, then expiration date.
 func sortTodayTodos(todos []database.Todo) {
 	sort.Slice(todos, func(i, j int) bool {
 		leftPriority := priorityRank(todos[i].Priority)
@@ -248,6 +259,7 @@ func sortTodayTodos(todos []database.Todo) {
 	})
 }
 
+// priorityRank maps textual priority to a sortable numeric value.
 func priorityRank(priority string) int {
 	switch priority {
 	case "high":
@@ -261,6 +273,7 @@ func priorityRank(priority string) int {
 	}
 }
 
+// printTodaySection renders one titled section from the today dashboard.
 func printTodaySection(title string, todos []database.Todo) {
 	if len(todos) == 0 {
 		return
@@ -272,6 +285,7 @@ func printTodaySection(title string, todos []database.Todo) {
 	}
 }
 
+// getTodoByName retrieves and prints a single task by fuzzy name search.
 func (cfg *Config) getTodoByName(name string) error {
 	todo, err := cfg.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
 		LOWER:   name,
@@ -288,6 +302,7 @@ func (cfg *Config) getTodoByName(name string) error {
 	return nil
 }
 
+// updateToConcluded marks a task as done and writes an entry to history.
 func (cfg *Config) updateToConcluded(name, notes string) error {
 	todo, err := cfg.Queries.UpdateTodoStatusByName(context.Background(), name)
 	if err != nil {
@@ -310,6 +325,7 @@ func (cfg *Config) updateToConcluded(name, notes string) error {
 	return nil
 }
 
+// deleteConcluded removes all tasks with concluded status.
 func (cfg *Config) deleteConcluded() error {
 	err := cfg.Queries.DeleteConcluded(context.Background())
 	if err != nil {
@@ -322,6 +338,7 @@ func (cfg *Config) deleteConcluded() error {
 	return nil
 }
 
+// getAllDailyTodos lists every task marked as daily.
 func (cfg *Config) getAllDailyTodos() error {
 	todos, err := cfg.Queries.GetDailyTodos(context.Background())
 	if err != nil {
@@ -335,6 +352,7 @@ func (cfg *Config) getAllDailyTodos() error {
 	return nil
 }
 
+// checkExpired prints expired non-daily tasks.
 func (cfg *Config) checkExpired() error {
 	todos, err := cfg.Queries.CheckExpired(context.Background())
 	if err != nil {
@@ -354,6 +372,7 @@ func (cfg *Config) checkExpired() error {
 	return nil
 }
 
+// checkExpiring prints tasks that expire within the configured warning window.
 func (cfg *Config) checkExpiring() error {
 	todos, err := cfg.Queries.GetTodos(context.Background())
 	if err != nil {
@@ -378,6 +397,7 @@ func (cfg *Config) checkExpiring() error {
 	return nil
 }
 
+// deleteByName removes one task identified by name.
 func (cfg *Config) deleteByName(name string) error {
 	err := cfg.Queries.DeleteTodoByName(context.Background(), name)
 	if err != nil {
@@ -389,8 +409,7 @@ func (cfg *Config) deleteByName(name string) error {
 	return nil
 }
 
-// updateDailyTodo execute the query to update the daily todos
-// it handles the logic for the detached command
+// updateDailyTodo snapshots daily completion state, then resets daily tasks.
 func (cfg *Config) updateDailyTodo() error {
 	now := time.Now()
 	fmt.Printf("Executing daily todo update at: %s\n", now.Format(time.DateTime))
@@ -446,6 +465,7 @@ func (cfg *Config) updateDailyTodo() error {
 	return nil
 }
 
+// getCurrentStreak prints the current streak count for a named task.
 func (cfg *Config) getCurrentStreak(name string) error {
 	todo, err := cfg.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
 		LOWER:   name,
@@ -466,6 +486,7 @@ func (cfg *Config) getCurrentStreak(name string) error {
 	return nil
 }
 
+// getStreakHistory prints historical streak intervals for a named task.
 func (cfg *Config) getStreakHistory(name string) error {
 	todo, err := cfg.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
 		LOWER:   name,
@@ -489,8 +510,7 @@ func (cfg *Config) getStreakHistory(name string) error {
 	return nil
 }
 
-// backfillDailyHistory fills missing history entries for daily tasks from their creation date up to N days ago.
-// This is useful when the update-daily command wasn't running due to system downtime or other issues.
+// backfillDailyHistory inserts missing daily history rows for a date interval.
 func (cfg *Config) backfillDailyHistory(daysBack int, taskName string) error {
 	ctx := context.Background()
 	now := time.Now()
