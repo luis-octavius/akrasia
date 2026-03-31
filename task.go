@@ -444,7 +444,7 @@ func (cfg *Config) backfillDailyHistory(daysBack int, taskName string) error {
 				ID:          uuid.New(),
 				TodoID:      task.ID,
 				Date:        dateOnly.Format(time.DateOnly),
-				Completed:   sql.NullBool{Bool: false, Valid: true}, // Default to not completed
+				Completed:   sql.NullBool{Bool: true, Valid: true}, // Default to not completed
 				CompletedAt: sql.NullTime{},
 				Notes:       sql.NullString{String: "backfilled", Valid: true},
 			})
