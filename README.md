@@ -1,10 +1,12 @@
 # Akrasia
 
-<img src="https://i.imgur.com/tWFhpXs.gif" />
-    
-_Akrasía_ is a Greek word meaning "incontinence" or lack of self-control. This app helps you manage tasks you need to complete but tend to procrastinate on.   
+<img width="1376" height="768" alt="akrasia_logo" src="https://github.com/user-attachments/assets/09a4b50e-c9a4-4dd3-be84-88ca92d21a88" />
+
+---
+
+_Akrasía_ is a Greek word meaning "incontinence" or lack of self-control. This app helps you manage tasks you need to complete but tend to procrastinate on.     
 As Plato wrote in _Laws_, humans are engaged in a never-ending internal war within their own souls — **a battle against pleasure-seeking**. Today, as we scroll through endless feeds of videos and posts, we chase instant gratification while neglecting the meaningful goals we should pursue.    
-This app aims to help you regain self-control in your daily life.
+This app aims to help you regain self-control in your daily life.  
 
 ## Motivation
 
