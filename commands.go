@@ -306,6 +306,10 @@ var delByName = &cobra.Command{
 	Short:   "delete a todo by name",
 	Aliases: []string{"deln", "dn"},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if !deleteYes {
+			return errors.New("destructive action blocked: use --yes to confirm")
+		}
+
 		err := cfg.deleteByName(name)
 		if err != nil {
 			return err
@@ -414,6 +418,7 @@ func init() {
 	focus.Flags().StringVar(&filterPriority, "priority", "", "filter tasks by priority: high|medium|low")
 	getTodoByName.Flags().StringVar(&name, "name", "", "task name")
 	delByName.Flags().StringVar(&name, "name", "", "todo name")
+	delByName.Flags().BoolVar(&deleteYes, "yes", false, "confirm destructive deletion of concluded tasks")
 	updateStatusToConcluded.Flags().StringVar(&name, "name", "", "task name")
 	updateStatusToConcluded.Flags().StringVar(&notes, "notes", "", "daily notes")
 	deleteConcluded.Flags().BoolVar(&deleteYes, "yes", false, "confirm destructive deletion of concluded tasks")

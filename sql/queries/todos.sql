@@ -51,7 +51,7 @@ WHERE is_daily = true
 RETURNING *;
 -- name: DeleteTodoByName :exec 
 DELETE FROM todos 
-WHERE name LIKE ?;
+WHERE name = ?;
 
 -- name: DeleteConcluded :exec 
 DELETE FROM todos 

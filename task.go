@@ -262,12 +262,22 @@ func (cfg *Config) checkExpiring() error {
 
 // deleteByName removes one task identified by name.
 func (cfg *Config) deleteByName(name string) error {
-	err := cfg.Queries.DeleteTodoByName(context.Background(), name)
+	todo, err := cfg.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
+		LOWER:   name,
+		LOWER_2: name,
+		LOWER_3: name,
+		LOWER_4: name,
+	})
 	if err != nil {
-		return fmt.Errorf("Error deleting task: %w", err)
+		return fmt.Errorf("error getting todo by name: %w", err)
 	}
 
-	color.MsgSuccess(SuccessDelete)
+	err = cfg.Queries.DeleteTodoByName(context.Background(), todo.Name)
+	if err != nil {
+		return fmt.Errorf("error deleting todo by name: %w", err)
+	}
+
+	color.MsgSuccess(fmt.Sprintf("Todo %s deleted successfully", todo.Name))
 
 	return nil
 }
@@ -282,7 +292,7 @@ func (cfg *Config) updateDailyTodo() error {
 	// First, get all daily tasks BEFORE resetting them
 	dailyTasks, err := cfg.Queries.GetDailyTodos(ctx)
 	if err != nil {
-		return fmt.Errorf("Error getting daily tasks: %w", err)
+		return fmt.Errorf("error getting daily tasks: %w", err)
 	}
 
 	if len(dailyTasks) == 0 {

@@ -122,7 +122,7 @@ func (q *Queries) DeleteConcluded(ctx context.Context) error {
 
 const deleteTodoByName = `-- name: DeleteTodoByName :exec
 DELETE FROM todos 
-WHERE name LIKE ?
+WHERE name = ?
 `
 
 func (q *Queries) DeleteTodoByName(ctx context.Context, name string) error {
