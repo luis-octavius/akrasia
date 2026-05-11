@@ -1,4 +1,4 @@
-package main
+package tasks
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/luis-octavius/akrasia/internal/database"
+	database "github.com/luis-octavius/akrasia/internal/db/out"
 	"github.com/luis-octavius/akrasia/pkg/color"
 )
 
@@ -18,27 +18,11 @@ const (
 	SuccessDelete = "Concluded Todos deleted successfully!"
 )
 
-// todayView groups tasks into sections used by today/focus outputs.
-type todayView struct {
-	Overdue      []database.Todo
-	DueToday     []database.Todo
-	Daily        []database.Todo
-	ExpiringSoon []database.Todo
-}
-
-// todayOptions configures section filtering, limits, and output format.
-type todayOptions struct {
-	Only     string
-	Limit    int
-	JSON     bool
-	Priority string
-}
-
 // addTodo persists a new task record and prints success feedback.
-func (cfg *Config) addTodo(name, description, priority string, isDaily bool, expiresAt time.Time) error {
+func (tkm *TaskManager) AddTodo(name, description, priority string, isDaily bool, expiresAt time.Time) error {
 	descriptionField := validateDescription(description)
 
-	_, err := cfg.Queries.AddTodo(context.Background(), database.AddTodoParams{
+	_, err := tkm.Queries.AddTodo(context.Background(), database.AddTodoParams{
 		ID:          uuid.New(),
 		Name:        name,
 		Description: descriptionField,
@@ -59,8 +43,8 @@ func (cfg *Config) addTodo(name, description, priority string, isDaily bool, exp
 }
 
 // getTodos lists all tasks, optionally filtered by priority.
-func (cfg *Config) getTodos(priorityFilter string) error {
-	todos, err := cfg.Queries.GetTodos(context.Background())
+func (tkm *TaskManager) GetTodos(priorityFilter string) error {
+	todos, err := tkm.Queries.GetTodos(context.Background())
 	if err != nil {
 		return fmt.Errorf("error getting tasks from database: %w", err)
 	}
@@ -77,8 +61,8 @@ func (cfg *Config) getTodos(priorityFilter string) error {
 }
 
 // getTodayFocus builds and prints the daily dashboard, or JSON when requested.
-func (cfg *Config) getTodayFocus(opts todayOptions) error {
-	todos, err := cfg.Queries.GetTodos(context.Background())
+func (tkm *TaskManager) GetTodayFocus(opts TodayOptions) error {
+	todos, err := tkm.Queries.GetTodos(context.Background())
 	if err != nil {
 		return fmt.Errorf("error getting tasks from database: %w", err)
 	}
@@ -113,8 +97,8 @@ func (cfg *Config) getTodayFocus(opts todayOptions) error {
 }
 
 // getFocus returns the top actionable items across today sections.
-func (cfg *Config) getFocus(limit int, priorityFilter string) error {
-	todos, err := cfg.Queries.GetTodos(context.Background())
+func (tkm *TaskManager) GetFocus(limit int, priorityFilter string) error {
+	todos, err := tkm.Queries.GetTodos(context.Background())
 	if err != nil {
 		return fmt.Errorf("error getting tasks from database: %w", err)
 	}
@@ -149,8 +133,8 @@ func (cfg *Config) getFocus(limit int, priorityFilter string) error {
 }
 
 // getTodoByName retrieves and prints a single task by fuzzy name search.
-func (cfg *Config) getTodoByName(name string) error {
-	todo, err := cfg.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
+func (tkm *TaskManager) GetTodoByName(name string) error {
+	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
 		LOWER:   name,
 		LOWER_2: name,
 		LOWER_3: name,
@@ -166,13 +150,13 @@ func (cfg *Config) getTodoByName(name string) error {
 }
 
 // updateToConcluded marks a task as done and writes an entry to history.
-func (cfg *Config) updateToConcluded(name, notes string) error {
-	todo, err := cfg.Queries.UpdateTodoStatusByName(context.Background(), name)
+func (tkm *TaskManager) UpdateToConcluded(name, notes string) error {
+	todo, err := tkm.Queries.UpdateTodoStatusByName(context.Background(), name)
 	if err != nil {
 		return fmt.Errorf("Error updating status of task '%v': %w", name, err)
 	}
 
-	_, err = cfg.Queries.AddTodoHistory(context.Background(), database.AddTodoHistoryParams{
+	_, err = tkm.Queries.AddTodoHistory(context.Background(), database.AddTodoHistoryParams{
 		ID:          uuid.New(),
 		TodoID:      todo.ID,
 		Completed:   sql.NullBool{Bool: true, Valid: true},
@@ -189,8 +173,8 @@ func (cfg *Config) updateToConcluded(name, notes string) error {
 }
 
 // deleteConcluded removes all tasks with concluded status.
-func (cfg *Config) deleteConcluded() error {
-	err := cfg.Queries.DeleteConcluded(context.Background())
+func (tkm *TaskManager) DeleteConcluded() error {
+	err := tkm.Queries.DeleteConcluded(context.Background())
 	if err != nil {
 		return fmt.Errorf("Error deleting concluded tasks: %w", err)
 	}
@@ -202,8 +186,8 @@ func (cfg *Config) deleteConcluded() error {
 }
 
 // getAllDailyTodos lists every task marked as daily.
-func (cfg *Config) getAllDailyTodos() error {
-	todos, err := cfg.Queries.GetDailyTodos(context.Background())
+func (tkm *TaskManager) GetAllDailyTodos() error {
+	todos, err := tkm.Queries.GetDailyTodos(context.Background())
 	if err != nil {
 		return fmt.Errorf("error in getAllDailyTodos: %v", err)
 	}
@@ -216,8 +200,8 @@ func (cfg *Config) getAllDailyTodos() error {
 }
 
 // checkExpired prints expired non-daily tasks.
-func (cfg *Config) checkExpired() error {
-	todos, err := cfg.Queries.CheckExpired(context.Background())
+func (tkm *TaskManager) CheckExpired() error {
+	todos, err := tkm.Queries.CheckExpired(context.Background())
 	if err != nil {
 		return fmt.Errorf("Error checking expired tasks: %w", err)
 	}
@@ -236,8 +220,8 @@ func (cfg *Config) checkExpired() error {
 }
 
 // checkExpiring prints tasks that expire within the configured warning window.
-func (cfg *Config) checkExpiring() error {
-	todos, err := cfg.Queries.GetTodos(context.Background())
+func (tkm *TaskManager) CheckExpiring() error {
+	todos, err := tkm.Queries.GetTodos(context.Background())
 	if err != nil {
 		return fmt.Errorf("Error getting tasks: %w", err)
 	}
@@ -261,8 +245,8 @@ func (cfg *Config) checkExpiring() error {
 }
 
 // deleteByName removes one task identified by name.
-func (cfg *Config) deleteByName(name string) error {
-	todo, err := cfg.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
+func (tkm *TaskManager) DeleteByName(name string) error {
+	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
 		LOWER:   name,
 		LOWER_2: name,
 		LOWER_3: name,
@@ -272,7 +256,7 @@ func (cfg *Config) deleteByName(name string) error {
 		return fmt.Errorf("error getting todo by name: %w", err)
 	}
 
-	err = cfg.Queries.DeleteTodoByName(context.Background(), todo.Name)
+	err = tkm.Queries.DeleteTodoByName(context.Background(), todo.Name)
 	if err != nil {
 		return fmt.Errorf("error deleting todo by name: %w", err)
 	}
@@ -283,14 +267,14 @@ func (cfg *Config) deleteByName(name string) error {
 }
 
 // updateDailyTodo snapshots daily completion state, then resets daily tasks.
-func (cfg *Config) updateDailyTodo() error {
+func (tkm *TaskManager) UpdateDailyTodo() error {
 	now := time.Now()
 	fmt.Printf("Executing daily todo update at: %s\n", now.Format(time.DateTime))
 
 	ctx := context.Background()
 
 	// First, get all daily tasks BEFORE resetting them
-	dailyTasks, err := cfg.Queries.GetDailyTodos(ctx)
+	dailyTasks, err := tkm.Queries.GetDailyTodos(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting daily tasks: %w", err)
 	}
@@ -311,7 +295,7 @@ func (cfg *Config) updateDailyTodo() error {
 			completedAt = sql.NullTime{Time: task.UpdatedAt, Valid: true}
 		}
 
-		_, err := cfg.Queries.AddDailyTaskHistory(ctx, database.AddDailyTaskHistoryParams{
+		_, err := tkm.Queries.AddDailyTaskHistory(ctx, database.AddDailyTaskHistoryParams{
 			ID:          uuid.New(),
 			TodoID:      task.ID,
 			Completed:   sql.NullBool{Bool: task.Concluded, Valid: true},
@@ -328,7 +312,7 @@ func (cfg *Config) updateDailyTodo() error {
 	fmt.Printf("Recorded history for %d daily tasks\n", recordedCount)
 
 	// Now reset all daily tasks for the new day
-	_, err = cfg.Queries.UpdateDailyTodo(ctx)
+	_, err = tkm.Queries.UpdateDailyTodo(ctx)
 	if err != nil {
 		return fmt.Errorf("Error updating daily tasks: %w", err)
 	}
@@ -339,8 +323,8 @@ func (cfg *Config) updateDailyTodo() error {
 }
 
 // getCurrentStreak prints the current streak count for a named task.
-func (cfg *Config) getCurrentStreak(name string) error {
-	todo, err := cfg.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
+func (tkm *TaskManager) GetCurrentStreak(name string) error {
+	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
 		LOWER:   name,
 		LOWER_2: name,
 		LOWER_3: name,
@@ -350,7 +334,7 @@ func (cfg *Config) getCurrentStreak(name string) error {
 		return fmt.Errorf("Error getting todo by name")
 	}
 
-	streak, err := cfg.Queries.GetCurrentStreak(context.Background(), todo.ID)
+	streak, err := tkm.Queries.GetCurrentStreak(context.Background(), todo.ID)
 	if err != nil {
 		return fmt.Errorf("Error getting current todo streak")
 	}
@@ -360,8 +344,8 @@ func (cfg *Config) getCurrentStreak(name string) error {
 }
 
 // getStreakHistory prints historical streak intervals for a named task.
-func (cfg *Config) getStreakHistory(name string) error {
-	todo, err := cfg.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
+func (tkm *TaskManager) GetStreakHistory(name string) error {
+	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
 		LOWER:   name,
 		LOWER_2: name,
 		LOWER_3: name,
@@ -371,7 +355,7 @@ func (cfg *Config) getStreakHistory(name string) error {
 		return fmt.Errorf("Error getting todo by name")
 	}
 
-	streak_history, err := cfg.Queries.GetStreakHistory(context.Background(), todo.ID)
+	streak_history, err := tkm.Queries.GetStreakHistory(context.Background(), todo.ID)
 	if err != nil {
 		return fmt.Errorf("Error getting todo streak history")
 	}
@@ -384,7 +368,7 @@ func (cfg *Config) getStreakHistory(name string) error {
 }
 
 // backfillDailyHistory inserts missing daily history rows for a date interval.
-func (cfg *Config) backfillDailyHistory(daysBack int, taskName string) error {
+func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) error {
 	ctx := context.Background()
 	now := time.Now()
 	startDate := now.AddDate(0, 0, -daysBack)
@@ -395,7 +379,7 @@ func (cfg *Config) backfillDailyHistory(daysBack int, taskName string) error {
 
 	if taskName != "" {
 		// Get specific task by name
-		todo, err := cfg.Queries.GetTodoByName(ctx, database.GetTodoByNameParams{
+		todo, err := tkm.Queries.GetTodoByName(ctx, database.GetTodoByNameParams{
 			LOWER:   taskName,
 			LOWER_2: taskName,
 			LOWER_3: taskName,
@@ -424,7 +408,7 @@ func (cfg *Config) backfillDailyHistory(daysBack int, taskName string) error {
 		}
 	} else {
 		// Get all daily tasks
-		dailyTasks, err = cfg.Queries.GetDailyTodos(ctx)
+		dailyTasks, err = tkm.Queries.GetDailyTodos(ctx)
 		if err != nil {
 			return fmt.Errorf("Error getting daily tasks: %w", err)
 		}
@@ -450,7 +434,7 @@ func (cfg *Config) backfillDailyHistory(daysBack int, taskName string) error {
 			dateOnly := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, now.Location())
 
 			// Try to insert; ON CONFLICT DO NOTHING will silently skip if already exists
-			_, err := cfg.Queries.AddDailyTaskHistoryForDate(ctx, database.AddDailyTaskHistoryForDateParams{
+			_, err := tkm.Queries.AddDailyTaskHistoryForDate(ctx, database.AddDailyTaskHistoryForDateParams{
 				ID:          uuid.New(),
 				TodoID:      task.ID,
 				Date:        dateOnly.Format(time.DateOnly),

@@ -1,4 +1,4 @@
-package main
+package commands
 
 import (
 	"errors"
@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/user"
 
+	"github.com/luis-octavius/akrasia/internal/db"
+	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/cron"
 	"github.com/spf13/cobra"
 )
@@ -30,8 +32,8 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "akrasia",
 	Short: "An app that helps with fighting akrasia",
-	Long: `Akrasia is a word in greek that means "Incontinence", which means a lack of self-control. 
-This app is constructed to simply help to fight akrasía rapidly in the terminal, by adding things to do 
+	Long: `Akrasia is a word in greek that means "Incontinence", which means a lack of self-control.
+This app is constructed to simply help to fight akrasía rapidly in the terminal, by adding things to do
 and to keep track of these things for you.`,
 }
 
@@ -93,7 +95,7 @@ var updateDailyTodo = &cobra.Command{
 	Short:   "reset daily tasks for a new day and record completion history (runs via cron)",
 	Aliases: []string{"upd"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cfg.updateDailyTodo()
+		err := tkm.UpdateDailyTodo()
 		if err != nil {
 			return fmt.Errorf("error in update daily todo: %v", err)
 		}
@@ -104,11 +106,11 @@ var updateDailyTodo = &cobra.Command{
 
 // add creates a new task with optional metadata such as priority and daily mode.
 var add = &cobra.Command{
-	Use:     "add <name> [description]",
+	Use:     "add --name <name> --desc [description] --date ['13,10']",
 	Short:   "create a new task with optional description, priority, and expiration date",
 	Aliases: []string{"a"},
 	Example: "akrasia add --name \"Morning run\" --daily --priority high",
-	Args:    cobra.MaximumNArgs(4),
+	Args:    cobra.MaximumNArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		expiresAt, err := parseDate(date)
 		if err != nil {
@@ -117,7 +119,7 @@ var add = &cobra.Command{
 
 		isDaily, err := cmd.Flags().GetBool("daily")
 
-		err = cfg.addTodo(name, description, priority, isDaily, expiresAt)
+		err = tkm.AddTodo(name, description, priority, isDaily, expiresAt)
 		if err != nil {
 			return err
 		}
@@ -134,7 +136,7 @@ var getAll = &cobra.Command{
 	Example: "akrasia get-all --priority high",
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cfg.getTodos(filterPriority)
+		err := tkm.GetTodos(filterPriority)
 		if err != nil {
 			return err
 		}
@@ -163,7 +165,7 @@ var today = &cobra.Command{
 			return fmt.Errorf("--limit cannot be negative")
 		}
 
-		err := cfg.getTodayFocus(todayOptions{
+		err := tkm.GetTodayFocus(tasks.TodayOptions{
 			Only:     todayOnly,
 			Limit:    todayLimit,
 			JSON:     todayJSON,
@@ -193,7 +195,7 @@ var focus = &cobra.Command{
 			return fmt.Errorf("invalid value for --priority: %q (use high|medium|low)", filterPriority)
 		}
 
-		return cfg.getFocus(focusLimit, filterPriority)
+		return tkm.GetFocus(focusLimit, filterPriority)
 	},
 }
 
@@ -208,7 +210,7 @@ var getTodoByName = &cobra.Command{
 			return errors.New("name cannot be empty")
 		}
 
-		err := cfg.getTodoByName(name)
+		err := tkm.GetTodoByName(name)
 		if err != nil {
 			return err
 		}
@@ -224,7 +226,7 @@ var updateStatusToConcluded = &cobra.Command{
 	Aliases: []string{"us"},
 	Example: "akrasia update-status --name \"Morning run\" --notes \"Done after lunch\"",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cfg.updateToConcluded(name, notes)
+		err := tkm.UpdateToConcluded(name, notes)
 		if err != nil {
 			return err
 		}
@@ -245,7 +247,7 @@ var deleteConcluded = &cobra.Command{
 			return errors.New("destructive action blocked: use --yes to confirm")
 		}
 
-		err := cfg.deleteConcluded()
+		err := tkm.DeleteConcluded()
 		if err != nil {
 			return err
 		}
@@ -261,7 +263,7 @@ var checkExpired = &cobra.Command{
 	Aliases: []string{"ce"},
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cfg.checkExpired()
+		err := tkm.CheckExpired()
 		if err != nil {
 			return err
 		}
@@ -277,7 +279,7 @@ var checkExpiring = &cobra.Command{
 	Aliases: []string{"cx", "chex"},
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cfg.checkExpiring()
+		err := tkm.CheckExpiring()
 		if err != nil {
 			return err
 		}
@@ -291,7 +293,7 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "initialize akrasia app",
 	Run: func(cmd *cobra.Command, args []string) {
-		_, err := initDB()
+		_, err := db.InitDB()
 		if err != nil {
 			log.Fatal("Error opening database: ", err)
 		}
@@ -310,7 +312,7 @@ var delByName = &cobra.Command{
 			return errors.New("destructive action blocked: use --yes to confirm")
 		}
 
-		err := cfg.deleteByName(name)
+		err := tkm.DeleteByName(name)
 		if err != nil {
 			return err
 		}
@@ -325,7 +327,7 @@ var getAllDaily = &cobra.Command{
 	Short:   "show all daily tasks",
 	Aliases: []string{"gd"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cfg.getAllDailyTodos()
+		err := tkm.GetAllDailyTodos()
 		if err != nil {
 			return err
 		}
@@ -340,7 +342,7 @@ var getTodoCurrentStreak = &cobra.Command{
 	Short:   "get the current streak of provided todo",
 	Aliases: []string{"curr", "cs"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cfg.getCurrentStreak(name)
+		err := tkm.GetCurrentStreak(name)
 		if err != nil {
 			return err
 		}
@@ -354,7 +356,7 @@ var getTodoStreakHistory = &cobra.Command{
 	Short:   "get the streak history of provided todo",
 	Aliases: []string{"his", "sh"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cfg.getStreakHistory(name)
+		err := tkm.GetStreakHistory(name)
 		if err != nil {
 			return err
 		}
@@ -369,7 +371,7 @@ var backfillHistory = &cobra.Command{
 	Short:   "backfill missing daily task history entries",
 	Aliases: []string{"bf"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := cfg.backfillDailyHistory(daysBackfill, name)
+		err := tkm.BackfillDailyHistory(daysBackfill, name)
 		if err != nil {
 			return err
 		}
@@ -380,8 +382,6 @@ var backfillHistory = &cobra.Command{
 
 // init wires subcommands, flags, and required arguments into the root command.
 func init() {
-	// add flags
-
 	commands := map[string]*cobra.Command{
 		"add":                     add,
 		"getAll":                  getAll,
