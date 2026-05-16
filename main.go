@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/luis-octavius/akrasia/internal/commands"
@@ -21,6 +22,8 @@ func main() {
 	queries := database.New(db)
 	tkm.Queries = queries
 
-	// initialize cobra root command
-	commands.Execute()
+	ctx := commands.WithTaskManager(context.Background(), &tkm)
+
+	// initialize cobra root command with context and a TaskManager within
+	commands.ExecuteWithContext(ctx)
 }

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -38,8 +39,8 @@ and to keep track of these things for you.`,
 }
 
 // Execute runs the root command and exits the process on fatal command errors.
-func Execute() {
-	err := rootCmd.Execute()
+func ExecuteWithContext(ctx context.Context) {
+	err := rootCmd.ExecuteContext(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -95,7 +96,12 @@ var updateDailyTodo = &cobra.Command{
 	Short:   "reset daily tasks for a new day and record completion history (runs via cron)",
 	Aliases: []string{"upd"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := tkm.UpdateDailyTodo()
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		err = tkm.UpdateDailyTodo()
 		if err != nil {
 			return fmt.Errorf("error in update daily todo: %v", err)
 		}
@@ -112,6 +118,11 @@ var add = &cobra.Command{
 	Example: "akrasia add --name \"Morning run\" --daily --priority high",
 	Args:    cobra.MaximumNArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
 		expiresAt, err := parseDate(date)
 		if err != nil {
 			return err
@@ -136,7 +147,12 @@ var getAll = &cobra.Command{
 	Example: "akrasia get-all --priority high",
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := tkm.GetTodos(filterPriority)
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		err = tkm.GetTodos(filterPriority)
 		if err != nil {
 			return err
 		}
@@ -165,7 +181,12 @@ var today = &cobra.Command{
 			return fmt.Errorf("--limit cannot be negative")
 		}
 
-		err := tkm.GetTodayFocus(tasks.TodayOptions{
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		err = tkm.GetTodayFocus(tasks.TodayOptions{
 			Only:     todayOnly,
 			Limit:    todayLimit,
 			JSON:     todayJSON,
@@ -195,6 +216,10 @@ var focus = &cobra.Command{
 			return fmt.Errorf("invalid value for --priority: %q (use high|medium|low)", filterPriority)
 		}
 
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
 		return tkm.GetFocus(focusLimit, filterPriority)
 	},
 }
@@ -210,7 +235,12 @@ var getTodoByName = &cobra.Command{
 			return errors.New("name cannot be empty")
 		}
 
-		err := tkm.GetTodoByName(name)
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		err = tkm.GetTodoByName(name)
 		if err != nil {
 			return err
 		}
@@ -226,7 +256,12 @@ var updateStatusToConcluded = &cobra.Command{
 	Aliases: []string{"us"},
 	Example: "akrasia update-status --name \"Morning run\" --notes \"Done after lunch\"",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := tkm.UpdateToConcluded(name, notes)
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		err = tkm.UpdateToConcluded(name, notes)
 		if err != nil {
 			return err
 		}
@@ -247,7 +282,12 @@ var deleteConcluded = &cobra.Command{
 			return errors.New("destructive action blocked: use --yes to confirm")
 		}
 
-		err := tkm.DeleteConcluded()
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		err = tkm.DeleteConcluded()
 		if err != nil {
 			return err
 		}
@@ -263,7 +303,12 @@ var checkExpired = &cobra.Command{
 	Aliases: []string{"ce"},
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := tkm.CheckExpired()
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		err = tkm.CheckExpired()
 		if err != nil {
 			return err
 		}
@@ -279,7 +324,12 @@ var checkExpiring = &cobra.Command{
 	Aliases: []string{"cx", "chex"},
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := tkm.CheckExpiring()
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		err = tkm.CheckExpiring()
 		if err != nil {
 			return err
 		}
@@ -312,7 +362,12 @@ var delByName = &cobra.Command{
 			return errors.New("destructive action blocked: use --yes to confirm")
 		}
 
-		err := tkm.DeleteByName(name)
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		err = tkm.DeleteByName(name)
 		if err != nil {
 			return err
 		}
@@ -327,7 +382,12 @@ var getAllDaily = &cobra.Command{
 	Short:   "show all daily tasks",
 	Aliases: []string{"gd"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := tkm.GetAllDailyTodos()
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		err = tkm.GetAllDailyTodos()
 		if err != nil {
 			return err
 		}
@@ -342,7 +402,12 @@ var getTodoCurrentStreak = &cobra.Command{
 	Short:   "get the current streak of provided todo",
 	Aliases: []string{"curr", "cs"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := tkm.GetCurrentStreak(name)
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		err = tkm.GetCurrentStreak(name)
 		if err != nil {
 			return err
 		}
@@ -356,7 +421,12 @@ var getTodoStreakHistory = &cobra.Command{
 	Short:   "get the streak history of provided todo",
 	Aliases: []string{"his", "sh"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := tkm.GetStreakHistory(name)
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		err = tkm.GetStreakHistory(name)
 		if err != nil {
 			return err
 		}
@@ -371,7 +441,12 @@ var backfillHistory = &cobra.Command{
 	Short:   "backfill missing daily task history entries",
 	Aliases: []string{"bf"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := tkm.BackfillDailyHistory(daysBackfill, name)
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		err = tkm.BackfillDailyHistory(daysBackfill, name)
 		if err != nil {
 			return err
 		}
