@@ -1,4 +1,4 @@
-package main
+package db
 
 import (
 	"database/sql"
@@ -6,23 +6,18 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/luis-octavius/akrasia/internal/database"
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
 )
 
-//go:embed sql/schema/*.sql
+//go:embed schema/*.sql
 var embedMigrations embed.FS
 
 var (
 	dbPath string
 )
 
-type Config struct {
-	Queries *database.Queries
-}
-
-func getDBPath() string {
+func GetDBPath() string {
 	if dbPath != "" {
 		return dbPath
 	}
@@ -47,15 +42,15 @@ func runMigrations(dbPath string) error {
 
 	goose.SetDialect("sqlite3")
 
-	if err := goose.Up(db, "sql/schema"); err != nil {
+	if err := goose.Up(db, "schema"); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func initDB() (*sql.DB, error) {
-	path := getDBPath()
+func InitDB() (*sql.DB, error) {
+	path := GetDBPath()
 
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {

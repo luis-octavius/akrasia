@@ -1,4 +1,4 @@
-package main
+package tasks
 
 import (
 	"context"
@@ -7,17 +7,19 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/luis-octavius/akrasia/internal/database"
+	"github.com/luis-octavius/akrasia/internal/db"
+	database "github.com/luis-octavius/akrasia/internal/db/out"
 )
 
 func TestUpdateDailyTodoResetsAndPushesExpiration(t *testing.T) {
+	dbPath := db.GetDBPath()
 	oldDBPath := dbPath
 	dbPath = filepath.Join(t.TempDir(), "akrasia-test.db")
 	t.Cleanup(func() {
 		dbPath = oldDBPath
 	})
 
-	db, err := initDB()
+	db, err := db.InitDB()
 	if err != nil {
 		t.Fatalf("initDB() error = %v", err)
 	}
@@ -26,7 +28,7 @@ func TestUpdateDailyTodoResetsAndPushesExpiration(t *testing.T) {
 	})
 
 	queries := database.New(db)
-	cfg := Config{Queries: queries}
+	tkm := TaskManager{Queries: queries}
 	ctx := context.Background()
 
 	// Create a completed daily task
@@ -60,7 +62,7 @@ func TestUpdateDailyTodoResetsAndPushesExpiration(t *testing.T) {
 	}
 
 	// Run daily update
-	err = cfg.updateDailyTodo()
+	err = tkm.UpdateDailyTodo()
 	if err != nil {
 		t.Fatalf("updateDailyTodo() error = %v", err)
 	}

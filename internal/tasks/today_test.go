@@ -1,10 +1,10 @@
-package main
+package tasks
 
 import (
 	"testing"
 	"time"
 
-	"github.com/luis-octavius/akrasia/internal/database"
+	database "github.com/luis-octavius/akrasia/internal/db/out"
 )
 
 func TestBuildTodayView(t *testing.T) {
@@ -44,14 +44,14 @@ func TestBuildTodayView(t *testing.T) {
 }
 
 func TestApplyTodayOptionsOnly(t *testing.T) {
-	view := todayView{
+	view := TodayView{
 		Overdue:      []database.Todo{{Name: "o1"}},
 		DueToday:     []database.Todo{{Name: "t1"}},
 		Daily:        []database.Todo{{Name: "d1"}},
 		ExpiringSoon: []database.Todo{{Name: "s1"}},
 	}
 
-	filtered := applyTodayOptions(view, todayOptions{Only: "daily"})
+	filtered := applyTodayOptions(view, TodayOptions{Only: "daily"})
 
 	if len(filtered.Daily) != 1 {
 		t.Fatalf("expected daily section to remain")
@@ -63,7 +63,7 @@ func TestApplyTodayOptionsOnly(t *testing.T) {
 }
 
 func TestApplyTodayOptionsLimit(t *testing.T) {
-	view := todayView{
+	view := TodayView{
 		DueToday: []database.Todo{
 			{Name: "a"},
 			{Name: "b"},
@@ -71,7 +71,7 @@ func TestApplyTodayOptionsLimit(t *testing.T) {
 		},
 	}
 
-	limited := applyTodayOptions(view, todayOptions{Limit: 2})
+	limited := applyTodayOptions(view, TodayOptions{Limit: 2})
 
 	if len(limited.DueToday) != 2 {
 		t.Fatalf("expected 2 due-today tasks after limit, got %d", len(limited.DueToday))

@@ -1,28 +1,29 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"log"
 
-	"github.com/luis-octavius/akrasia/internal/database"
+	"github.com/luis-octavius/akrasia/internal/commands"
+	"github.com/luis-octavius/akrasia/internal/db"
+	database "github.com/luis-octavius/akrasia/internal/db/out"
+	"github.com/luis-octavius/akrasia/internal/tasks"
 	_ "modernc.org/sqlite"
 )
 
-var cfg = Config{}
+var tkm = tasks.TaskManager{}
 
 func main() {
-	dbPath := getDBPath()
-
-	db, err := sql.Open("sqlite", dbPath)
+	db, err := db.InitDB()
 	if err != nil {
-		log.Fatal("Error opening the database: ", err)
+		log.Fatalf("Error initializing the database")
 	}
 
-	defer db.Close()
-
 	queries := database.New(db)
-	cfg.Queries = queries
+	tkm.Queries = queries
 
-	// initialize cobra root command
-	Execute()
+	ctx := commands.WithTaskManager(context.Background(), &tkm)
+
+	// initialize cobra root command with context and a TaskManager within
+	commands.ExecuteWithContext(ctx)
 }

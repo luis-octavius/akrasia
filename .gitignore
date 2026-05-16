@@ -1,7 +1,15 @@
+# Database
 akrasia.db
+
+# Environment Variables
 .env
 *.env
 .env.local
 .env*.local
-.github
+
+# Binary
 akrasia
+
+# VS Code
+.vscode
+.github
