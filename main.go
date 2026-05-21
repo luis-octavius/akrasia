@@ -6,7 +6,6 @@ import (
 
 	"github.com/luis-octavius/akrasia/internal/commands"
 	"github.com/luis-octavius/akrasia/internal/db"
-	database "github.com/luis-octavius/akrasia/internal/db/out"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	_ "modernc.org/sqlite"
 )
@@ -14,12 +13,11 @@ import (
 var tkm = tasks.TaskManager{}
 
 func main() {
-	db, err := db.InitDB()
+	queries, err := db.GetQueries()
 	if err != nil {
 		log.Fatalf("Error initializing the database")
 	}
 
-	queries := database.New(db)
 	tkm.Queries = queries
 
 	ctx := commands.WithTaskManager(context.Background(), &tkm)

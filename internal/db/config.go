@@ -3,9 +3,11 @@ package db
 import (
 	"database/sql"
 	"embed"
+	"fmt"
 	"os"
 	"path/filepath"
 
+	database "github.com/luis-octavius/akrasia/internal/db/out"
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
 )
@@ -67,4 +69,23 @@ func InitDB() (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func GetQueries() (*database.Queries, error) {
+	dbPath := GetDBPath()
+	if dbPath == "" {
+		return nil, fmt.Errorf("database path is not valid")
+	}
+
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		return nil, err
+	}
+
+	queries := database.New(db)
+	if err != nil {
+		return nil, err
+	}
+
+	return queries, nil
 }
