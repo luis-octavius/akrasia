@@ -1,25 +1,25 @@
 package color
 
-import (
-	"github.com/fatih/color"
-)
-
 func MsgError(text string) {
-	c := color.New(color.FgRed)
+	theme := GetCurrentTheme()
+	c := applyColorStyle(theme.Error)
 	c.Println(text)
 }
 
 func MsgWarning(text string) {
-	c := color.New(color.FgYellow)
+	theme := GetCurrentTheme()
+	c := applyColorStyle(theme.Warning)
 	c.Println(text)
 }
 
 func MsgSuccess(text string) {
-	c := color.New(color.FgBlue)
+	theme := GetCurrentTheme()
+	c := applyColorStyle(theme.Success)
 	c.Println(text)
 }
 
 func MsgQuote(text string) {
-	c := color.New(color.BgWhite).Add(color.FgBlack, color.Underline)
+	theme := GetCurrentTheme()
+	c := applyColorStyle(theme.Quote)
 	c.Println(text)
 }
