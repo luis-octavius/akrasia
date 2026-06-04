@@ -10,6 +10,7 @@ import (
 
 	"github.com/luis-octavius/akrasia/internal/db"
 	"github.com/luis-octavius/akrasia/internal/tasks"
+	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/cron"
 	"github.com/spf13/cobra"
 )
@@ -465,12 +466,76 @@ var backfillHistory = &cobra.Command{
 			return err
 		}
 
+		// decrease by one to not generate errors with today
+		daysBackfill = daysBackfill - 1
+
 		err = tkm.BackfillDailyHistory(daysBackfill, name)
 		if err != nil {
 			return err
 		}
 
 		return nil
+	},
+}
+
+// config manages application settings and themes.
+var config = &cobra.Command{
+	Use:     "config",
+	Short:   "manage application settings (themes, preferences)",
+	Aliases: []string{"cfg"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
+	},
+}
+
+// configTheme manages theme selection.
+var configTheme = &cobra.Command{
+	Use:     "theme [list|show|<theme-name>]",
+	Short:   "manage color themes",
+	Aliases: []string{"t"},
+	Example: "akrasia config theme high-contrast\nakrasia config theme list\nakrasia config theme show",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+
+		action := args[0]
+
+		switch action {
+		case "list":
+			fmt.Println("Available themes:")
+			for _, theme := range color.GetAvailableThemes() {
+				fmt.Printf("  - %s\n", theme)
+			}
+			return nil
+
+		case "show":
+			currentTheme := color.GetCurrentTheme()
+			fmt.Printf("Current theme: %s\n", currentTheme.Name)
+			return nil
+
+		default:
+			// Try to set the theme
+			availableThemes := color.GetAvailableThemes()
+			found := false
+			for _, t := range availableThemes {
+				if t == action {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				return fmt.Errorf("unknown theme: %q (available: %v)", action, availableThemes)
+			}
+
+			if err := color.SaveTheme(action); err != nil {
+				return fmt.Errorf("failed to save theme: %w", err)
+			}
+
+			fmt.Printf("Theme set to: %s\n", action)
+			return nil
+		}
 	},
 }
 
@@ -494,11 +559,15 @@ func init() {
 		"getTodoCurrentStreak":    getTodoCurrentStreak,
 		"getTodoStreakHistory":    getTodoStreakHistory,
 		"backfillHistory":         backfillHistory,
+		"config":                  config,
 	}
 
 	for _, cmd := range commands {
 		rootCmd.AddCommand(cmd)
 	}
+
+	// Add subcommands to config
+	config.AddCommand(configTheme)
 
 	// flags for commands - add; getTodoByName; delByName; updateStatusToConcluded
 	add.Flags().IntSliceVar(&date, "date", []int{}, "add date to task")
