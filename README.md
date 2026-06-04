@@ -53,6 +53,25 @@ akrasia create-cron # or cc
 echo "akr='akrasia'" >> ~/.zshrc # or .bashrc
 ```
 
+## ✨ Features
+
+- **Simple Task Creation** — Use positional arguments for intuitive task creation
+  - `akrasia add "Task name"` — Create task quickly
+  - `akrasia add "Task name" "Description"` — Add description without flags
+  
+- **Colorful & Accessible** — Configurable color themes for better readability
+  - Default theme with standard colors
+  - High-contrast theme for improved accessibility
+  - Manage themes with `akrasia config theme`
+
+- **Smart Quotes** — Motivational quotes that adapt to your terminal width
+  - Automatic word-wrapping for any terminal size
+  - Never breaks words mid-line
+
+- **Daily Task Management** — Built-in support for recurring daily tasks with streak tracking
+
+- **Focus Dashboard** — See what matters now with the `today` and `focus` commands
+
 ## Commands
 
 ```
@@ -66,15 +85,16 @@ Available Commands:
   check-expired      show tasks that have passed their expiration date
   check-expiring     check todos that are expiring in 5 days
   completion         Generate the autocompletion script for the specified shell
+  config             manage application settings (themes, preferences)
   create-cron        create the cron job to update daily tasks
   delete-concluded   delete all concluded todos
+  delete-by-name     delete a todo by name
   focus              show top 1-3 priority items to focus on right now
   get-all            returns all the todos saved in storage
   get-by-name        search for a task by name (case-insensitive, fuzzy match)
   get-daily          show all daily tasks
   help               Help about any command
   history            get the streak history of provided todo
-  delete-by-name     delete a todo by name
   init               initialize akrasia app
   streak             get the current streak of provided todo
   today              show a daily focus dashboard (overdue, due today, daily pending, expiring soon)
@@ -90,25 +110,48 @@ Use "akrasia [command] --help" for more information about a command.
 ## Usage
 
 ```bash
-# add command
+# add command with positional arguments (new style - simpler!)
+akrasia add "Stendhal"
+2026/01/04 11:38:31 Task Stendhal created successfully!
+
+# add command with positional name and description
+akrasia add "Stendhal" "Finish the book The Red and The Black" --priority high
+2026/01/04 11:38:31 Task Stendhal created successfully!
+
+# add command with flags (backward compatible)
 akrasia add --name Stendhal --desc "Finish the book The Red and The Black" 13
 2026/01/04 11:38:31 Todo Stendhal created successfully!
 
 # add a daily task
-akrasia add --name "Morning run" --daily --priority high
+akrasia add "Morning run" --daily --priority high
 2026/03/08 08:15:20 Task Morning run created successfully!
 
+# manage color themes
+akrasia config theme list           # show available themes
+Available themes:
+  - default
+  - high-contrast
+
+akrasia config theme show           # show current theme
+Current theme: default
+
+akrasia config theme high-contrast  # switch to high-contrast theme for better accessibility
+Theme set to: high-contrast
+
+# mark task as done
 akrasia update-status --name stendhal # case-insensitive, mark Todo as done
 Stendhal | Finish the book The Red and The Black |
 13 Feb 26 00:00 UTC | Done
 
-akrasia get-all --priority high #
+# get all tasks with priority filter
+akrasia get-all --priority high
 Todos:
 
 Stendhal | Finish the book The Red and The Black |
 13 Feb 26 00:00 UTC | Done
 
-akrasia delete-concluded --yes # self-explanatory (requires confirmation)
+# delete concluded tasks (requires confirmation)
+akrasia delete-concluded --yes
 Concluded Todos deleted successfully!
 
 # backfill history for the last 30 days (default)
