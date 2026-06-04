@@ -112,15 +112,34 @@ var updateDailyTodo = &cobra.Command{
 
 // add creates a new task with optional metadata such as priority and daily mode.
 var add = &cobra.Command{
-	Use:     "add --name <name> --desc [description] --date ['13,10']",
+	Use:     "add [<name> [<description>]]",
 	Short:   "create a new task with optional description, priority, and expiration date",
 	Aliases: []string{"a"},
-	Example: "akrasia add --name \"Morning run\" --daily --priority high",
-	Args:    cobra.MaximumNArgs(3),
+	Example: `akrasia add "Morning run" --daily --priority high
+akrasia add "Morning run" "Do 5km at the park" --priority high
+akrasia add --name "Morning run" --daily --priority high`,
+	Args: cobra.MaximumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
 		if err != nil {
 			return err
+		}
+
+		// Handle positional arguments and flags
+		// Priority: positional args > flags (for backward compatibility)
+		taskName := name
+		taskDesc := description
+
+		if len(args) > 0 {
+			taskName = args[0]
+		}
+		if len(args) > 1 {
+			taskDesc = args[1]
+		}
+
+		// Validate that name was provided
+		if taskName == "" {
+			return errors.New("task name is required (use positional argument or --name flag)")
 		}
 
 		expiresAt, err := parseDate(date)
@@ -130,7 +149,7 @@ var add = &cobra.Command{
 
 		isDaily, err := cmd.Flags().GetBool("daily")
 
-		err = tkm.AddTodo(name, description, priority, isDaily, expiresAt)
+		err = tkm.AddTodo(taskName, taskDesc, priority, isDaily, expiresAt)
 		if err != nil {
 			return err
 		}
@@ -504,9 +523,4 @@ func init() {
 	today.Flags().StringVar(&todayOnly, "only", "", "show only one section: overdue|today|daily|soon")
 	today.Flags().IntVar(&todayLimit, "limit", 0, "limit items per section (0 = no limit)")
 	today.Flags().BoolVar(&todayJSON, "json", false, "print today output as JSON")
-
-	// mark as required
-	if err := add.MarkFlagRequired("name"); err != nil {
-		panic(err)
-	}
 }
