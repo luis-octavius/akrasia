@@ -52,7 +52,9 @@ INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
 VALUES (
     ?, ?, date(?), ?, ?, ?
 ) 
-ON CONFLICT(todo_id, date) DO NOTHING
+ON CONFLICT(todo_id, date) DO UPDATE SET
+  notes = 'backfilled'
+WHERE todos_history.notes IS NULL AND todos_history.completed = 0
 `
 
 type AddDailyTaskHistoryForDateParams struct {
