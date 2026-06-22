@@ -456,6 +456,7 @@ var getTodoStreakHistory = &cobra.Command{
 }
 
 // backfillHistory inserts missing history snapshots for daily tasks.
+// Excludes today (handled by update-daily cron job).
 var backfillHistory = &cobra.Command{
 	Use:     "backfill-history",
 	Short:   "backfill missing daily task history entries",
@@ -465,9 +466,6 @@ var backfillHistory = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
-		// decrease by one to not generate errors with today
-		daysBackfill = daysBackfill - 1
 
 		err = tkm.BackfillDailyHistory(daysBackfill, name)
 		if err != nil {

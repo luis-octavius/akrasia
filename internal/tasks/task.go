@@ -368,10 +368,12 @@ func (tkm *TaskManager) GetStreakHistory(name string) error {
 }
 
 // backfillDailyHistory inserts missing daily history rows for a date interval.
+// It excludes today (handled by update-daily) and marks entries with notes="backfilled".
 func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) error {
 	ctx := context.Background()
 	now := time.Now()
-	startDate := now.AddDate(0, 0, -daysBack)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	startDate := today.AddDate(0, 0, -daysBack)
 
 	// Get all daily tasks, or a specific one if taskName is provided
 	var dailyTasks []database.Todo
@@ -420,45 +422,70 @@ func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) erro
 	}
 
 	totalBackfilled := 0
+	totalSkipped := 0
 
 	for _, task := range dailyTasks {
-		// Start from the later of: task creation date or (now - daysBack)
+		// Start from the later of: task creation date or startDate
 		backfillStart := task.CreatedAt
 		if startDate.After(backfillStart) {
 			backfillStart = startDate
 		}
 
-		// Create a history entry for each day from backfillStart to now
-		currentDate := backfillStart
-		for currentDate.Before(now) || currentDate.Equal(now) {
-			dateOnly := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, now.Location())
+		fmt.Printf("  %s: ", task.Name)
 
-			// Try to insert; ON CONFLICT DO NOTHING will silently skip if already exists
-			_, err := tkm.Queries.AddDailyTaskHistoryForDate(ctx, database.AddDailyTaskHistoryForDateParams{
+		taskInserted := 0
+		taskSkipped := 0
+
+		// Create a history entry for each day from backfillStart to yesterday (exclude today)
+		currentDate := backfillStart
+		dayCount := 0
+		for currentDate.Before(today) {
+			dateOnly := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, now.Location())
+			dateStr := dateOnly.Format(time.DateOnly)
+
+			// Try to insert; ON CONFLICT DO NOTHING silently skips duplicates
+			res, err := tkm.Queries.AddDailyTaskHistoryForDate(ctx, database.AddDailyTaskHistoryForDateParams{
 				ID:          uuid.New(),
 				TodoID:      task.ID,
-				Date:        dateOnly.Format(time.DateOnly),
-				Completed:   sql.NullBool{Bool: false, Valid: true}, // conservative default: not completed
+				Date:        dateStr,
+				Completed:   sql.NullBool{Bool: false, Valid: true},
 				CompletedAt: sql.NullTime{},
 				Notes:       sql.NullString{String: "backfilled", Valid: true},
 			})
 
 			if err != nil {
-				// Might be a conflict (already exists) or real error
-				// For now, just log warnings and continue
-				fmt.Printf("Warning: Could not backfill %s for date %s: %v\n", task.Name, dateOnly.Format(time.DateOnly), err)
+				fmt.Printf("\n  Error backfilling %s for %s: %v\n", task.Name, dateStr, err)
 			} else {
-				totalBackfilled++
+				affected, _ := res.RowsAffected()
+				if affected > 0 {
+					taskInserted++
+				} else {
+					taskSkipped++
+				}
+			}
+
+			dayCount++
+			if dayCount%10 == 0 {
+				fmt.Print(".")
 			}
 
 			currentDate = currentDate.AddDate(0, 0, 1)
+		}
+
+		totalBackfilled += taskInserted
+		totalSkipped += taskSkipped
+
+		if taskInserted > 0 || taskSkipped > 0 {
+			fmt.Printf(" %d inserted, %d already existed\n", taskInserted, taskSkipped)
+		} else {
+			fmt.Println(" no days to backfill")
 		}
 	}
 
 	if taskName != "" {
 		color.MsgSuccess(fmt.Sprintf("Backfilled %d history entries for task '%s'", totalBackfilled, taskName))
 	} else {
-		color.MsgSuccess(fmt.Sprintf("Backfilled %d history entries for %d daily task(s)", totalBackfilled, len(dailyTasks)))
+		color.MsgSuccess(fmt.Sprintf("Backfilled %d history entries across %d daily task(s) (%d already existed)", totalBackfilled, len(dailyTasks), totalSkipped))
 	}
 
 	return nil

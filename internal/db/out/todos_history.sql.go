@@ -47,13 +47,12 @@ func (q *Queries) AddDailyTaskHistory(ctx context.Context, arg AddDailyTaskHisto
 	return i, err
 }
 
-const addDailyTaskHistoryForDate = `-- name: AddDailyTaskHistoryForDate :one
+const addDailyTaskHistoryForDate = `-- name: AddDailyTaskHistoryForDate :execresult
 INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
 VALUES (
     ?, ?, date(?), ?, ?, ?
 ) 
 ON CONFLICT(todo_id, date) DO NOTHING
-RETURNING id, todo_id, date, completed, completed_at, notes
 `
 
 type AddDailyTaskHistoryForDateParams struct {
@@ -65,8 +64,8 @@ type AddDailyTaskHistoryForDateParams struct {
 	Notes       sql.NullString
 }
 
-func (q *Queries) AddDailyTaskHistoryForDate(ctx context.Context, arg AddDailyTaskHistoryForDateParams) (TodosHistory, error) {
-	row := q.db.QueryRowContext(ctx, addDailyTaskHistoryForDate,
+func (q *Queries) AddDailyTaskHistoryForDate(ctx context.Context, arg AddDailyTaskHistoryForDateParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, addDailyTaskHistoryForDate,
 		arg.ID,
 		arg.TodoID,
 		arg.Date,
@@ -74,16 +73,6 @@ func (q *Queries) AddDailyTaskHistoryForDate(ctx context.Context, arg AddDailyTa
 		arg.CompletedAt,
 		arg.Notes,
 	)
-	var i TodosHistory
-	err := row.Scan(
-		&i.ID,
-		&i.TodoID,
-		&i.Date,
-		&i.Completed,
-		&i.CompletedAt,
-		&i.Notes,
-	)
-	return i, err
 }
 
 const addTodoHistory = `-- name: AddTodoHistory :one
@@ -131,6 +120,7 @@ WITH ordered AS (
     SELECT
         date,
         completed,
+        notes,
         julianday(date) - julianday(LAG(date) OVER (ORDER BY date ASC)) AS days_diff
     FROM todos_history
     WHERE todo_id = ?
@@ -141,8 +131,10 @@ grouped AS (
     SELECT
         date,
         completed,
+        notes,
         SUM(
             CASE
+                WHEN notes = 'backfilled' THEN 0
                 WHEN completed = 0 THEN 1
                 WHEN days_diff > 1 THEN 1
                 ELSE 0
@@ -158,14 +150,13 @@ current_group AS (
 )
 SELECT COUNT(*) AS current_streak
 FROM grouped
-WHERE completed = 1
-  AND streak_group = (SELECT streak_group FROM current_group)
+WHERE (completed = 1 OR notes = 'backfilled')
+  AND streak_group = (SELECT streak_group FROM current_grou
 `
 
 // Returns the number of consecutive completed days ending on the most recent entry.
-// Fix: uses ASC ordering for LAG so days_diff is always positive for consecutive days,
-// and anchors the current group on the latest entry instead of requiring today's date
-// to exist in the table (so the streak is not broken mid-day before the cron runs).
+// Backfilled rows (notes = 'backfilled') are neutral — they don't break the streak
+// but also don't count as completed days.
 func (q *Queries) GetCurrentStreak(ctx context.Context, todoID interface{}) (int64, error) {
 	row := q.db.QueryRowContext(ctx, getCurrentStreak, todoID)
 	var current_streak int64
@@ -174,10 +165,13 @@ func (q *Queries) GetCurrentStreak(ctx context.Context, todoID interface{}) (int
 }
 
 const getStreakHistory = `-- name: GetStreakHistory :many
+);
+
 WITH ordered AS (
     SELECT
         date,
         completed,
+        notes,
         julianday(date) - julianday(LAG(date) OVER (ORDER BY date ASC)) AS days_diff
     FROM todos_history
     WHERE todo_id = ?
@@ -187,8 +181,10 @@ grouped AS (
     SELECT
         date,
         completed,
+        notes,
         SUM(
             CASE
+                WHEN notes = 'backfilled' THEN 0
                 WHEN completed = 0 THEN 1
                 WHEN days_diff > 1 THEN 1
                 ELSE 0
@@ -203,7 +199,7 @@ streaks AS (
         MAX(date) AS end_date,
         COUNT(*)  AS streak_length
     FROM grouped
-    WHERE completed = 1
+    WHERE (completed = 1 OR notes = 'backfilled')
     GROUP BY streak_id
 )
 SELECT
@@ -211,7 +207,7 @@ SELECT
     end_date,
     streak_length
 FROM streaks
-ORDER BY streak_length DESC, start_date DESC
+ORDER BY streak_length DESC, start_date
 `
 
 type GetStreakHistoryRow struct {
@@ -221,8 +217,8 @@ type GetStreakHistoryRow struct {
 }
 
 // Returns all completed streak intervals ordered by length descending.
-// Fix: removed HAVING days_count = streak_length which silently dropped any streak
-// with an internal gap, and removed streak_length > 1 so single-day streaks appear.
+// Backfilled rows (notes = 'backfilled') are neutral — they don't break the streak
+// but also don't count as completed days.
 func (q *Queries) GetStreakHistory(ctx context.Context, todoID interface{}) ([]GetStreakHistoryRow, error) {
 	rows, err := q.db.QueryContext(ctx, getStreakHistory, todoID)
 	if err != nil {
