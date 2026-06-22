@@ -7,7 +7,7 @@ Usage:
 Available Commands:
 
   add                create a new task with optional description, priority, and expiration date
-  backfill-history   backfill missing daily task history entries
+  backfill-history   backfill missing daily task history entries (--task to target one, --days for range)
   check-expired      show tasks that have passed their expiration date
   check-expiring     check todos that are expiring in 5 days
   completion         Generate the autocompletion script for the specified shell
