@@ -13,6 +13,7 @@ import (
 	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/cron"
 	"github.com/spf13/cobra"
+	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
 var (
@@ -539,6 +540,53 @@ var configTheme = &cobra.Command{
 	},
 }
 
+var configLanguage = &cobra.Command{
+	Use:     "language [list|show|<language-code>]",
+	Short:   "manage languages",
+	Aliases: []string{"l"},
+	Example: "akrasia config language pt\nakrasia config language list\nakrasia config language show",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+
+		action := args[0]
+
+		switch action {
+		case "list":
+			fmt.Println("Available languages:")
+			for _, language := range i18n.GetAvailableLanguages() {
+				fmt.Printf(" - %s\n", language)
+			}
+			return nil
+
+		case "show":
+			fmt.Printf("Current language: %s\n", i18n.GetCurrentLanguage())
+			return nil
+
+		default:
+			availableLanguages := i18n.GetAvailableLanguages()
+			found := false
+			for _, l := range availableLanguages {
+				if l == action {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				return fmt.Errorf("unknown language: %q (available: %v)", action, availableLanguages)
+			}
+
+			if err := i18n.SetLanguage(action); err != nil {
+				return fmt.Errorf("failed to set language: %w",	err)
+			}
+			fmt.Printf("Language set to: %s\n", action)
+			return nil
+		}
+	},
+}
+
 // init wires subcommands, flags, and required arguments into the root command.
 func init() {
 	commands := map[string]*cobra.Command{
@@ -567,7 +615,7 @@ func init() {
 	}
 
 	// Add subcommands to config
-	config.AddCommand(configTheme)
+	config.AddCommand(configTheme, configLanguage)
 
 	// flags for commands - add; getTodoByName; delByName; updateStatusToConcluded
 	add.Flags().IntSliceVar(&date, "date", []int{}, "add date to task")
