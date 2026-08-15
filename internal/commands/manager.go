@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/luis-octavius/akrasia/internal/tasks"
+	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
 type contextKey struct{}
@@ -25,7 +26,7 @@ func taskManagerFromContext(ctx context.Context) (*tasks.TaskManager, error) {
 	v := ctx.Value(taskManagerKey)
 	tkm, ok := v.(*tasks.TaskManager)
 	if !ok || tkm == nil {
-		return nil, fmt.Errorf("task manager not found")
+		return nil, fmt.Errorf(i18n.T("errorTkmNotFound"))
 	}
 	return tkm, nil
 }

@@ -10,6 +10,8 @@ import (
 
 	database "github.com/luis-octavius/akrasia/internal/db/out"
 	"github.com/luis-octavius/akrasia/pkg/color"
+	"github.com/luis-octavius/akrasia/pkg/i18n"
+
 )
 
 func validateDescription(description string) sql.NullString {
@@ -45,9 +47,9 @@ func printTodo(todo database.Todo) {
 	var status string
 
 	if todo.Concluded == true {
-		status = "Done"
+		status = i18n.T("done")
 	} else {
-		status = "Not done"
+		status = i18n.T("notDone")
 	}
 
 	s := fmt.Sprintf("%v | %v\n%v | %v\n\n", todo.Name, todo.Description.String, todoTime, status)
