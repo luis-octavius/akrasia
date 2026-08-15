@@ -33,7 +33,7 @@
 	"currentTheme": "Current theme: %s\n",
 	"themeSet": "Theme set to: %s\n",
 	"configLanguageShort": "manage languages",
-	"configLanguageUse": "language [list|show|<código>]",
+	"configLanguageUse": "language [list|show|<language-code>]",
 	"availableLanguages": "Available languages:",
 	"currentLanguage": "Current language: %s\n",
 	"languageSet": "Language set to: %s\n",
