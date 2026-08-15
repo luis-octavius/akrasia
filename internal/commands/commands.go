@@ -243,7 +243,7 @@ var focus = &cobra.Command{
 
 // getTodoByName searches for a task using case-insensitive fuzzy matching.
 var getTodoByName = &cobra.Command{
-	Use:     "get-by-name <name>",
+	Use:     i18n.T("getTodoByNameUse"),
 	Short:   i18n.T("getTodoByNameShort"),
 	Aliases: []string{"gn", "name"},
 	Args:    cobra.NoArgs,
@@ -268,10 +268,10 @@ var getTodoByName = &cobra.Command{
 
 // updateStatusToConcluded marks a task as completed and records completion history.
 var updateStatusToConcluded = &cobra.Command{
-	Use:     "update-status <name>",
+	Use:     i18n.T("updateStatusUse"),
 	Short:   i18n.T("updateStatusShort"),
 	Aliases: []string{"us"},
-	Example: "akrasia update-status --name \"Morning run\" --notes \"Done after lunch\"",
+	Example: i18n.T("updateStatusExample"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
 		if err != nil {
@@ -487,7 +487,7 @@ var config = &cobra.Command{
 
 // configTheme manages theme selection.
 var configTheme = &cobra.Command{
-	Use:     "theme [list|show|<theme-name>]",
+	Use:     i18n.T("configThemeUse"),
 	Short:   i18n.T("configThemeShort"),
 	Aliases: []string{"t"},
 	Example: "akrasia config theme high-contrast\nakrasia config theme list\nakrasia config theme show",
@@ -537,7 +537,7 @@ var configTheme = &cobra.Command{
 }
 
 var configLanguage = &cobra.Command{
-	Use:     "language [list|show|<language-code>]",
+	Use:     i18n.T("configLanguageUse"),
 	Short:   i18n.T("configLanguageShort"),
 	Aliases: []string{"l"},
 	Example: "akrasia config language pt\nakrasia config language list\nakrasia config language show",
@@ -609,6 +609,9 @@ func init() {
 	for _, cmd := range commands {
 		rootCmd.AddCommand(cmd)
 	}
+
+	// Set usage func for localised help
+	rootCmd.SetUsageFunc(UsageFunc)
 
 	// Add subcommands to config
 	config.AddCommand(configTheme, configLanguage)
