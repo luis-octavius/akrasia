@@ -3,6 +3,11 @@ module github.com/luis-octavius/akrasia
 go 1.25.1
 
 require (
+	github.com/nicksnyder/go-i18n/v2 v2.6.1
+	golang.org/x/text v0.32.0
+)
+
+require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -22,7 +27,7 @@ require (
 	github.com/spf13/pflag v1.0.9 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
-	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.44.0 // indirect
 	golang.org/x/term v0.43.0 // indirect
 	modernc.org/libc v1.66.10 // indirect

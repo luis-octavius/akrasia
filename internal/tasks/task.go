@@ -11,11 +11,12 @@ import (
 
 	database "github.com/luis-octavius/akrasia/internal/db/out"
 	"github.com/luis-octavius/akrasia/pkg/color"
+	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
-const (
-	NoExpiring    = "Your tasks are not fleeing. You have time, yet your focus must remain steadfast."
-	SuccessDelete = "Concluded Todos deleted successfully!"
+var (
+	NoExpiring    = i18n.T("taskNoExpiring")
+	SuccessDelete = i18n.T("taskSuccessDelete")
 )
 
 // addTodo persists a new task record and prints success feedback.
@@ -34,10 +35,10 @@ func (tkm *TaskManager) AddTodo(name, description, priority string, isDaily bool
 		IsDaily:     isDaily,
 	})
 	if err != nil {
-		return fmt.Errorf("Error creating task: %w", err)
+		return fmt.Errorf(i18n.T("errorCreateTask"), err)
 	}
 
-	color.MsgSuccess(fmt.Sprintf("Task %v created successfully!\n", name))
+	color.MsgSuccess(fmt.Sprintf(i18n.T("createdTask"), name))
 	generateRandomQuote()
 	return nil
 }
@@ -46,12 +47,12 @@ func (tkm *TaskManager) AddTodo(name, description, priority string, isDaily bool
 func (tkm *TaskManager) GetTodos(priorityFilter string) error {
 	todos, err := tkm.Queries.GetTodos(context.Background())
 	if err != nil {
-		return fmt.Errorf("error getting tasks from database: %w", err)
+		return fmt.Errorf(i18n.T("errorGetTaskDatabase"), err)
 	}
 
 	todos = filterTodosByPriority(todos, priorityFilter)
 
-	fmt.Println("Tasks: ")
+	fmt.Println(i18n.T("tasks"))
 
 	for _, todo := range todos {
 		printTodo(todo)
@@ -64,7 +65,7 @@ func (tkm *TaskManager) GetTodos(priorityFilter string) error {
 func (tkm *TaskManager) GetTodayFocus(opts TodayOptions) error {
 	todos, err := tkm.Queries.GetTodos(context.Background())
 	if err != nil {
-		return fmt.Errorf("error getting tasks from database: %w", err)
+		return fmt.Errorf(i18n.T("errorGetTaskDatabase"), err)
 	}
 
 	todos = filterTodosByPriority(todos, opts.Priority)
@@ -74,7 +75,7 @@ func (tkm *TaskManager) GetTodayFocus(opts TodayOptions) error {
 	if opts.JSON {
 		payload, err := json.MarshalIndent(view, "", "  ")
 		if err != nil {
-			return fmt.Errorf("error encoding today output to json: %w", err)
+			return fmt.Errorf(i18n.T("errorEncodeTodayJSON"), err)
 		}
 
 		fmt.Println(string(payload))
@@ -82,16 +83,16 @@ func (tkm *TaskManager) GetTodayFocus(opts TodayOptions) error {
 	}
 
 	if len(view.Overdue) == 0 && len(view.DueToday) == 0 && len(view.Daily) == 0 && len(view.ExpiringSoon) == 0 {
-		color.MsgSuccess("You are clear for today. No pending items need attention.")
+		color.MsgSuccess(i18n.T("noPendingTasks"))
 		return nil
 	}
 
-	fmt.Println("TODAY FOCUS")
+	fmt.Println(i18n.T("todayFocus"))
 
-	printTodaySection("OVERDUE", view.Overdue)
-	printTodaySection("DUE TODAY", view.DueToday)
-	printTodaySection("DAILY PENDING", view.Daily)
-	printTodaySection("EXPIRING SOON", view.ExpiringSoon)
+	printTodaySection(i18n.T("overdue"), view.Overdue)
+	printTodaySection(i18n.T("dueToday"), view.DueToday)
+	printTodaySection(i18n.T("dailyPending"), view.Daily)
+	printTodaySection(i18n.T("expiringSoon"), view.ExpiringSoon)
 
 	return nil
 }
@@ -100,7 +101,7 @@ func (tkm *TaskManager) GetTodayFocus(opts TodayOptions) error {
 func (tkm *TaskManager) GetFocus(limit int, priorityFilter string) error {
 	todos, err := tkm.Queries.GetTodos(context.Background())
 	if err != nil {
-		return fmt.Errorf("error getting tasks from database: %w", err)
+		return fmt.Errorf(i18n.T("errorGetTaskDatabase"), err)
 	}
 
 	todos = filterTodosByPriority(todos, priorityFilter)
@@ -120,11 +121,11 @@ func (tkm *TaskManager) GetFocus(limit int, priorityFilter string) error {
 	}
 
 	if len(focus) == 0 {
-		color.MsgSuccess("No focus items for now. You are clear.")
+		color.MsgSuccess(i18n.T("noFocusTasks"))
 		return nil
 	}
 
-	fmt.Printf("FOCUS (%d)\n", len(focus))
+	fmt.Printf(i18n.T("focus"), len(focus))
 	for _, todo := range focus {
 		printTodo(todo)
 	}
@@ -141,10 +142,10 @@ func (tkm *TaskManager) GetTodoByName(name string) error {
 		LOWER_4: name,
 	})
 	if err != nil {
-		return fmt.Errorf("error getting task from provided name: %w", err)
+		return fmt.Errorf(i18n.T("errorGetTaskByName"), err)
 	}
 
-	s := fmt.Sprintf("Name: %s | Description: %s\nExpires: %v\n", todo.Name, todo.Description.String, todo.ExpiresAt.Format(time.RFC1123))
+	s := fmt.Sprintf(i18n.T("tableGetTaskByName"), todo.Name, todo.Description.String, todo.ExpiresAt.Format(time.RFC1123))
 	color.MsgSuccess(s)
 	return nil
 }
@@ -153,7 +154,7 @@ func (tkm *TaskManager) GetTodoByName(name string) error {
 func (tkm *TaskManager) UpdateToConcluded(name, notes string) error {
 	todo, err := tkm.Queries.UpdateTodoStatusByName(context.Background(), name)
 	if err != nil {
-		return fmt.Errorf("Error updating status of task '%v': %w", name, err)
+		return fmt.Errorf(i18n.T("errorUpdateTaskStatus"), name, err)
 	}
 
 	_, err = tkm.Queries.AddTodoHistory(context.Background(), database.AddTodoHistoryParams{
@@ -164,10 +165,10 @@ func (tkm *TaskManager) UpdateToConcluded(name, notes string) error {
 		Notes:       sql.NullString{String: notes, Valid: true},
 	})
 	if err != nil {
-		return fmt.Errorf("Error creating todo history")
+		return fmt.Errorf(i18n.T("errorCreateTaskHistory"))
 	}
 
-	fmt.Println("Updated successfully")
+	fmt.Println(i18n.T("updatedSuccessfully"))
 	generateRandomQuote()
 	return nil
 }
@@ -176,7 +177,7 @@ func (tkm *TaskManager) UpdateToConcluded(name, notes string) error {
 func (tkm *TaskManager) DeleteConcluded() error {
 	err := tkm.Queries.DeleteConcluded(context.Background())
 	if err != nil {
-		return fmt.Errorf("Error deleting concluded tasks: %w", err)
+		return fmt.Errorf(i18n.T("errorDeleteConcludedTasks"), err)
 	}
 
 	color.MsgSuccess(SuccessDelete)
@@ -189,7 +190,7 @@ func (tkm *TaskManager) DeleteConcluded() error {
 func (tkm *TaskManager) GetAllDailyTodos() error {
 	todos, err := tkm.Queries.GetDailyTodos(context.Background())
 	if err != nil {
-		return fmt.Errorf("error in getAllDailyTodos: %v", err)
+		return fmt.Errorf(i18n.T("errorGetAllDailyTodos"), err)
 	}
 
 	for _, todo := range todos {
@@ -203,7 +204,7 @@ func (tkm *TaskManager) GetAllDailyTodos() error {
 func (tkm *TaskManager) CheckExpired() error {
 	todos, err := tkm.Queries.CheckExpired(context.Background())
 	if err != nil {
-		return fmt.Errorf("Error checking expired tasks: %w", err)
+		return fmt.Errorf(i18n.T("errorCheckExpiredTasks"), err)
 	}
 
 	if len(todos) == 0 {
@@ -211,7 +212,7 @@ func (tkm *TaskManager) CheckExpired() error {
 		return nil
 	}
 
-	fmt.Println("EXPIRED: ")
+	fmt.Println(i18n.T("expired"))
 	for _, todo := range todos {
 		printTodo(todo)
 	}
@@ -223,7 +224,7 @@ func (tkm *TaskManager) CheckExpired() error {
 func (tkm *TaskManager) CheckExpiring() error {
 	todos, err := tkm.Queries.GetTodos(context.Background())
 	if err != nil {
-		return fmt.Errorf("Error getting tasks: %w", err)
+		return fmt.Errorf(i18n.T("errorCheckExpiringTasks"), err)
 	}
 
 	var countExpiring int
@@ -231,7 +232,7 @@ func (tkm *TaskManager) CheckExpiring() error {
 	for _, todo := range todos {
 		isTodoExpiring := checkIfTodoExpires(todo.ExpiresAt)
 		if isTodoExpiring && !todo.Concluded {
-			fmt.Println("Expiring...")
+			fmt.Println(i18n.T("expiring"))
 			printTodo(todo)
 			countExpiring++
 		}
@@ -253,15 +254,15 @@ func (tkm *TaskManager) DeleteByName(name string) error {
 		LOWER_4: name,
 	})
 	if err != nil {
-		return fmt.Errorf("error getting todo by name: %w", err)
+		return fmt.Errorf(i18n.T("errorGetTodoByName"), err)
 	}
 
 	err = tkm.Queries.DeleteTodoByName(context.Background(), todo.Name)
 	if err != nil {
-		return fmt.Errorf("error deleting todo by name: %w", err)
+		return fmt.Errorf(i18n.T("errorDeleteTaskByName"), err)
 	}
 
-	color.MsgSuccess(fmt.Sprintf("Todo %s deleted successfully", todo.Name))
+	color.MsgSuccess(fmt.Sprintf(i18n.T("taskDeletedSuccessfully"), todo.Name))
 
 	return nil
 }
@@ -269,18 +270,18 @@ func (tkm *TaskManager) DeleteByName(name string) error {
 // updateDailyTodo snapshots daily completion state, then resets daily tasks.
 func (tkm *TaskManager) UpdateDailyTodo() error {
 	now := time.Now()
-	fmt.Printf("Executing daily todo update at: %s\n", now.Format(time.DateTime))
+	fmt.Printf(i18n.T("executeDailyTaskUpdate"), now.Format(time.DateTime))
 
 	ctx := context.Background()
 
 	// First, get all daily tasks BEFORE resetting them
 	dailyTasks, err := tkm.Queries.GetDailyTodos(ctx)
 	if err != nil {
-		return fmt.Errorf("error getting daily tasks: %w", err)
+		return fmt.Errorf(i18n.T("errorGetDailyTasks"), err)
 	}
 
 	if len(dailyTasks) == 0 {
-		color.MsgError("No daily tasks to be updated")
+		color.MsgError(i18n.T("noDailyTasksToUpdate"))
 		return nil
 	}
 
@@ -303,21 +304,21 @@ func (tkm *TaskManager) UpdateDailyTodo() error {
 			Notes:       sql.NullString{},
 		})
 		if err != nil {
-			fmt.Printf("Warning: Could not record history for task '%s': %v\n", task.Name, err)
+			fmt.Printf(i18n.T("cantRecordTaskHistory"), task.Name, err)
 			continue
 		}
 		recordedCount++
 	}
 
-	fmt.Printf("Recorded history for %d daily tasks\n", recordedCount)
+	fmt.Printf(i18n.T("recordTaskHistorySuccessful"), recordedCount)
 
 	// Now reset all daily tasks for the new day
 	_, err = tkm.Queries.UpdateDailyTodo(ctx)
 	if err != nil {
-		return fmt.Errorf("Error updating daily tasks: %w", err)
+		return fmt.Errorf(i18n.T("errorUpdateDailyTasks"), err)
 	}
 
-	color.MsgSuccess(fmt.Sprintf("Tasks updated successfully (%d history entries recorded)", recordedCount))
+	color.MsgSuccess(fmt.Sprintf(i18n.T("tasksUpdatedSuccessfully"), recordedCount))
 
 	return nil
 }
@@ -331,15 +332,15 @@ func (tkm *TaskManager) GetCurrentStreak(name string) error {
 		LOWER_4: name,
 	})
 	if err != nil {
-		return fmt.Errorf("Error getting todo by name")
+		return fmt.Errorf(i18n.T("errorGetTodoByNameStreak"))
 	}
 
 	streak, err := tkm.Queries.GetCurrentStreak(context.Background(), todo.ID)
 	if err != nil {
-		return fmt.Errorf("Error getting current todo streak")
+		return fmt.Errorf(i18n.T("errorGetCurrentStreak"))
 	}
 
-	fmt.Printf("\nYour current streak with %s is: %d\n", todo.Name, streak)
+	fmt.Printf(i18n.T("currentStreak"), todo.Name, streak)
 	return nil
 }
 
@@ -352,16 +353,16 @@ func (tkm *TaskManager) GetStreakHistory(name string) error {
 		LOWER_4: name,
 	})
 	if err != nil {
-		return fmt.Errorf("Error getting todo by name")
+		return fmt.Errorf(i18n.T("errorGetTaskByName"))
 	}
 
 	streak_history, err := tkm.Queries.GetStreakHistory(context.Background(), todo.ID)
 	if err != nil {
-		return fmt.Errorf("Error getting todo streak history")
+		return fmt.Errorf(i18n.T("errorGetStreakHistory"))
 	}
 
 	for i, streak := range streak_history {
-		fmt.Printf("\n%d. Started Date: %v | End Date: %v | Total Days: %d\n", i+1, streak.StartDate, streak.EndDate, streak.StreakLength)
+		fmt.Printf(i18n.T("tableGetStreakHistory"), i+1, streak.StartDate, streak.EndDate, streak.StreakLength)
 	}
 
 	return nil
@@ -386,11 +387,11 @@ func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) erro
 			LOWER_4: taskName,
 		})
 		if err != nil {
-			return fmt.Errorf("Error finding task '%s': %w", taskName, err)
+			return fmt.Errorf(i18n.T("errorFindTask"), taskName, err)
 		}
 
 		if !todo.IsDaily {
-			return fmt.Errorf("Task '%s' is not a daily task", taskName)
+			return fmt.Errorf(i18n.T("errorTaskNotDaily"), taskName)
 		}
 
 		dailyTasks = []database.Todo{
@@ -410,12 +411,12 @@ func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) erro
 		// Get all daily tasks
 		dailyTasks, err = tkm.Queries.GetDailyTodos(ctx)
 		if err != nil {
-			return fmt.Errorf("Error getting daily tasks: %w", err)
+			return fmt.Errorf(i18n.T("errorGetDaily"), err)
 		}
 	}
 
 	if len(dailyTasks) == 0 {
-		color.MsgError("No daily tasks found to backfill")
+		color.MsgError(i18n.T("noDailyToBackfill"))
 		return nil
 	}
 
@@ -446,7 +447,7 @@ func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) erro
 			if err != nil {
 				// Might be a conflict (already exists) or real error
 				// For now, just log warnings and continue
-				fmt.Printf("Warning: Could not backfill %s for date %s: %v\n", task.Name, dateOnly.Format(time.DateOnly), err)
+				fmt.Printf(i18n.T("cantBackfillTask"), task.Name, dateOnly.Format(time.DateOnly), err)
 			} else {
 				totalBackfilled++
 			}
@@ -456,9 +457,9 @@ func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) erro
 	}
 
 	if taskName != "" {
-		color.MsgSuccess(fmt.Sprintf("Backfilled %d history entries for task '%s'", totalBackfilled, taskName))
+		color.MsgSuccess(fmt.Sprintf(i18n.T("backfilledTask"), totalBackfilled, taskName))
 	} else {
-		color.MsgSuccess(fmt.Sprintf("Backfilled %d history entries for %d daily task(s)", totalBackfilled, len(dailyTasks)))
+		color.MsgSuccess(fmt.Sprintf(i18n.T("backfilledDailyTask"), totalBackfilled, len(dailyTasks)))
 	}
 
 	return nil
