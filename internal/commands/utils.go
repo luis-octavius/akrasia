@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
 func isDateBefore(date time.Time) (bool, error) {
 	isBefore := date.Before(time.Now())
 	if isBefore == true {
-		return isBefore, fmt.Errorf("date %v is before right now - put a valid date", date)
+		return isBefore, fmt.Errorf(i18n.T("errorDateBeforeNow"), date)
 	}
 
 	return isBefore, nil
@@ -18,7 +19,7 @@ func isDateBefore(date time.Time) (bool, error) {
 func parseDate(expireDate []int) (time.Time, error) {
 	lenDate := len(expireDate)
 	if lenDate > 2 {
-		log.Fatal("Not enough arguments in date")
+		log.Fatal(i18n.T("errorDateNotEnoughArguments"))
 	}
 
 	actualTime := time.Now()
@@ -30,14 +31,14 @@ func parseDate(expireDate []int) (time.Time, error) {
 		date = time.Now().AddDate(0, 0, 1)
 		_, err := isDateBefore(date)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			log.Fatalf(i18n.T("error"), err)
 		}
 		return date, nil
 	case 1:
 		date := time.Date(year, month, expireDate[0], 0, 0, 0, 0, time.UTC)
 		_, err := isDateBefore(date)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			log.Fatalf(i18n.T("error"), err)
 		}
 		return date, nil
 	case 2:
@@ -45,7 +46,7 @@ func parseDate(expireDate []int) (time.Time, error) {
 		date := time.Date(year, month, expireDate[0], 0, 0, 0, 0, time.UTC)
 		_, err := isDateBefore(date)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			log.Fatalf(i18n.T("error"), err)
 		}
 		return date, nil
 	}
@@ -55,7 +56,7 @@ func parseDate(expireDate []int) (time.Time, error) {
 
 func getMonthByNum(num int) time.Month {
 	if num <= 0 || num > 12 {
-		log.Fatal("month number is not between 1 and 12")
+		log.Fatal(i18n.T("errorInvalidMonthNumber"))
 	}
 
 	switch num {

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	database "github.com/luis-octavius/akrasia/internal/db/out"
+	"github.com/luis-octavius/akrasia/pkg/i18n"
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
 )
@@ -74,7 +75,7 @@ func InitDB() (*sql.DB, error) {
 func GetQueries() (*database.Queries, error) {
 	dbPath := GetDBPath()
 	if dbPath == "" {
-		return nil, fmt.Errorf("database path is not valid")
+		return nil, fmt.Errorf(i18n.T("errorInvalidDatabasePath"))
 	}
 
 	db, err := sql.Open("sqlite", dbPath)
