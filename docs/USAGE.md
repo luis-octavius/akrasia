@@ -45,12 +45,15 @@ Stendhal | Finish the book The Red and The Black |
 akrasia delete-concluded --yes
 Concluded Todos deleted successfully!
 
-# backfill history for the last 30 days (default)
+# backfill history for the last 30 days (default, all daily tasks)
 akrasia backfill-history
-Backfilled 90 history entries for 3 daily task(s)
+  Morning run: .......... 30 inserted, 0 already existed
+  Read 30min: .......... 30 inserted, 0 already existed
+Backfilled 60 history entries across 2 daily task(s) (0 already existed)
 
 # backfill history for a specific task and 60 days back
 akrasia backfill-history --task "Morning run" --days 60
+  Morning run: .......... 60 inserted, 0 already existed
 Backfilled 60 history entries for task 'Morning run'
 
 # see what needs attention now
