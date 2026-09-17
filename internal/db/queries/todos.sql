@@ -1,7 +1,7 @@
 -- name: AddTodo :one 
-INSERT INTO todos (id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily)
+INSERT INTO todos (id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since)
 VALUES (
-  ?, ?, ?, ?, ?, ?, ?, ?, ? 
+  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 )
 RETURNING *;
 
@@ -37,18 +37,10 @@ WHERE name = ?;
 
 -- name: UpdateTodoStatusByName :one 
 UPDATE todos 
-SET concluded = true, updated_at = datetime('now')
+SET concluded = true, updated_at = datetime('now', 'localtime')
 WHERE name LIKE ?
 RETURNING *;
 
--- name: UpdateDailyTodo :many
-UPDATE todos 
-SET
-  expires_at = datetime(date('now', 'localtime', '+1 day')),
-  updated_at = datetime('now', 'localtime'),
-  concluded = false
-WHERE is_daily = true
-RETURNING *;
 -- name: DeleteTodoByName :exec 
 DELETE FROM todos 
 WHERE name = ?;

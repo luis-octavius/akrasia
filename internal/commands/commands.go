@@ -5,13 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
-	"os/user"
 
 	"github.com/luis-octavius/akrasia/internal/db"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/color"
-	"github.com/luis-octavius/akrasia/pkg/cron"
 	"github.com/spf13/cobra"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
@@ -46,69 +43,13 @@ func ExecuteWithContext(ctx context.Context) {
 	}
 }
 
-// createDailyUpdate installs a system cron job that runs the daily update command.
-var createDailyUpdate = &cobra.Command{
-	Use:     "create-cron",
-	Short:   i18n.T("createDailyUpdateShort"),
-	Aliases: []string{"cc"},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		user, err := user.Current()
-		if err != nil {
-			return fmt.Errorf(i18n.T("errorGetUser"), err)
-		}
-
-		schedule := "00 22 * * *"
-
-		executablePath, err := os.Executable()
-		if err != nil {
-			return fmt.Errorf(i18n.T("errorGetExecutable"), err)
-		}
-
-		akrasiaCommand := fmt.Sprintf("%s upd", executablePath)
-
-		name := "createUpdateDaily"
-
-		comment := "update daily todos in akrasia app"
-
-		manager := cron.NewManager()
-
-		if err := manager.ValidateSchedule(schedule); err != nil {
-			return fmt.Errorf(i18n.T("errorInvalidSchedule"), err)
-		}
-
-		err = manager.AddJob(name, schedule, akrasiaCommand, user.Username, comment)
-		if err != nil {
-			return fmt.Errorf(i18n.T("errorInvalidJob"), err)
-		}
-
-		fmt.Printf(i18n.T("cronjobCreated"), name)
-		if user.Username != "" {
-			fmt.Printf(i18n.T("cronjobUser"), user)
-		}
-
-		return nil
-	},
-}
-
-// updateDailyTodo triggers the daily reset flow used by cron.
-var updateDailyTodo = &cobra.Command{
-	Use:     "update-daily",
-	Short:   i18n.T("updateDailyTodoShort"),
-	Aliases: []string{"upd"},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		tkm, err := taskManagerFromContext(cmd.Context())
-		if err != nil {
-			return err
-		}
-
-		err = tkm.UpdateDailyTodo()
-		if err != nil {
-			return fmt.Errorf(i18n.T("errorUpdateDailyTodo"), err)
-		}
-
-		return nil
-	},
-}
+// NOTE: create-cron / update-daily were removed. Daily tasks no longer
+// carry mutable "concluded" state that needs a scheduled reset — see
+// migration 006_add_history_since.sql and MarkDaily-style writes in
+// internal/tasks/task.go. A future reminder feature (e.g. "you haven't
+// done X today") can reuse pkg/cron, but it would only ever notify —
+// never write app state — so it doesn't belong in this command file
+// until it exists.
 
 // add creates a new task with optional metadata such as priority and daily mode.
 var add = &cobra.Command{
@@ -452,8 +393,8 @@ var getTodoStreakHistory = &cobra.Command{
 	},
 }
 
-// backfillHistory inserts missing history snapshots for daily tasks.
-// Excludes today (handled by update-daily cron job).
+// backfillHistory inserts real completions for days the user forgot to log.
+// Excludes today — use `done` for that.
 var backfillHistory = &cobra.Command{
 	Use:     "backfill-history",
 	Short:   i18n.T("backfillHistoryShort"),
@@ -595,8 +536,6 @@ func init() {
 		"checkExpired":            checkExpired,
 		"initCmd":                 initCmd,
 		"delByName":               delByName,
-		"updateDailyTodo":         updateDailyTodo,
-		"createDailyUpdate":       createDailyUpdate,
 		"getAllDaily":             getAllDaily,
 		"getTodoCurrentStreak":    getTodoCurrentStreak,
 		"getTodoStreakHistory":    getTodoStreakHistory,

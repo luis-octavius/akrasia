@@ -40,6 +40,29 @@ func checkIfTodoExpires(expiresAt time.Time) bool {
 	return false
 }
 
+// todoKey turns a todo's ID (stored generically as interface{}) into a
+// comparable map key, since it can't be used directly as one.
+func todoKey(id interface{}) string {
+	return fmt.Sprintf("%v", id)
+}
+
+// printDailyTodo renders a daily task using today's real completion state
+// instead of todo.Concluded, which stays true forever once a daily task is
+// marked done for the first time.
+func printDailyTodo(todo database.Todo, doneToday bool) {
+	todoTime := todo.ExpiresAt.Format(time.RFC822)
+
+	var status string
+	if doneToday {
+		status = i18n.T("done")
+	} else {
+		status = i18n.T("notDone")
+	}
+
+	s := fmt.Sprintf("%v | %v\n%v | %v\n\n", todo.Name, todo.Description.String, todoTime, status)
+	color.MsgSuccess(s)
+}
+
 // printTodo receives a Todo and create a readable output
 func printTodo(todo database.Todo) {
 	todoTime := todo.ExpiresAt.Format(time.RFC822)
@@ -79,19 +102,25 @@ func filterTodosByPriority(todos []database.Todo, priorityFilter string) []datab
 }
 
 // buildTodayView classifies pending tasks into today-oriented sections.
-func buildTodayView(todos []database.Todo, now time.Time) TodayView {
+// doneToday holds the keys (see todoKey) of tasks already completed today —
+// daily tasks are judged against it instead of todo.Concluded, because that
+// flag is never reset back to false once a daily task is marked done.
+func buildTodayView(todos []database.Todo, now time.Time, doneToday map[string]bool) TodayView {
 	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	dayEnd := dayStart.Add(24 * time.Hour)
 
 	view := TodayView{}
 
 	for _, todo := range todos {
-		if todo.Concluded {
+		if todo.IsDaily {
+			if doneToday[todoKey(todo.ID)] {
+				continue
+			}
+			view.Daily = append(view.Daily, todo)
 			continue
 		}
 
-		if todo.IsDaily {
-			view.Daily = append(view.Daily, todo)
+		if todo.Concluded {
 			continue
 		}
 

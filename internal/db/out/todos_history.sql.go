@@ -10,73 +10,6 @@ import (
 	"database/sql"
 )
 
-const addDailyTaskHistory = `-- name: AddDailyTaskHistory :one
-INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
-VALUES (
-    ?, ?, date('now', 'localtime'), ?, ?, ?
-) 
-ON CONFLICT(todo_id, date) DO NOTHING
-RETURNING id, todo_id, date, completed, completed_at, notes
-`
-
-type AddDailyTaskHistoryParams struct {
-	ID          interface{}
-	TodoID      interface{}
-	Completed   sql.NullBool
-	CompletedAt sql.NullTime
-	Notes       sql.NullString
-}
-
-func (q *Queries) AddDailyTaskHistory(ctx context.Context, arg AddDailyTaskHistoryParams) (TodosHistory, error) {
-	row := q.db.QueryRowContext(ctx, addDailyTaskHistory,
-		arg.ID,
-		arg.TodoID,
-		arg.Completed,
-		arg.CompletedAt,
-		arg.Notes,
-	)
-	var i TodosHistory
-	err := row.Scan(
-		&i.ID,
-		&i.TodoID,
-		&i.Date,
-		&i.Completed,
-		&i.CompletedAt,
-		&i.Notes,
-	)
-	return i, err
-}
-
-const addDailyTaskHistoryForDate = `-- name: AddDailyTaskHistoryForDate :execresult
-INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
-VALUES (
-    ?, ?, date(?), ?, ?, ?
-) 
-ON CONFLICT(todo_id, date) DO UPDATE SET
-  notes = 'backfilled'
-WHERE todos_history.notes IS NULL AND todos_history.completed = 0
-`
-
-type AddDailyTaskHistoryForDateParams struct {
-	ID          interface{}
-	TodoID      interface{}
-	Date        interface{}
-	Completed   sql.NullBool
-	CompletedAt sql.NullTime
-	Notes       sql.NullString
-}
-
-func (q *Queries) AddDailyTaskHistoryForDate(ctx context.Context, arg AddDailyTaskHistoryForDateParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, addDailyTaskHistoryForDate,
-		arg.ID,
-		arg.TodoID,
-		arg.Date,
-		arg.Completed,
-		arg.CompletedAt,
-		arg.Notes,
-	)
-}
-
 const addTodoHistory = `-- name: AddTodoHistory :one
 INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
 VALUES (
@@ -97,6 +30,10 @@ type AddTodoHistoryParams struct {
 	Notes       sql.NullString
 }
 
+// Logs a completion for "today" (local time). Used by `done` for both
+// daily and one-off tasks. ON CONFLICT DO UPDATE means calling this
+// more than once on the same day always reflects the latest state —
+// there is no separate "reset" step that can race against it.
 func (q *Queries) AddTodoHistory(ctx context.Context, arg AddTodoHistoryParams) (TodosHistory, error) {
 	row := q.db.QueryRowContext(ctx, addTodoHistory,
 		arg.ID,
@@ -117,15 +54,100 @@ func (q *Queries) AddTodoHistory(ctx context.Context, arg AddTodoHistoryParams) 
 	return i, err
 }
 
+const isDoneToday = `-- name: IsDoneToday :one
+SELECT EXISTS(
+    SELECT 1 FROM todos_history
+    WHERE todo_id = ? AND date = date('now', 'localtime') AND completed = 1
+) AS done_today
+`
+
+func (q *Queries) IsDoneToday(ctx context.Context, todoID interface{}) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isDoneToday, todoID)
+	var done_today bool
+	err := row.Scan(&done_today)
+	return done_today, err
+}
+
+const getDoneTodayIDs = `-- name: GetDoneTodayIDs :many
+SELECT todo_id FROM todos_history
+WHERE date = date('now', 'localtime') AND completed = 1
+`
+
+// IDs of every task (daily or not) already completed today. Used to
+// render "today" views without relying on todos.concluded, which no
+// longer gets reset for daily tasks.
+func (q *Queries) GetDoneTodayIDs(ctx context.Context) ([]interface{}, error) {
+	rows, err := q.db.QueryContext(ctx, getDoneTodayIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []interface{}
+	for rows.Next() {
+		var todo_id interface{}
+		if err := rows.Scan(&todo_id); err != nil {
+			return nil, err
+		}
+		items = append(items, todo_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const backfillDailyDone = `-- name: BackfillDailyDone :one
+INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
+VALUES (
+    ?, ?, date(?), true, NULL, 'backfilled'
+)
+ON CONFLICT(todo_id, date) DO UPDATE SET
+    completed = true,
+    notes = 'backfilled'
+RETURNING id, todo_id, date, completed, completed_at, notes
+`
+
+type BackfillDailyDoneParams struct {
+	ID     interface{}
+	TodoID interface{}
+	Date   interface{}
+}
+
+// Records a real completion for a past date the user forgot to log.
+// Unlike the old backfill, this always writes completed = true — there
+// is no "neutral" state. Dates before a task's history_since are simply
+// never considered by the streak queries below, so there is nothing
+// left to accidentally overwrite or misclassify.
+func (q *Queries) BackfillDailyDone(ctx context.Context, arg BackfillDailyDoneParams) (TodosHistory, error) {
+	row := q.db.QueryRowContext(ctx, backfillDailyDone,
+		arg.ID,
+		arg.TodoID,
+		arg.Date,
+	)
+	var i TodosHistory
+	err := row.Scan(
+		&i.ID,
+		&i.TodoID,
+		&i.Date,
+		&i.Completed,
+		&i.CompletedAt,
+		&i.Notes,
+	)
+	return i, err
+}
+
 const getCurrentStreak = `-- name: GetCurrentStreak :one
 WITH ordered AS (
     SELECT
         date,
         completed,
-        notes,
         julianday(date) - julianday(LAG(date) OVER (ORDER BY date ASC)) AS days_diff
     FROM todos_history
     WHERE todo_id = ?
+      AND date >= (SELECT history_since FROM todos WHERE id = ?)
       AND date <= date('now', 'localtime')
     ORDER BY date ASC
 ),
@@ -133,10 +155,8 @@ grouped AS (
     SELECT
         date,
         completed,
-        notes,
         SUM(
             CASE
-                WHEN notes = 'backfilled' THEN 0
                 WHEN completed = 0 THEN 1
                 WHEN days_diff > 1 THEN 1
                 ELSE 0
@@ -152,41 +172,43 @@ current_group AS (
 )
 SELECT COUNT(*) AS current_streak
 FROM grouped
-WHERE (completed = 1 OR notes = 'backfilled')
-  AND streak_group = (SELECT streak_group FROM current_grou
+WHERE completed = 1
+  AND streak_group = (SELECT streak_group FROM current_group)
 `
 
-// Returns the number of consecutive completed days ending on the most recent entry.
-// Backfilled rows (notes = 'backfilled') are neutral — they don't break the streak
-// but also don't count as completed days.
-func (q *Queries) GetCurrentStreak(ctx context.Context, todoID interface{}) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getCurrentStreak, todoID)
+type GetCurrentStreakParams struct {
+	TodoID   interface{}
+	TodoID_2 interface{}
+}
+
+// Returns the number of consecutive completed days ending on the most
+// recent entry. Only dates from todos.history_since onward are
+// considered, so days before history tracking existed for this task
+// can never break (or pad) the streak.
+func (q *Queries) GetCurrentStreak(ctx context.Context, arg GetCurrentStreakParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getCurrentStreak, arg.TodoID, arg.TodoID_2)
 	var current_streak int64
 	err := row.Scan(&current_streak)
 	return current_streak, err
 }
 
 const getStreakHistory = `-- name: GetStreakHistory :many
-);
-
 WITH ordered AS (
     SELECT
         date,
         completed,
-        notes,
         julianday(date) - julianday(LAG(date) OVER (ORDER BY date ASC)) AS days_diff
     FROM todos_history
     WHERE todo_id = ?
+      AND date >= (SELECT history_since FROM todos WHERE id = ?)
     ORDER BY date ASC
 ),
 grouped AS (
     SELECT
         date,
         completed,
-        notes,
         SUM(
             CASE
-                WHEN notes = 'backfilled' THEN 0
                 WHEN completed = 0 THEN 1
                 WHEN days_diff > 1 THEN 1
                 ELSE 0
@@ -201,7 +223,7 @@ streaks AS (
         MAX(date) AS end_date,
         COUNT(*)  AS streak_length
     FROM grouped
-    WHERE (completed = 1 OR notes = 'backfilled')
+    WHERE completed = 1
     GROUP BY streak_id
 )
 SELECT
@@ -209,8 +231,13 @@ SELECT
     end_date,
     streak_length
 FROM streaks
-ORDER BY streak_length DESC, start_date
+ORDER BY streak_length DESC, start_date DESC
 `
+
+type GetStreakHistoryParams struct {
+	TodoID   interface{}
+	TodoID_2 interface{}
+}
 
 type GetStreakHistoryRow struct {
 	StartDate    interface{}
@@ -219,10 +246,8 @@ type GetStreakHistoryRow struct {
 }
 
 // Returns all completed streak intervals ordered by length descending.
-// Backfilled rows (notes = 'backfilled') are neutral — they don't break the streak
-// but also don't count as completed days.
-func (q *Queries) GetStreakHistory(ctx context.Context, todoID interface{}) ([]GetStreakHistoryRow, error) {
-	rows, err := q.db.QueryContext(ctx, getStreakHistory, todoID)
+func (q *Queries) GetStreakHistory(ctx context.Context, arg GetStreakHistoryParams) ([]GetStreakHistoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, getStreakHistory, arg.TodoID, arg.TodoID_2)
 	if err != nil {
 		return nil, err
 	}

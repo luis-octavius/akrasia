@@ -11,16 +11,19 @@ func TestBuildTodayView(t *testing.T) {
 	now := time.Date(2026, time.March, 8, 10, 0, 0, 0, time.UTC)
 
 	todos := []database.Todo{
-		{Name: "overdue-medium", Priority: "medium", ExpiresAt: now.Add(-24 * time.Hour)},
-		{Name: "due-today-high", Priority: "high", ExpiresAt: now.Add(2 * time.Hour)},
-		{Name: "due-today-low", Priority: "low", ExpiresAt: now.Add(3 * time.Hour)},
-		{Name: "expiring-soon", Priority: "medium", ExpiresAt: now.Add(48 * time.Hour)},
-		{Name: "daily", IsDaily: true, Priority: "high", ExpiresAt: now.Add(24 * time.Hour)},
-		{Name: "done-ignored", Concluded: true, ExpiresAt: now.Add(24 * time.Hour)},
-		{Name: "far-future", ExpiresAt: now.Add(10 * 24 * time.Hour)},
+		{ID: "overdue-medium-id", Name: "overdue-medium", Priority: "medium", ExpiresAt: now.Add(-24 * time.Hour)},
+		{ID: "due-today-high-id", Name: "due-today-high", Priority: "high", ExpiresAt: now.Add(2 * time.Hour)},
+		{ID: "due-today-low-id", Name: "due-today-low", Priority: "low", ExpiresAt: now.Add(3 * time.Hour)},
+		{ID: "expiring-soon-id", Name: "expiring-soon", Priority: "medium", ExpiresAt: now.Add(48 * time.Hour)},
+		{ID: "daily-pending-id", Name: "daily-pending", IsDaily: true, Priority: "high", ExpiresAt: now.Add(24 * time.Hour)},
+		{ID: "daily-done-id", Name: "daily-done", IsDaily: true, Priority: "high", ExpiresAt: now.Add(24 * time.Hour)},
+		{ID: "done-ignored-id", Name: "done-ignored", Concluded: true, ExpiresAt: now.Add(24 * time.Hour)},
+		{ID: "far-future-id", Name: "far-future", ExpiresAt: now.Add(10 * 24 * time.Hour)},
 	}
 
-	view := buildTodayView(todos, now)
+	doneToday := map[string]bool{"daily-done-id": true}
+
+	view := buildTodayView(todos, now, doneToday)
 
 	if len(view.Overdue) != 1 || view.Overdue[0].Name != "overdue-medium" {
 		t.Fatalf("unexpected overdue view: %#v", view.Overdue)
@@ -34,7 +37,10 @@ func TestBuildTodayView(t *testing.T) {
 		t.Fatalf("expected high priority first in due-today, got %s", view.DueToday[0].Name)
 	}
 
-	if len(view.Daily) != 1 || view.Daily[0].Name != "daily" {
+	// Only the daily task NOT in doneToday should show up as pending —
+	// a daily task marked done today must disappear even though
+	// todo.Concluded was never set (see buildTodayView doc comment).
+	if len(view.Daily) != 1 || view.Daily[0].Name != "daily-pending" {
 		t.Fatalf("unexpected daily view: %#v", view.Daily)
 	}
 
