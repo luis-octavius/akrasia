@@ -19,20 +19,40 @@ var (
 	SuccessDelete = i18n.T("taskSuccessDelete")
 )
 
+// doneTodaySet returns the IDs (as comparable keys) of every task already
+// completed today, daily or not. This replaces reading todos.concluded for
+// daily tasks, since that flag is no longer reset by anything — the only
+// source of truth for "did I do this today" is todos_history itself.
+func (tkm *TaskManager) doneTodaySet() (map[string]bool, error) {
+	ids, err := tkm.Queries.GetDoneTodayIDs(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	set := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		set[todoKey(id)] = true
+	}
+
+	return set, nil
+}
+
 // addTodo persists a new task record and prints success feedback.
 func (tkm *TaskManager) AddTodo(name, description, priority string, isDaily bool, expiresAt time.Time) error {
 	descriptionField := validateDescription(description)
+	now := time.Now()
 
 	_, err := tkm.Queries.AddTodo(context.Background(), database.AddTodoParams{
-		ID:          uuid.New(),
-		Name:        name,
-		Description: descriptionField,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-		Concluded:   false,
-		ExpiresAt:   expiresAt,
-		Priority:    priority,
-		IsDaily:     isDaily,
+		ID:           uuid.New(),
+		Name:         name,
+		Description:  descriptionField,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+		Concluded:    false,
+		ExpiresAt:    expiresAt,
+		Priority:     priority,
+		IsDaily:      isDaily,
+		HistorySince: sql.NullString{String: now.Format(time.DateOnly), Valid: true},
 	})
 	if err != nil {
 		return fmt.Errorf(i18n.T("errorCreateTask"), err)
@@ -69,7 +89,11 @@ func (tkm *TaskManager) GetTodayFocus(opts TodayOptions) error {
 	}
 
 	todos = filterTodosByPriority(todos, opts.Priority)
-	view := buildTodayView(todos, time.Now())
+	doneToday, err := tkm.doneTodaySet()
+	if err != nil {
+		return fmt.Errorf(i18n.T("errorGetTaskDatabase"), err)
+	}
+	view := buildTodayView(todos, time.Now(), doneToday)
 	view = applyTodayOptions(view, opts)
 
 	if opts.JSON {
@@ -105,7 +129,11 @@ func (tkm *TaskManager) GetFocus(limit int, priorityFilter string) error {
 	}
 
 	todos = filterTodosByPriority(todos, priorityFilter)
-	view := buildTodayView(todos, time.Now())
+	doneToday, err := tkm.doneTodaySet()
+	if err != nil {
+		return fmt.Errorf(i18n.T("errorGetTaskDatabase"), err)
+	}
+	view := buildTodayView(todos, time.Now(), doneToday)
 
 	focus := make([]database.Todo, 0, limit)
 	for _, section := range [][]database.Todo{view.Overdue, view.DueToday, view.Daily, view.ExpiringSoon} {
@@ -186,15 +214,20 @@ func (tkm *TaskManager) DeleteConcluded() error {
 	return nil
 }
 
-// getAllDailyTodos lists every task marked as daily.
+// getAllDailyTodos lists every task marked as daily, with today's status.
 func (tkm *TaskManager) GetAllDailyTodos() error {
 	todos, err := tkm.Queries.GetDailyTodos(context.Background())
 	if err != nil {
 		return fmt.Errorf(i18n.T("errorGetAllDailyTodos"), err)
 	}
 
+	doneToday, err := tkm.doneTodaySet()
+	if err != nil {
+		return fmt.Errorf(i18n.T("errorGetAllDailyTodos"), err)
+	}
+
 	for _, todo := range todos {
-		printTodo(todo)
+		printDailyTodo(todo, doneToday[todoKey(todo.ID)])
 	}
 
 	return nil
@@ -267,62 +300,6 @@ func (tkm *TaskManager) DeleteByName(name string) error {
 	return nil
 }
 
-// updateDailyTodo snapshots daily completion state, then resets daily tasks.
-func (tkm *TaskManager) UpdateDailyTodo() error {
-	now := time.Now()
-	fmt.Printf(i18n.T("executeDailyTaskUpdate"), now.Format(time.DateTime))
-
-	ctx := context.Background()
-
-	// First, get all daily tasks BEFORE resetting them
-	dailyTasks, err := tkm.Queries.GetDailyTodos(ctx)
-	if err != nil {
-		return fmt.Errorf(i18n.T("errorGetDailyTasks"), err)
-	}
-
-	if len(dailyTasks) == 0 {
-		color.MsgError(i18n.T("noDailyTasksToUpdate"))
-		return nil
-	}
-
-	// Record one history snapshot per task/day before resetting statuses.
-	recordedCount := 0
-
-	for _, task := range dailyTasks {
-		// Skip if we already have a history entry for this date (prevents duplicates)
-		// Create history entry: completed = task.Concluded (true if done, false if not)
-		completedAt := sql.NullTime{}
-		if task.Concluded {
-			completedAt = sql.NullTime{Time: task.UpdatedAt, Valid: true}
-		}
-
-		_, err := tkm.Queries.AddDailyTaskHistory(ctx, database.AddDailyTaskHistoryParams{
-			ID:          uuid.New(),
-			TodoID:      task.ID,
-			Completed:   sql.NullBool{Bool: task.Concluded, Valid: true},
-			CompletedAt: completedAt,
-			Notes:       sql.NullString{},
-		})
-		if err != nil {
-			fmt.Printf(i18n.T("cantRecordTaskHistory"), task.Name, err)
-			continue
-		}
-		recordedCount++
-	}
-
-	fmt.Printf(i18n.T("recordTaskHistorySuccessful"), recordedCount)
-
-	// Now reset all daily tasks for the new day
-	_, err = tkm.Queries.UpdateDailyTodo(ctx)
-	if err != nil {
-		return fmt.Errorf(i18n.T("errorUpdateDailyTasks"), err)
-	}
-
-	color.MsgSuccess(fmt.Sprintf(i18n.T("tasksUpdatedSuccessfully"), recordedCount))
-
-	return nil
-}
-
 // getCurrentStreak prints the current streak count for a named task.
 func (tkm *TaskManager) GetCurrentStreak(name string) error {
 	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
@@ -335,7 +312,10 @@ func (tkm *TaskManager) GetCurrentStreak(name string) error {
 		return fmt.Errorf(i18n.T("errorGetTodoByNameStreak"))
 	}
 
-	streak, err := tkm.Queries.GetCurrentStreak(context.Background(), todo.ID)
+	streak, err := tkm.Queries.GetCurrentStreak(context.Background(), database.GetCurrentStreakParams{
+		TodoID:   todo.ID,
+		TodoID_2: todo.ID,
+	})
 	if err != nil {
 		return fmt.Errorf(i18n.T("errorGetCurrentStreak"))
 	}
@@ -356,7 +336,10 @@ func (tkm *TaskManager) GetStreakHistory(name string) error {
 		return fmt.Errorf(i18n.T("errorGetTaskByName"))
 	}
 
-	streak_history, err := tkm.Queries.GetStreakHistory(context.Background(), todo.ID)
+	streak_history, err := tkm.Queries.GetStreakHistory(context.Background(), database.GetStreakHistoryParams{
+		TodoID:   todo.ID,
+		TodoID_2: todo.ID,
+	})
 	if err != nil {
 		return fmt.Errorf(i18n.T("errorGetStreakHistory"))
 	}
@@ -368,8 +351,10 @@ func (tkm *TaskManager) GetStreakHistory(name string) error {
 	return nil
 }
 
-// backfillDailyHistory inserts missing daily history rows for a date interval.
-// It excludes today (handled by update-daily) and marks entries with notes="backfilled".
+// backfillDailyHistory records real completions for days the user forgot to
+// log. It excludes today — use `done` for that — and tags each row with
+// notes="backfilled" purely as a note to the user, not a semantic marker
+// the streak queries treat specially.
 func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) error {
 	ctx := context.Background()
 	now := time.Now()
@@ -423,7 +408,6 @@ func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) erro
 	}
 
 	totalBackfilled := 0
-	totalSkipped := 0
 
 	for _, task := range dailyTasks {
 		// Start from the later of: task creation date or startDate
@@ -435,36 +419,28 @@ func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) erro
 		fmt.Printf("  %s: ", task.Name)
 
 		taskInserted := 0
-		taskSkipped := 0
 
-		// Create a history entry for each day from backfillStart to yesterday (exclude today)
+		// Insert a real completion for each day from backfillStart to
+		// yesterday (exclude today — that's what `done` is for). There is
+		// no "neutral" state anymore: dates before task.history_since are
+		// simply never looked at by the streak queries, so nothing here
+		// can accidentally overwrite a genuine miss.
 		currentDate := backfillStart
 		dayCount := 0
 		for currentDate.Before(today) {
 			dateOnly := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(), 0, 0, 0, 0, now.Location())
 			dateStr := dateOnly.Format(time.DateOnly)
 
-			// Try to insert; ON CONFLICT DO NOTHING silently skips duplicates
-			res, err := tkm.Queries.AddDailyTaskHistoryForDate(ctx, database.AddDailyTaskHistoryForDateParams{
-				ID:          uuid.New(),
-				TodoID:      task.ID,
-				Date:        dateStr,
-				Completed:   sql.NullBool{Bool: false, Valid: true},
-				CompletedAt: sql.NullTime{},
-				Notes:       sql.NullString{String: "backfilled", Valid: true},
+			_, err := tkm.Queries.BackfillDailyDone(ctx, database.BackfillDailyDoneParams{
+				ID:     uuid.New(),
+				TodoID: task.ID,
+				Date:   dateStr,
 			})
 
 			if err != nil {
-				// Might be a conflict (already exists) or real error
-				// For now, just log warnings and continue
 				fmt.Printf(i18n.T("cantBackfillTask"), task.Name, dateOnly.Format(time.DateOnly), err)
 			} else {
-				affected, _ := res.RowsAffected()
-				if affected > 0 {
-					taskInserted++
-				} else {
-					taskSkipped++
-				}
+				taskInserted++
 			}
 
 			dayCount++
@@ -476,10 +452,9 @@ func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) erro
 		}
 
 		totalBackfilled += taskInserted
-		totalSkipped += taskSkipped
 
-		if taskInserted > 0 || taskSkipped > 0 {
-			fmt.Printf(" %d inserted, %d already existed\n", taskInserted, taskSkipped)
+		if taskInserted > 0 {
+			fmt.Printf(" %d days marked as completed\n", taskInserted)
 		} else {
 			fmt.Println(" no days to backfill")
 		}

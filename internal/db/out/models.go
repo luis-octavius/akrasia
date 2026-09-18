@@ -10,15 +10,16 @@ import (
 )
 
 type Todo struct {
-	ID          interface{}
-	Name        string
-	Description sql.NullString
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	Concluded   bool
-	ExpiresAt   time.Time
-	Priority    string
-	IsDaily     bool
+	ID           interface{}
+	Name         string
+	Description  sql.NullString
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	Concluded    bool
+	ExpiresAt    time.Time
+	Priority     string
+	IsDaily      bool
+	HistorySince sql.NullString
 }
 
 type TodosHistory struct {
