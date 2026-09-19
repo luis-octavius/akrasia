@@ -10,7 +10,7 @@ import (
 func isDateBefore(date time.Time) (bool, error) {
 	isBefore := date.Before(time.Now())
 	if isBefore == true {
-		return isBefore, fmt.Errorf(i18n.T("errorDateBeforeNow"), date)
+		return isBefore, fmt.Errorf(i18n.T("commands.error.dateBeforeNow"), date)
 	}
 
 	return isBefore, nil
@@ -19,7 +19,7 @@ func isDateBefore(date time.Time) (bool, error) {
 func parseDate(expireDate []int) (time.Time, error) {
 	lenDate := len(expireDate)
 	if lenDate > 2 {
-		log.Fatal(i18n.T("errorDateNotEnoughArguments"))
+		log.Fatal(i18n.T("commands.error.dateNotEnoughArguments"))
 	}
 
 	actualTime := time.Now()
@@ -31,14 +31,14 @@ func parseDate(expireDate []int) (time.Time, error) {
 		date = time.Now().AddDate(0, 0, 1)
 		_, err := isDateBefore(date)
 		if err != nil {
-			log.Fatalf(i18n.T("error"), err)
+			log.Fatalf(i18n.T("commands.error.error"), err)
 		}
 		return date, nil
 	case 1:
 		date := time.Date(year, month, expireDate[0], 0, 0, 0, 0, time.UTC)
 		_, err := isDateBefore(date)
 		if err != nil {
-			log.Fatalf(i18n.T("error"), err)
+			log.Fatalf(i18n.T("commands.error.error"), err)
 		}
 		return date, nil
 	case 2:
@@ -46,7 +46,7 @@ func parseDate(expireDate []int) (time.Time, error) {
 		date := time.Date(year, month, expireDate[0], 0, 0, 0, 0, time.UTC)
 		_, err := isDateBefore(date)
 		if err != nil {
-			log.Fatalf(i18n.T("error"), err)
+			log.Fatalf(i18n.T("commands.error.error"), err)
 		}
 		return date, nil
 	}
@@ -56,7 +56,7 @@ func parseDate(expireDate []int) (time.Time, error) {
 
 func getMonthByNum(num int) time.Month {
 	if num <= 0 || num > 12 {
-		log.Fatal(i18n.T("errorInvalidMonthNumber"))
+		log.Fatal(i18n.T("commands.error.invalidMonthNumber"))
 	}
 
 	switch num {

@@ -75,7 +75,7 @@ func InitDB() (*sql.DB, error) {
 func GetQueries() (*database.Queries, error) {
 	dbPath := GetDBPath()
 	if dbPath == "" {
-		return nil, fmt.Errorf(i18n.T("errorInvalidDatabasePath"))
+		return nil, fmt.Errorf(i18n.T("db.error.invalidDatabasePath"))
 	}
 
 	db, err := sql.Open("sqlite", dbPath)

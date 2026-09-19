@@ -31,8 +31,8 @@ var (
 // rootCmd is the CLI entrypoint that registers all Akrasia subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "akrasia",
-	Short: i18n.T("rootCmdShort"),
-	Long: i18n.T("rootCmdLong"),
+	Short: i18n.T("commands.commands.rootCmdShort"),
+	Long: i18n.T("commands.commands.rootCmdLong"),
 }
 
 // Execute runs the root command and exits the process on fatal command errors.
@@ -53,10 +53,10 @@ func ExecuteWithContext(ctx context.Context) {
 
 // add creates a new task with optional metadata such as priority and daily mode.
 var add = &cobra.Command{
-	Use:     i18n.T("addUse"),
-	Short:   i18n.T("addShort"),
+	Use:     i18n.T("commands.commands.addUse"),
+	Short:   i18n.T("commands.commands.addShort"),
 	Aliases: []string{"a"},
-	Example: i18n.T("addExample"),
+	Example: i18n.T("commands.commands.addExample"),
 	Args: cobra.MaximumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -78,7 +78,7 @@ var add = &cobra.Command{
 
 		// Validate that name was provided
 		if taskName == "" {
-			return errors.New(i18n.T("errorTaskName"))
+			return errors.New(i18n.T("commands.error.taskName"))
 		}
 
 		expiresAt, err := parseDate(date)
@@ -100,7 +100,7 @@ var add = &cobra.Command{
 // getAll lists all tasks, optionally filtered by priority.
 var getAll = &cobra.Command{
 	Use:     "get-all",
-	Short:   i18n.T("getAllShort"),
+	Short:   i18n.T("commands.commands.getAllShort"),
 	Aliases: []string{"ga"},
 	Example: "akrasia get-all --priority high",
 	Args:    cobra.NoArgs,
@@ -122,21 +122,21 @@ var getAll = &cobra.Command{
 // today shows a categorized dashboard for what needs attention today.
 var today = &cobra.Command{
 	Use:     "today",
-	Short:   i18n.T("todayShort"),
+	Short:   i18n.T("commands.commands.todayShort"),
 	Aliases: []string{"td"},
 	Example: "akrasia today --only overdue --limit 5 --priority high",
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if filterPriority != "" && filterPriority != "high" && filterPriority != "medium" && filterPriority != "low" {
-			return fmt.Errorf(i18n.T("errorInvalidPriority"), filterPriority)
+			return fmt.Errorf(i18n.T("commands.error.invalidPriority"), filterPriority)
 		}
 
 		if todayOnly != "" && todayOnly != "overdue" && todayOnly != "today" && todayOnly != "daily" && todayOnly != "soon" {
-			return fmt.Errorf(i18n.T("errorInvalidTodayOnly"), todayOnly)
+			return fmt.Errorf(i18n.T("commands.error.invalidTodayOnly"), todayOnly)
 		}
 
 		if todayLimit < 0 {
-			return fmt.Errorf(i18n.T("errorInvalidTodayLimit"))
+			return fmt.Errorf(i18n.T("commands.error.invalidTodayLimit"))
 		}
 
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -161,17 +161,17 @@ var today = &cobra.Command{
 // focus shows the top actionable tasks to execute now.
 var focus = &cobra.Command{
 	Use:     "focus",
-	Short:   i18n.T("focusShort"),
+	Short:   i18n.T("commands.commands.focusShort"),
 	Aliases: []string{"fc"},
 	Example: "akrasia focus --limit 3 --priority high",
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if focusLimit < 1 || focusLimit > 3 {
-			return fmt.Errorf(i18n.T("errorFocusLimit"))
+			return fmt.Errorf(i18n.T("commands.error.focusLimit"))
 		}
 
 		if filterPriority != "" && filterPriority != "high" && filterPriority != "medium" && filterPriority != "low" {
-			return fmt.Errorf(i18n.T("errorInvalidFocusPriority"), filterPriority)
+			return fmt.Errorf(i18n.T("commands.error.invalidFocusPriority"), filterPriority)
 		}
 
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -184,13 +184,13 @@ var focus = &cobra.Command{
 
 // getTodoByName searches for a task using case-insensitive fuzzy matching.
 var getTodoByName = &cobra.Command{
-	Use:     i18n.T("getTodoByNameUse"),
-	Short:   i18n.T("getTodoByNameShort"),
+	Use:     i18n.T("commands.commands.getTodoByNameUse"),
+	Short:   i18n.T("commands.commands.getTodoByNameShort"),
 	Aliases: []string{"gn", "name"},
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if name == "" {
-			return errors.New(i18n.T("errorEmptyName"))
+			return errors.New(i18n.T("commands.error.emptyName"))
 		}
 
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -209,10 +209,10 @@ var getTodoByName = &cobra.Command{
 
 // updateStatusToConcluded marks a task as completed and records completion history.
 var updateStatusToConcluded = &cobra.Command{
-	Use:     i18n.T("updateStatusUse"),
-	Short:   i18n.T("updateStatusShort"),
+	Use:     i18n.T("commands.commands.updateStatusUse"),
+	Short:   i18n.T("commands.commands.updateStatusShort"),
 	Aliases: []string{"us"},
-	Example: i18n.T("updateStatusExample"),
+	Example: i18n.T("commands.commands.updateStatusExample"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
 		if err != nil {
@@ -231,13 +231,13 @@ var updateStatusToConcluded = &cobra.Command{
 // deleteConcluded removes all concluded tasks after explicit confirmation.
 var deleteConcluded = &cobra.Command{
 	Use:     "delete-concluded",
-	Short:   i18n.T("deleteConcludedShort"),
+	Short:   i18n.T("commands.commands.deleteConcludedShort"),
 	Aliases: []string{"dc", "delc"},
 	Example: "akrasia delete-concluded --yes",
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !deleteYes {
-			return errors.New(i18n.T("errorDestructiveAction"))
+			return errors.New(i18n.T("commands.error.destructiveAction"))
 		}
 
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -257,7 +257,7 @@ var deleteConcluded = &cobra.Command{
 // checkExpired lists expired non-daily tasks.
 var checkExpired = &cobra.Command{
 	Use:     "check-expired",
-	Short:   i18n.T("checkExpiredShort"),
+	Short:   i18n.T("commands.commands.checkExpiredShort"),
 	Aliases: []string{"ce"},
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -278,7 +278,7 @@ var checkExpired = &cobra.Command{
 // checkExpiring lists tasks that are approaching expiration.
 var checkExpiring = &cobra.Command{
 	Use:     "check-expiring",
-	Short:   i18n.T("checkExpiringShort"),
+	Short:   i18n.T("commands.commands.checkExpiringShort"),
 	Aliases: []string{"cx", "chex"},
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -299,25 +299,25 @@ var checkExpiring = &cobra.Command{
 // initCmd initializes the local database schema and storage.
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: i18n.T("initCmdShort"),
+	Short: i18n.T("commands.commands.initCmdShort"),
 	Run: func(cmd *cobra.Command, args []string) {
 		_, err := db.InitDB()
 		if err != nil {
-			log.Fatal(i18n.T("errorOpenDatabase"), err)
+			log.Fatal(i18n.T("commands.error.openDatabase"), err)
 		}
 
-		fmt.Printf(i18n.T("initSuccessful"))
+		fmt.Printf(i18n.T("commands.info.initSuccessful"))
 	},
 }
 
 // delByName deletes a single task by name.
 var delByName = &cobra.Command{
 	Use:     "delete-by-name",
-	Short:   i18n.T("delByNameShort"),
+	Short:   i18n.T("commands.commands.delByNameShort"),
 	Aliases: []string{"deln", "dn"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !deleteYes {
-			return errors.New(i18n.T("errorDestructiveAction"))
+			return errors.New(i18n.T("commands.error.destructiveAction"))
 		}
 
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -337,7 +337,7 @@ var delByName = &cobra.Command{
 // getAllDaily shows all tasks marked as daily.
 var getAllDaily = &cobra.Command{
 	Use:     "get-daily",
-	Short:   i18n.T("getAllDailyShort"),
+	Short:   i18n.T("commands.commands.getAllDailyShort"),
 	Aliases: []string{"gd"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -357,7 +357,7 @@ var getAllDaily = &cobra.Command{
 // getTodoCurrentStreak returns the current completion streak for a task.
 var getTodoCurrentStreak = &cobra.Command{
 	Use:     "streak",
-	Short:   i18n.T("getTodoCurrentStreakShort"),
+	Short:   i18n.T("commands.commands.getTodoCurrentStreakShort"),
 	Aliases: []string{"curr", "cs"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -376,7 +376,7 @@ var getTodoCurrentStreak = &cobra.Command{
 // getTodoStreakHistory returns the streak history timeline for a task.
 var getTodoStreakHistory = &cobra.Command{
 	Use:     "history",
-	Short:   i18n.T("getTodoStreakHistoryShort"),
+	Short:   i18n.T("commands.commands.getTodoStreakHistoryShort"),
 	Aliases: []string{"his", "sh"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -397,7 +397,7 @@ var getTodoStreakHistory = &cobra.Command{
 // Excludes today — use `done` for that.
 var backfillHistory = &cobra.Command{
 	Use:     "backfill-history",
-	Short:   i18n.T("backfillHistoryShort"),
+	Short:   i18n.T("commands.commands.backfillHistoryShort"),
 	Aliases: []string{"bf"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -417,7 +417,7 @@ var backfillHistory = &cobra.Command{
 // config manages application settings and themes.
 var config = &cobra.Command{
 	Use:     "config",
-	Short:   i18n.T("configShort"),
+	Short:   i18n.T("commands.commands.configShort"),
 	Aliases: []string{"cfg"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
@@ -426,8 +426,8 @@ var config = &cobra.Command{
 
 // configTheme manages theme selection.
 var configTheme = &cobra.Command{
-	Use:     i18n.T("configThemeUse"),
-	Short:   i18n.T("configThemeShort"),
+	Use:     i18n.T("commands.commands.configThemeUse"),
+	Short:   i18n.T("commands.commands.configThemeShort"),
 	Aliases: []string{"t"},
 	Example: "akrasia config theme high-contrast\nakrasia config theme list\nakrasia config theme show",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -439,7 +439,7 @@ var configTheme = &cobra.Command{
 
 		switch action {
 		case "list":
-			fmt.Println(i18n.T("availableThemes"))
+			fmt.Println(i18n.T("commands.info.availableThemes"))
 			for _, theme := range color.GetAvailableThemes() {
 				fmt.Printf("  - %s\n", theme)
 			}
@@ -447,7 +447,7 @@ var configTheme = &cobra.Command{
 
 		case "show":
 			currentTheme := color.GetCurrentTheme()
-			fmt.Printf(i18n.T("currentTheme"), currentTheme.Name)
+			fmt.Printf(i18n.T("commands.info.currentTheme"), currentTheme.Name)
 			return nil
 
 		default:
@@ -462,22 +462,22 @@ var configTheme = &cobra.Command{
 			}
 
 			if !found {
-				return fmt.Errorf(i18n.T("errorUnknownTheme"), action, availableThemes)
+				return fmt.Errorf(i18n.T("commands.error.unknownTheme"), action, availableThemes)
 			}
 
 			if err := color.SaveTheme(action); err != nil {
-				return fmt.Errorf(i18n.T("errorSaveTheme"), err)
+				return fmt.Errorf(i18n.T("commands.error.saveTheme"), err)
 			}
 
-			fmt.Printf(i18n.T("themeSet"), action)
+			fmt.Printf(i18n.T("commands.info.themeSet"), action)
 			return nil
 		}
 	},
 }
 
 var configLanguage = &cobra.Command{
-	Use:     i18n.T("configLanguageUse"),
-	Short:   i18n.T("configLanguageShort"),
+	Use:     i18n.T("commands.commands.configLanguageUse"),
+	Short:   i18n.T("commands.commands.configLanguageShort"),
 	Aliases: []string{"l"},
 	Example: "akrasia config language pt\nakrasia config language list\nakrasia config language show",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -489,14 +489,14 @@ var configLanguage = &cobra.Command{
 
 		switch action {
 		case "list":
-			fmt.Println(i18n.T("availableLanguages"))
+			fmt.Println(i18n.T("commands.info.availableLanguages"))
 			for _, language := range i18n.GetAvailableLanguages() {
 				fmt.Printf(" - %s\n", language)
 			}
 			return nil
 
 		case "show":
-			fmt.Printf(i18n.T("currentLanguage"), i18n.GetCurrentLanguage())
+			fmt.Printf(i18n.T("commands.info.currentLanguage"), i18n.GetCurrentLanguage())
 			return nil
 
 		default:
@@ -510,13 +510,13 @@ var configLanguage = &cobra.Command{
 			}
 
 			if !found {
-				return fmt.Errorf(i18n.T("errorUnknownLanguage"), action, availableLanguages)
+				return fmt.Errorf(i18n.T("commands.error.unknownLanguage"), action, availableLanguages)
 			}
 
 			if err := i18n.SetLanguage(action); err != nil {
-				return fmt.Errorf(i18n.T("errorSetLanguage"), err)
+				return fmt.Errorf(i18n.T("commands.error.setLanguage"), err)
 			}
-			fmt.Printf(i18n.T("languageSet"), action)
+			fmt.Printf(i18n.T("commands.info.languageSet"), action)
 			return nil
 		}
 	},
@@ -554,26 +554,26 @@ func init() {
 	config.AddCommand(configTheme, configLanguage)
 
 	// flags for commands - add; getTodoByName; delByName; updateStatusToConcluded
-	add.Flags().IntSliceVar(&date, "date", []int{}, i18n.T("addFlagDate"))
-	add.Flags().StringVar(&name, "name", "", i18n.T("addFlagName"))
-	add.Flags().StringVar(&priority, "priority", "", i18n.T("addFlagPriority"))
-	add.Flags().Bool("daily", false, i18n.T("addFlagDaily"))
-	add.Flags().StringVar(&description, "desc", "", i18n.T("addFlagDescription"))
-	getAll.Flags().StringVar(&filterPriority, "priority", "", i18n.T("getAllFlagFilterPriority"))
-	today.Flags().StringVar(&filterPriority, "priority", "", i18n.T("todayFlagFilterPriority"))
-	focus.Flags().IntVar(&focusLimit, "limit", 3, i18n.T("focusFlagFocusLimit"))
-	focus.Flags().StringVar(&filterPriority, "priority", "", i18n.T("focusFlagPriority"))
-	getTodoByName.Flags().StringVar(&name, "name", "", i18n.T("getTodoByNameFlagName"))
-	delByName.Flags().StringVar(&name, "name", "", i18n.T("delByNameFlagName"))
-	delByName.Flags().BoolVar(&deleteYes, "yes", false, i18n.T("delByNameFlagDeleteYes"))
-	updateStatusToConcluded.Flags().StringVar(&name, "name", "", i18n.T("updateStatusToConcludedFlagName"))
-	updateStatusToConcluded.Flags().StringVar(&notes, "notes", "", i18n.T("updateStatusToConcludedFlagNotes"))
-	deleteConcluded.Flags().BoolVar(&deleteYes, "yes", false, i18n.T("deleteConcludedFlagDeleteYes"))
-	getTodoCurrentStreak.Flags().StringVar(&name, "name", "", i18n.T("getTodoCurrentStreakFlagName"))
-	getTodoStreakHistory.Flags().StringVar(&name, "name", "", i18n.T("getTodoStreakHistoryFlagName"))
-	backfillHistory.Flags().IntVar(&daysBackfill, "days", 30, i18n.T("backfillHistoryFlagDays"))
-	backfillHistory.Flags().StringVar(&name, "task", "", i18n.T("backfillHistoryFlagName"))
-	today.Flags().StringVar(&todayOnly, "only", "", i18n.T("todayFlagTodayOnly"))
-	today.Flags().IntVar(&todayLimit, "limit", 0, i18n.T("todayFlagLimit"))
-	today.Flags().BoolVar(&todayJSON, "json", false, i18n.T("todayFlagTodayJSON"))
+	add.Flags().IntSliceVar(&date, "date", []int{}, i18n.T("commands.flags.addDate"))
+	add.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.addName"))
+	add.Flags().StringVar(&priority, "priority", "", i18n.T("commands.flags.addPriority"))
+	add.Flags().Bool("daily", false, i18n.T("commands.flags.addDaily"))
+	add.Flags().StringVar(&description, "desc", "", i18n.T("commands.flags.addDescription"))
+	getAll.Flags().StringVar(&filterPriority, "priority", "", i18n.T("commands.flags.getAllPriority"))
+	today.Flags().StringVar(&filterPriority, "priority", "", i18n.T("commands.flags.todayPriority"))
+	focus.Flags().IntVar(&focusLimit, "limit", 3, i18n.T("commands.flags.focusLimit"))
+	focus.Flags().StringVar(&filterPriority, "priority", "", i18n.T("commands.flags.focusPriority"))
+	getTodoByName.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.getTodoByNameName"))
+	delByName.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.delByNameName"))
+	delByName.Flags().BoolVar(&deleteYes, "yes", false, i18n.T("commands.flags.delByNameDeleteYes"))
+	updateStatusToConcluded.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.updateStatusToConcludedName"))
+	updateStatusToConcluded.Flags().StringVar(&notes, "notes", "", i18n.T("commands.flags.updateStatusToConcludedNotes"))
+	deleteConcluded.Flags().BoolVar(&deleteYes, "yes", false, i18n.T("commands.flags.deleteConcludedDeleteYes"))
+	getTodoCurrentStreak.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.getTodoCurrentStreakName"))
+	getTodoStreakHistory.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.getTodoStreakHistoryName"))
+	backfillHistory.Flags().IntVar(&daysBackfill, "days", 30, i18n.T("commands.flags.backfillHistoryDays"))
+	backfillHistory.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.backfillHistoryName"))
+	today.Flags().StringVar(&todayOnly, "only", "", i18n.T("commands.flags.todayOnly"))
+	today.Flags().IntVar(&todayLimit, "limit", 0, i18n.T("commands.flags.todayLimit"))
+	today.Flags().BoolVar(&todayJSON, "json", false, i18n.T("commands.flags.todayJSON"))
 }
