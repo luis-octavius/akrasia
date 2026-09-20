@@ -189,7 +189,7 @@ func (tkm *TaskManager) UpdateToConcluded(name, notes string) error {
 		Notes:       sql.NullString{String: notes, Valid: true},
 	})
 	if err != nil {
-		return fmt.Errorf(i18n.T("errorCreateTaskHistory"))
+		return fmt.Errorf("%s", i18n.T("errorCreateTaskHistory"))
 	}
 
 	fmt.Println(i18n.T("updatedSuccessfully"))
@@ -295,7 +295,7 @@ func (tkm *TaskManager) DeleteByName(name string) error {
 func (tkm *TaskManager) GetCurrentStreak(name string) error {
 	todo, err := GetTodoByName(tkm, name)
 	if err != nil {
-		return fmt.Errorf(i18n.T("errorGetTodoByNameStreak"))
+		return fmt.Errorf("%s", i18n.T("errorGetTodoByNameStreak"))
 	}
 
 	streak, err := tkm.Queries.GetCurrentStreak(context.Background(), database.GetCurrentStreakParams{
@@ -303,7 +303,7 @@ func (tkm *TaskManager) GetCurrentStreak(name string) error {
 		TodoID_2: todo.ID,
 	})
 	if err != nil {
-		return fmt.Errorf(i18n.T("errorGetCurrentStreak"))
+		return fmt.Errorf("%s", i18n.T("errorGetCurrentStreak"))
 	}
 
 	fmt.Printf(i18n.T("currentStreak"), todo.Name, streak)
@@ -314,7 +314,7 @@ func (tkm *TaskManager) GetCurrentStreak(name string) error {
 func (tkm *TaskManager) GetStreakHistory(name string) error {
 	todo, err := GetTodoByName(tkm, name)
 	if err != nil {
-		return fmt.Errorf(i18n.T("errorGetTaskByName"))
+		return fmt.Errorf("%s", i18n.T("errorGetTaskByName"))
 	}
 
 	streak_history, err := tkm.Queries.GetStreakHistory(context.Background(), database.GetStreakHistoryParams{
@@ -322,7 +322,7 @@ func (tkm *TaskManager) GetStreakHistory(name string) error {
 		TodoID_2: todo.ID,
 	})
 	if err != nil {
-		return fmt.Errorf(i18n.T("errorGetStreakHistory"))
+		return fmt.Errorf("%s", i18n.T("errorGetStreakHistory"))
 	}
 
 	for i, streak := range streak_history {
