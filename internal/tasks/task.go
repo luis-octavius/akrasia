@@ -163,12 +163,8 @@ func (tkm *TaskManager) GetFocus(limit int, priorityFilter string) error {
 
 // getTodoByName retrieves and prints a single task by fuzzy name search.
 func (tkm *TaskManager) GetTodoByName(name string) error {
-	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
-		LOWER:   name,
-		LOWER_2: name,
-		LOWER_3: name,
-		LOWER_4: name,
-	})
+	todo, err := GetTodoByName(tkm, name)
+
 	if err != nil {
 		return fmt.Errorf(i18n.T("errorGetTaskByName"), err)
 	}
@@ -280,12 +276,7 @@ func (tkm *TaskManager) CheckExpiring() error {
 
 // deleteByName removes one task identified by name.
 func (tkm *TaskManager) DeleteByName(name string) error {
-	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
-		LOWER:   name,
-		LOWER_2: name,
-		LOWER_3: name,
-		LOWER_4: name,
-	})
+	todo, err := GetTodoByName(tkm, name)
 	if err != nil {
 		return fmt.Errorf(i18n.T("errorGetTodoByName"), err)
 	}
@@ -302,12 +293,7 @@ func (tkm *TaskManager) DeleteByName(name string) error {
 
 // getCurrentStreak prints the current streak count for a named task.
 func (tkm *TaskManager) GetCurrentStreak(name string) error {
-	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
-		LOWER:   name,
-		LOWER_2: name,
-		LOWER_3: name,
-		LOWER_4: name,
-	})
+	todo, err := GetTodoByName(tkm, name)
 	if err != nil {
 		return fmt.Errorf(i18n.T("errorGetTodoByNameStreak"))
 	}
@@ -326,12 +312,7 @@ func (tkm *TaskManager) GetCurrentStreak(name string) error {
 
 // getStreakHistory prints historical streak intervals for a named task.
 func (tkm *TaskManager) GetStreakHistory(name string) error {
-	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
-		LOWER:   name,
-		LOWER_2: name,
-		LOWER_3: name,
-		LOWER_4: name,
-	})
+	todo, err := GetTodoByName(tkm, name)
 	if err != nil {
 		return fmt.Errorf(i18n.T("errorGetTaskByName"))
 	}
@@ -366,13 +347,7 @@ func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) erro
 	var err error
 
 	if taskName != "" {
-		// Get specific task by name
-		todo, err := tkm.Queries.GetTodoByName(ctx, database.GetTodoByNameParams{
-			LOWER:   taskName,
-			LOWER_2: taskName,
-			LOWER_3: taskName,
-			LOWER_4: taskName,
-		})
+		todo, err := GetTodoByName(tkm, taskName)
 		if err != nil {
 			return fmt.Errorf(i18n.T("errorFindTask"), taskName, err)
 		}
