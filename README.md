@@ -26,11 +26,7 @@ This gap between available tools and my personal workflow led me to develop my o
 - [Quick Start](docs/QUICK-START.md)
 - [Commands](docs/COMMANDS.md)
 - [Usage](docs/USAGE.md)
-
-## Contributing
-
-Contributions are welcome!
-If you're willing to contribute, just fork the project and open a pull request at main.
+- [Contributin](docs/CONTRIBUTING.md)
 
 ## License
 
