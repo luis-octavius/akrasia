@@ -72,7 +72,7 @@ func (tkm *TaskManager) GetTodos(priorityFilter string) error {
 
 	todos = filterTodosByPriority(todos, priorityFilter)
 
-	fmt.Println(i18n.T("tasks.table.tasks"))
+	fmt.Println(i18n.T("tasks.tasks.tasks"))
 
 	for _, todo := range todos {
 		printTodo(todo)
@@ -111,12 +111,12 @@ func (tkm *TaskManager) GetTodayFocus(opts TodayOptions) error {
 		return nil
 	}
 
-	fmt.Println(i18n.T("tasks.table.todayFocus"))
+	fmt.Println(i18n.T("tasks.tasks.todayFocus"))
 
-	printTodaySection(i18n.T("tasks.table.overdue"), view.Overdue)
-	printTodaySection(i18n.T("tasks.table.dueToday"), view.DueToday)
-	printTodaySection(i18n.T("tasks.table.dailyPending"), view.Daily)
-	printTodaySection(i18n.T("tasks.table.expiringSoon"), view.ExpiringSoon)
+	printTodaySection(i18n.T("tasks.tasks.overdue"), view.Overdue)
+	printTodaySection(i18n.T("tasks.tasks.dueToday"), view.DueToday)
+	printTodaySection(i18n.T("tasks.tasks.dailyPending"), view.Daily)
+	printTodaySection(i18n.T("tasks.tasks.expiringSoon"), view.ExpiringSoon)
 
 	return nil
 }
@@ -153,7 +153,7 @@ func (tkm *TaskManager) GetFocus(limit int, priorityFilter string) error {
 		return nil
 	}
 
-	fmt.Printf(i18n.T("tasks.table.focus"), len(focus))
+	fmt.Printf(i18n.T("tasks.tasks.focus"), len(focus))
 	for _, todo := range focus {
 		printTodo(todo)
 	}
@@ -173,7 +173,7 @@ func (tkm *TaskManager) GetTodoByName(name string) error {
 		return fmt.Errorf(i18n.T("tasks.error.getTaskByName"), err)
 	}
 
-	s := fmt.Sprintf(i18n.T("tasks.table.getTaskByName"), todo.Name, todo.Description.String, todo.ExpiresAt.Format(time.RFC1123))
+	s := fmt.Sprintf(i18n.T("tasks.tasks.getTaskByName"), todo.Name, todo.Description.String, todo.ExpiresAt.Format(time.RFC1123))
 	color.MsgSuccess(s)
 	return nil
 }
@@ -245,7 +245,7 @@ func (tkm *TaskManager) CheckExpired() error {
 		return nil
 	}
 
-	fmt.Println(i18n.T("tasks.table.expired"))
+	fmt.Println(i18n.T("tasks.tasks.expired"))
 	for _, todo := range todos {
 		printTodo(todo)
 	}
@@ -265,7 +265,7 @@ func (tkm *TaskManager) CheckExpiring() error {
 	for _, todo := range todos {
 		isTodoExpiring := checkIfTodoExpires(todo.ExpiresAt)
 		if isTodoExpiring && !todo.Concluded {
-			fmt.Println(i18n.T("tasks.table.expiring"))
+			fmt.Println(i18n.T("tasks.tasks.expiring"))
 			printTodo(todo)
 			countExpiring++
 		}
@@ -345,7 +345,7 @@ func (tkm *TaskManager) GetStreakHistory(name string) error {
 	}
 
 	for i, streak := range streak_history {
-		fmt.Printf(i18n.T("tasks.table.getStreakHistory"), i+1, streak.StartDate, streak.EndDate, streak.StreakLength)
+		fmt.Printf(i18n.T("tasks.tasks.getStreakHistory"), i+1, streak.StartDate, streak.EndDate, streak.StreakLength)
 	}
 
 	return nil

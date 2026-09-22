@@ -54,9 +54,9 @@ func printDailyTodo(todo database.Todo, doneToday bool) {
 
 	var status string
 	if doneToday {
-		status = i18n.T("tasks.table.done")
+		status = i18n.T("tasks.tasks.done")
 	} else {
-		status = i18n.T("tasks.table.notDone")
+		status = i18n.T("tasks.tasks.notDone")
 	}
 
 	s := fmt.Sprintf("%v | %v\n%v | %v\n\n", todo.Name, todo.Description.String, todoTime, status)
@@ -70,9 +70,9 @@ func printTodo(todo database.Todo) {
 	var status string
 
 	if todo.Concluded == true {
-		status = i18n.T("tasks.table.done")
+		status = i18n.T("tasks.tasks.done")
 	} else {
-		status = i18n.T("tasks.table.notDone")
+		status = i18n.T("tasks.tasks.notDone")
 	}
 
 	s := fmt.Sprintf("%v | %v\n%v | %v\n\n", todo.Name, todo.Description.String, todoTime, status)
