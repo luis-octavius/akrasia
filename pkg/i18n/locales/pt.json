@@ -103,21 +103,6 @@
 		}
 	},
 	"tasks": {
-		"quotes": {
-			"quote1": "\"Sofremos mais na imaginação do que na realidade. E contudo, afastamos o que importa para o futuro, calmo e indefinido, como se pudéssemos comandar o tempo.\" - Sêneca, Cartas para Lucílio (Carta 13).",
-			"quote2": "\"O presente é o único momento que realmente possuímos. Se permitir de pensar em arrependimentos passados ou ansiedades futuras é o maior roubo de si.\" - Marco Aurélio, Meditações (Adaptado de Livro 3, 10; Livro 8, 36).",
-			"quote3": "\"Não se deve pensar que uma tarefa é fácil simplesmente porque ela não é urgente. São as tarefas não urgentes que, na maioria das vezes, definem a qualidade de uma vida..\" - Inspirado pela doutrina de prohairesis de Epicteto (caráter moral).",
-			"quote4": "\"A alma é tingida pelos pensamentos. Cuida, então, dos seus pensamentos, pois eles se transformam em ações. Cuida de suas ações, pois elas se tornam seus hábitos.\" - Marco Aurélio, Meditações (Livro 5, 16).",
-			"quote5": "\"Nós devemos sempre estar atentos às nossas percepções, pois elas são as guardiãs da mente.\" - Epicteto, Discursos (Livro 4, 12).",
-			"quote6": "\"A mente distraída é uma mente diminuída. Não é uma chama, mas brasas espalhadas, que não dão nem luz nem calor.\" - Inspirado por \"Acerca do Controle da Raiva\" de Plutarco e a doutrina Estoica de unidade de pensamento.",
-			"quote7": "\"Adiar é uma escolha. Ao diferir uma boa ação, você escolheu de forma ativa o pior estado da sua alma.\" - Inspirado por Sócrates em Górgias de Platão.",
-			"quote8": "\"A causa da inação humana não é que a tarefa seja grande, mas que a vontade seja pequena. Comece, e a mente se animará; continue, e a tarefa será concluída.\" - Adaptado de Demócrito (Fragmento 84) e o princípio Estoico de \"começar\"",
-			"quote9": "\"Ninguém erra voluntariamente; a incapacidade de agir corretamente é uma falha de conhecimento, não de vontade.\" - Sócrates, em Protágoras de Platão",
-			"quote10": "\"O auto-controle (enkrateia) é o alicerce da virtude, e o primeiro passo é controlar seus prazeres e apetites.\" - Aritóteles, Ética a Nicômaco",
-			"quote11": "\"Vejo e aprovo o melhor, mas sigo o pior.\" - Ovídio, Metamorfoses",
-			"quote12": "\"O sábio é guiado pela razão, o tolo pela paixão, e o louco pelo impulso.\" - Zenão de Cítio",
-			"quote13": "\"Quanto tempo você vai esperar antes de exigir o melhor de si mesmo?\" - Epicteto, Discursos"
-		},
 		"tasks": {
 			"tasks": "Tarefas: ",
 			"todayFocus": "FOCO DE HOJE",
@@ -174,5 +159,20 @@
 			"taskNotDaily": "Tarefa '%s' não é uma tarefa diária",
 			"getDaily": "Erro ao obter as tarefas diárias: %w"
 		}
+	},
+	"quotes": {
+		"quote1": "\"Sofremos mais na imaginação do que na realidade. E contudo, afastamos o que importa para o futuro, calmo e indefinido, como se pudéssemos comandar o tempo.\" - Sêneca, Cartas para Lucílio (Carta 13).",
+		"quote2": "\"O presente é o único momento que realmente possuímos. Se permitir de pensar em arrependimentos passados ou ansiedades futuras é o maior roubo de si.\" - Marco Aurélio, Meditações (Adaptado de Livro 3, 10; Livro 8, 36).",
+		"quote3": "\"Não se deve pensar que uma tarefa é fácil simplesmente porque ela não é urgente. São as tarefas não urgentes que, na maioria das vezes, definem a qualidade de uma vida..\" - Inspirado pela doutrina de prohairesis de Epicteto (caráter moral).",
+		"quote4": "\"A alma é tingida pelos pensamentos. Cuida, então, dos seus pensamentos, pois eles se transformam em ações. Cuida de suas ações, pois elas se tornam seus hábitos.\" - Marco Aurélio, Meditações (Livro 5, 16).",
+		"quote5": "\"Nós devemos sempre estar atentos às nossas percepções, pois elas são as guardiãs da mente.\" - Epicteto, Discursos (Livro 4, 12).",
+		"quote6": "\"A mente distraída é uma mente diminuída. Não é uma chama, mas brasas espalhadas, que não dão nem luz nem calor.\" - Inspirado por \"Acerca do Controle da Raiva\" de Plutarco e a doutrina Estoica de unidade de pensamento.",
+		"quote7": "\"Adiar é uma escolha. Ao diferir uma boa ação, você escolheu de forma ativa o pior estado da sua alma.\" - Inspirado por Sócrates em Górgias de Platão.",
+		"quote8": "\"A causa da inação humana não é que a tarefa seja grande, mas que a vontade seja pequena. Comece, e a mente se animará; continue, e a tarefa será concluída.\" - Adaptado de Demócrito (Fragmento 84) e o princípio Estoico de \"começar\"",
+		"quote9": "\"Ninguém erra voluntariamente; a incapacidade de agir corretamente é uma falha de conhecimento, não de vontade.\" - Sócrates, em Protágoras de Platão",
+		"quote10": "\"O auto-controle (enkrateia) é o alicerce da virtude, e o primeiro passo é controlar seus prazeres e apetites.\" - Aritóteles, Ética a Nicômaco",
+		"quote11": "\"Vejo e aprovo o melhor, mas sigo o pior.\" - Ovídio, Metamorfoses",
+		"quote12": "\"O sábio é guiado pela razão, o tolo pela paixão, e o louco pelo impulso.\" - Zenão de Cítio",
+		"quote13": "\"Quanto tempo você vai esperar antes de exigir o melhor de si mesmo?\" - Epicteto, Discursos"
 	}
 }

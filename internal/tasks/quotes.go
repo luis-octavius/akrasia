@@ -12,19 +12,19 @@ import (
 )
 
 var quotes = []string{
-	i18n.T("tasks.quotes.quote1"),
-	i18n.T("tasks.quotes.quote2"),
-	i18n.T("tasks.quotes.quote3"),
-	i18n.T("tasks.quotes.quote4"),
-	i18n.T("tasks.quotes.quote5"),
-	i18n.T("tasks.quotes.quote6"),
-	i18n.T("tasks.quotes.quote7"),
-	i18n.T("tasks.quotes.quote8"),
-	i18n.T("tasks.quotes.quote9"),
-	i18n.T("tasks.quotes.quote10"),
-	i18n.T("tasks.quotes.quote11"),
-	i18n.T("tasks.quotes.quote12"),
-	i18n.T("tasks.quotes.quote13"),
+	i18n.T("quotes.quote1"),
+	i18n.T("quotes.quote2"),
+	i18n.T("quotes.quote3"),
+	i18n.T("quotes.quote4"),
+	i18n.T("quotes.quote5"),
+	i18n.T("quotes.quote6"),
+	i18n.T("quotes.quote7"),
+	i18n.T("quotes.quote8"),
+	i18n.T("quotes.quote9"),
+	i18n.T("quotes.quote10"),
+	i18n.T("quotes.quote11"),
+	i18n.T("quotes.quote12"),
+	i18n.T("quotes.quote13"),
 }
 
 // getTerminalWidth detects the current terminal width, with a safe minimum
