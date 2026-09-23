@@ -31,33 +31,33 @@ func useLine(c *cobra.Command) string {
 	if c.DisableFlagsInUseLine {
 		return useline
 	}
-	if c.HasAvailableFlags() && !strings.Contains(useline, i18n.T("cobraFlagsString")) {
-		useline += " " + i18n.T("cobraFlagsString")
+	if c.HasAvailableFlags() && !strings.Contains(useline, i18n.T("commands.cobra.flagsString")) {
+		useline += " " + i18n.T("commands.cobra.flagsString")
 	}
 	return useline
 }
 
 
 func UsageFunc(cmd *cobra.Command) error {
-	cmd.Print(i18n.T("cobraUsage"))
+	cmd.Print(i18n.T("commands.cobra.usage"))
 	if cmd.Runnable() {
 		cmd.Printf("\n  %s", useLine(cmd))
 	}
 	if cmd.HasAvailableSubCommands() {
-		cmd.Printf(i18n.T("cobraUsageSubcommand"), cmd.CommandPath())
+		cmd.Printf(i18n.T("commands.cobra.usageSubcommand"), cmd.CommandPath())
 	}
 	if len(cmd.Aliases) > 0 {
-		cmd.Printf("%s", i18n.T("cobraAliases"))
+		cmd.Printf(i18n.T("commands.cobra.aliases"))
 		cmd.Printf("  %s", cmd.NameAndAliases())
 	}
 	if cmd.HasExample() {
-		cmd.Printf("%s", i18n.T("cobraExamples"))
+		cmd.Printf(i18n.T("commands.cobra.examples"))
 		cmd.Printf("%s", cmd.Example)
 	}
 	if cmd.HasAvailableSubCommands() {
 		cmds := cmd.Commands()
 		if len(cmd.Groups()) == 0 {
-			cmd.Printf("%s", i18n.T("cobraAvailableCommands"))
+			cmd.Printf("%s", i18n.T("commands.cobra.availableCommands"))
 			for _, subcmd := range cmds {
 				if subcmd.IsAvailableCommand() || subcmd.Name() == "help" {
 					cmd.Printf("\n  %s %s", rpad(subcmd.Name(), subcmd.NamePadding()), subcmd.Short)
@@ -73,7 +73,7 @@ func UsageFunc(cmd *cobra.Command) error {
 				}
 			}
 			if !cmd.AllChildCommandsHaveGroup() {
-				cmd.Printf("%s", i18n.T("cobraAdditionalCommands"))
+				cmd.Printf("%s", i18n.T("commands.cobra.additionalCommands"))
 				for _, subcmd := range cmds {
 					if subcmd.GroupID == "" && (subcmd.IsAvailableCommand() || subcmd.Name() == "help") {
 						cmd.Printf("\n  %s %s", rpad(subcmd.Name(), subcmd.NamePadding()), subcmd.Short)
@@ -83,15 +83,15 @@ func UsageFunc(cmd *cobra.Command) error {
 		}
 	}
 	if cmd.HasAvailableLocalFlags() {
-		cmd.Printf("%s", i18n.T("cobraFlags"))
+		cmd.Printf(i18n.T("commands.cobra.flags"))
 		cmd.Print(trimRightSpace(cmd.LocalFlags().FlagUsages()))
 	}
 	if cmd.HasAvailableInheritedFlags() {
-		cmd.Printf("%s", i18n.T("cobraGlobalFlags"))
+		cmd.Printf(i18n.T("commands.cobra.globalFlags"))
 		cmd.Print(trimRightSpace(cmd.InheritedFlags().FlagUsages()))
 	}
 	if cmd.HasHelpSubCommands() {
-		cmd.Printf("%s", i18n.T("cobraAdditionalHelp"))
+		cmd.Printf(i18n.T("commands.cobra.additionalHelp"))
 		for _, subcmd := range cmd.Commands() {
 			if subcmd.IsAdditionalHelpTopicCommand() {
 				cmd.Printf("\n  %s %s", rpad(subcmd.CommandPath(), subcmd.CommandPathPadding()), subcmd.Short)
@@ -99,7 +99,7 @@ func UsageFunc(cmd *cobra.Command) error {
 		}
 	}
 	if cmd.HasAvailableSubCommands() {
-		cmd.Printf(i18n.T("cobraHelpInfo"), cmd.CommandPath())
+		cmd.Printf(i18n.T("commands.cobra.helpInfo"), cmd.CommandPath())
 	}
 	cmd.Println()
 	return nil
