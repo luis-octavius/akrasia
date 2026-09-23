@@ -19,18 +19,13 @@ This gap between available tools and my personal workflow led me to develop my o
 - [Go 1.25 or later](https://go.dev/doc/install)
 - SQLite3
 - [Goose](https://pressly.github.io/goose/installation/)
-- Cron 
 - A terminal
 
 ## Links 
 - [Quick Start](docs/QUICK-START.md)
 - [Commands](docs/COMMANDS.md)
 - [Usage](docs/USAGE.md)
-
-## Contributing
-
-Contributions are welcome!
-If you're willing to contribute, just fork the project and open a pull request at main.
+- [Contributing](docs/CONTRIBUTING.md)
 
 ## License
 

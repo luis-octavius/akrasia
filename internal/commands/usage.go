@@ -57,7 +57,7 @@ func UsageFunc(cmd *cobra.Command) error {
 	if cmd.HasAvailableSubCommands() {
 		cmds := cmd.Commands()
 		if len(cmd.Groups()) == 0 {
-			cmd.Printf(i18n.T("commands.cobra.availableCommands"))
+			cmd.Printf("%s", i18n.T("commands.cobra.availableCommands"))
 			for _, subcmd := range cmds {
 				if subcmd.IsAvailableCommand() || subcmd.Name() == "help" {
 					cmd.Printf("\n  %s %s", rpad(subcmd.Name(), subcmd.NamePadding()), subcmd.Short)
@@ -73,7 +73,7 @@ func UsageFunc(cmd *cobra.Command) error {
 				}
 			}
 			if !cmd.AllChildCommandsHaveGroup() {
-				cmd.Printf(i18n.T("commands.cobra.additionalCommands"))
+				cmd.Printf("%s", i18n.T("commands.cobra.additionalCommands"))
 				for _, subcmd := range cmds {
 					if subcmd.GroupID == "" && (subcmd.IsAvailableCommand() || subcmd.Name() == "help") {
 						cmd.Printf("\n  %s %s", rpad(subcmd.Name(), subcmd.NamePadding()), subcmd.Short)

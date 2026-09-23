@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"sort"
@@ -8,10 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/luis-octavius/akrasia/internal/db/out"
 	database "github.com/luis-octavius/akrasia/internal/db/out"
 	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
-
 )
 
 func validateDescription(description string) sql.NullString {
@@ -225,4 +226,22 @@ func printTodaySection(title string, todos []database.Todo) {
 	for _, todo := range todos {
 		printTodo(todo)
 	}
+}
+
+func GetTodoByName(tkm *TaskManager, name string) (out.GetTodoByNameRow, error) {
+	loweredName := strings.ToLower(name)
+
+	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams {
+		LOWER: loweredName,
+		LOWER_2: loweredName,
+		LOWER_3: loweredName,
+		LOWER_4: loweredName,
+	})
+
+	if err != nil {
+		// TODO: i18n here too
+		return out.GetTodoByNameRow{}, fmt.Errorf("Error getting todo with %v from the database", name)
+	}
+
+	return todo, nil
 }

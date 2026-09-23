@@ -163,12 +163,8 @@ func (tkm *TaskManager) GetFocus(limit int, priorityFilter string) error {
 
 // getTodoByName retrieves and prints a single task by fuzzy name search.
 func (tkm *TaskManager) GetTodoByName(name string) error {
-	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
-		LOWER:   name,
-		LOWER_2: name,
-		LOWER_3: name,
-		LOWER_4: name,
-	})
+	todo, err := GetTodoByName(tkm, name)
+
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.getTaskByName"), err)
 	}
@@ -193,7 +189,7 @@ func (tkm *TaskManager) UpdateToConcluded(name, notes string) error {
 		Notes:       sql.NullString{String: notes, Valid: true},
 	})
 	if err != nil {
-		return fmt.Errorf(i18n.T("tasks.error.createTaskHistory"))
+		return fmt.Errorf("%s", i18n.T("tasks.error.createTaskHistory"))
 	}
 
 	fmt.Println(i18n.T("tasks.info.updatedSuccessfully"))
@@ -280,12 +276,7 @@ func (tkm *TaskManager) CheckExpiring() error {
 
 // deleteByName removes one task identified by name.
 func (tkm *TaskManager) DeleteByName(name string) error {
-	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
-		LOWER:   name,
-		LOWER_2: name,
-		LOWER_3: name,
-		LOWER_4: name,
-	})
+	todo, err := GetTodoByName(tkm, name)
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.getTodoByName"), err)
 	}
@@ -302,14 +293,9 @@ func (tkm *TaskManager) DeleteByName(name string) error {
 
 // getCurrentStreak prints the current streak count for a named task.
 func (tkm *TaskManager) GetCurrentStreak(name string) error {
-	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
-		LOWER:   name,
-		LOWER_2: name,
-		LOWER_3: name,
-		LOWER_4: name,
-	})
+	todo, err := GetTodoByName(tkm, name)
 	if err != nil {
-		return fmt.Errorf(i18n.T("tasks.error.getTodoByNameStreak"))
+		return fmt.Errorf("%s", i18n.T("tasks.error.getTodoByNameStreak"))
 	}
 
 	streak, err := tkm.Queries.GetCurrentStreak(context.Background(), database.GetCurrentStreakParams{
@@ -317,7 +303,7 @@ func (tkm *TaskManager) GetCurrentStreak(name string) error {
 		TodoID_2: todo.ID,
 	})
 	if err != nil {
-		return fmt.Errorf(i18n.T("tasks.error.getCurrentStreak"))
+		return fmt.Errorf("%s", i18n.T("tasks.error.getCurrentStreak"))
 	}
 
 	fmt.Printf(i18n.T("tasks.info.currentStreak"), todo.Name, streak)
@@ -326,14 +312,9 @@ func (tkm *TaskManager) GetCurrentStreak(name string) error {
 
 // getStreakHistory prints historical streak intervals for a named task.
 func (tkm *TaskManager) GetStreakHistory(name string) error {
-	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
-		LOWER:   name,
-		LOWER_2: name,
-		LOWER_3: name,
-		LOWER_4: name,
-	})
+	todo, err := GetTodoByName(tkm, name)
 	if err != nil {
-		return fmt.Errorf(i18n.T("tasks.error.getTaskByName"))
+		return fmt.Errorf("%s", i18n.T("tasks.error.getTaskByName"))
 	}
 
 	streak_history, err := tkm.Queries.GetStreakHistory(context.Background(), database.GetStreakHistoryParams{
@@ -341,7 +322,7 @@ func (tkm *TaskManager) GetStreakHistory(name string) error {
 		TodoID_2: todo.ID,
 	})
 	if err != nil {
-		return fmt.Errorf(i18n.T("tasks.error.getStreakHistory"))
+		return fmt.Errorf("%s", i18n.T("tasks.error.getStreakHistory"))
 	}
 
 	for i, streak := range streak_history {
@@ -366,13 +347,7 @@ func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) erro
 	var err error
 
 	if taskName != "" {
-		// Get specific task by name
-		todo, err := tkm.Queries.GetTodoByName(ctx, database.GetTodoByNameParams{
-			LOWER:   taskName,
-			LOWER_2: taskName,
-			LOWER_3: taskName,
-			LOWER_4: taskName,
-		})
+		todo, err := GetTodoByName(tkm, taskName)
 		if err != nil {
 			return fmt.Errorf(i18n.T("tasks.error.findTask"), taskName, err)
 		}

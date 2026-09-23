@@ -136,7 +136,7 @@ var today = &cobra.Command{
 		}
 
 		if todayLimit < 0 {
-			return fmt.Errorf(i18n.T("commands.error.invalidTodayLimit"))
+			return fmt.Errorf("%s", i18n.T("commands.error.invalidTodayLimit"))
 		}
 
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -167,7 +167,7 @@ var focus = &cobra.Command{
 	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if focusLimit < 1 || focusLimit > 3 {
-			return fmt.Errorf(i18n.T("commands.error.focusLimit"))
+			return fmt.Errorf("%s", i18n.T("commands.error.focusLimit"))
 		}
 
 		if filterPriority != "" && filterPriority != "high" && filterPriority != "medium" && filterPriority != "low" {
@@ -306,7 +306,7 @@ var initCmd = &cobra.Command{
 			log.Fatal(i18n.T("commands.error.openDatabase"), err)
 		}
 
-		fmt.Printf(i18n.T("commands.info.initSuccessful"))
+		fmt.Printf("%s", i18n.T("commands.info.initSuccessful"))
 	},
 }
 
