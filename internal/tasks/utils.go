@@ -231,13 +231,12 @@ func printTodaySection(title string, todos []database.Todo) {
 func GetTodoByName(tkm *TaskManager, name string) (out.GetTodoByNameRow, error) {
 	loweredName := strings.ToLower(name)
 
-	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams {
-		LOWER: loweredName,
+	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
+		LOWER:   loweredName,
 		LOWER_2: loweredName,
 		LOWER_3: loweredName,
 		LOWER_4: loweredName,
 	})
-
 	if err != nil {
 		// TODO: i18n here too
 		return out.GetTodoByNameRow{}, fmt.Errorf("Error getting todo with %v from the database", name)
