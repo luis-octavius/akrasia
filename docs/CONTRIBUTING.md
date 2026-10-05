@@ -1,9 +1,30 @@
-Here, you can see how you can contribute to the application in general and in other specific cases. 
+Here you can see how you can contribute to the application in general and in other specific cases. 
+
+## Table of Contents
+- [Branches and Pull Requests](#branches-and-pull-requests)
+- [Adding a command](#adding-a-command)
+## Branches and Pull Requests
+
+Every change should be made in its own branch, created from `main`. Please don't commit directly into the `main` branch.
+
+1. Name your branch as `type/short-description`, using the same types as [Conventional Commits](https://www.conventionalcommits.org/):
+   - `feat/` for new features or commands
+   - `fix/` for bug fixes
+   - `docs/` for documentation changes
+   - `refactor/` for code changes that don't alter behavior
+   - `test/` for adding or adjusting tests
+   - `chore/` for maintenance tasks
+
+   Use lowercase and hyphens in the description, e.g. `fix/streak-reset-bug` or `feat/export-command`.
+
+2. Commit your changes, preferably following the Conventional Commits style as well.
+3. Open a Pull Request against `main` and reference the related issue in the description.
+4. I'll review it and may ask for adjustments before merging. 
 
 ## Adding a command 
-The flux to add a command is simple. 
+The flow to add a command is simple. 
 
-1. If it is a new functionality that the actual queries do not cover, you'll have to create one in `/internal/db/queries/`. If it is related to tasks, you'll have to put into the `todos.sql`, otherwise, put it in `todos_history.sql`. The shape is this: 
+1. If it is a new functionality that the existing queries do not cover, you'll have to create one in `/internal/db/queries/`. If it is related to tasks, you'll have to put into the `todos.sql`, otherwise, put it in `todos_history.sql`. The shape is this: 
 
 ```sqlite
 -- name: GetTodoByName :one 
@@ -13,7 +34,7 @@ where name LIKE '%';
 ```
 2. Generate the new query(ies) in the code with `sqlc generate`.
 
-3. Create a method for the `TaskManager` in `internal/tasks/task.go`. I'll leave a detailed examplebelow:
+3. Create a method for the `TaskManager` in `internal/tasks/task.go`. I'll leave a detailed example below:
 
 ```go 
 // the signature to create a new method for the TaskManager 
@@ -92,6 +113,10 @@ var add = &cobra.Command{
 		}
 
 		isDaily, err := cmd.Flags().GetBool("daily")
+
+		if (err != nil) {
+			return err
+		}
         
         // usage of the created method in step 3
 		err = tkm.AddTodo(taskName, taskDesc, priority, isDaily, expiresAt)
@@ -107,8 +132,7 @@ var add = &cobra.Command{
 
 5. Add the command in the map `commands` inside `init()`. 
 
-6. Add flags in the created command. The cobra documentation for how to work with flags is [this](
-https://cobra.dev/docs/how-to-guides/working-with-flags/). A simple example: 
+6. Add flags in the created command. The cobra documentation for how to work with flags is [this](https://cobra.dev/docs/how-to-guides/working-with-flags/). A simple example: 
 
 ```go
 	add.Flags().IntSliceVar(&date, "date", []int{}, i18n.T("addFlagDate"))
