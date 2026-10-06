@@ -6,7 +6,7 @@
 			"updateDailyTodoShort": "reconfigurar tarefas diárias para mais um dia e registrar o histórico de conclusões (roda pelo cron)",
 			"addShort": "cria uma nova tarefa com descrição opcional, prioridade e data de expiração",
 			"addUse": "add [<nome> [<descrição>]]",
-			"addExample": "akrasia add \"Corrida matinal\" --daily --priority high\nakrasia add \"Corrida matinal\" \"Fazer 5km no parque\" --priority high\nakrasia add --name \"Corrida matinal\" --daily --priority high",
+			"addExample": "akrasia add \"Corrida matinal\" --daily --priority high --date 31,12\nakrasia add \"Corrida matinal\" \"Fazer 5km no parque\" --priority medium\nakrasia add --name \"Corrida matinal\" --daily --priority low",
 			"getAllShort": "retorna todas as tarefas salvas no disco",
 			"todayShort": "mostrar um painel do foco diário (atrasados, vence hoje, pendências diárias, expirando em breve)",
 			"focusShort": "mostrar os top 1-3 itens para focar agora",
@@ -31,9 +31,9 @@
 			"configLanguageUse": "language [list|show|<código-da-linguagem>]"
 		},
 		"flags": {
-			"addDate": "adicionar data para a tarefa",
+			"addDate": "adicionar data para a tarefa (dd,mm)",
 			"addName": "nome da tarefa",
-			"addPriority": "prioridade da tarefa",
+			"addPriority": "prioridade da tarefa (high|medium|low)",
 			"addDaily": "tarefa diária",
 			"addDescription": "descrição da tarefa",
 			"getAllPriority": "filtrar tarefas por prioridade: high|medium|low",
@@ -46,13 +46,13 @@
 			"updateStatusToConcludedName": "nome da tarefa",
 			"updateStatusToConcludedNotes": "notas diárias",
 			"deleteConcludedDeleteYes":  "confirmar remoção destrutiva de tarefas concluídas",
-			"getTodoCurrentStreakName": "ofensiva atual",
+			"getTodoCurrentStreakName": "nome da tarefa",
 			"getTodoStreakHistoryName": "histórico de ofensivas da tarefa",
-			"backfillHistoryDays": "número de dias para retropreencher (padrão 30)",
+			"backfillHistoryDays": "número de dias para retropreencher",
 			"backfillHistoryName": "nome da tarefa específica para retropreencher (opcional, preenche todas as tarefas diárias se não for definido)",
-			"todayOnly": "mostrar apenas uma seção: atrasadas|hoje|diárias|breve",
+			"todayOnly": "mostrar apenas uma seção: overdue|today|daily|soon",
 			"todayLimit": "limitar itens por seção (0 = sem limite)",
-			"todayJSON": "exibir a saída de hoje em JSON"
+			"todayJSON": "exibir a saída do today em JSON"
 		},
 		"cobra": {
 			"usage": "Uso:",
