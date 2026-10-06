@@ -48,11 +48,11 @@
 			"deleteConcludedDeleteYes":  "confirmar remoção destrutiva de tarefas concluídas",
 			"getTodoCurrentStreakName": "nome da tarefa",
 			"getTodoStreakHistoryName": "histórico de ofensivas da tarefa",
-			"backfillHistoryDays": "número de dias para retropreencher (padrão 30)",
+			"backfillHistoryDays": "número de dias para retropreencher",
 			"backfillHistoryName": "nome da tarefa específica para retropreencher (opcional, preenche todas as tarefas diárias se não for definido)",
-			"todayOnly": "mostrar apenas uma seção: atrasadas|hoje|diárias|breve",
+			"todayOnly": "mostrar apenas uma seção: overdue|today|daily|soon",
 			"todayLimit": "limitar itens por seção (0 = sem limite)",
-			"todayJSON": "exibir a saída de hoje em JSON"
+			"todayJSON": "exibir a saída do today em JSON"
 		},
 		"cobra": {
 			"usage": "Uso:",

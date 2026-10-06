@@ -48,7 +48,7 @@
 			"deleteConcludedDeleteYes": "confirm destructive deletion of concluded tasks",
 			"getTodoCurrentStreakName": "task name",
 			"getTodoStreakHistoryName": "todo streak history",
-			"backfillHistoryDays": "number of days back to backfill (default 30)",
+			"backfillHistoryDays": "number of days back to backfill",
 			"backfillHistoryName": "specific task name to backfill (optional, fills all daily tasks if not set)",
 			"todayOnly": "show only one section: overdue|today|daily|soon",
 			"todayLimit": "limit items per section (0 = no limit)",
@@ -100,7 +100,7 @@
 	},
 	"db": {
 		"error": {
-			"errorInvalidDatabasePath": "database path is not valid"
+			"invalidDatabasePath": "database path is not valid"
 		}
 	},
 	"tasks": {
