@@ -187,9 +187,15 @@ var getTodoByName = &cobra.Command{
 	Use:     i18n.T("commands.commands.getTodoByNameUse"),
 	Short:   i18n.T("commands.commands.getTodoByNameShort"),
 	Aliases: []string{"gn", "name"},
-	Args:    cobra.NoArgs,
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if name == "" {
+		taskName := name
+
+		if len(args) > 0 {
+			taskName = args[0]
+		}
+
+		if taskName == "" {
 			return errors.New(i18n.T("commands.error.emptyName"))
 		}
 
@@ -198,7 +204,7 @@ var getTodoByName = &cobra.Command{
 			return err
 		}
 
-		err = tkm.GetTodoByName(name)
+		err = tkm.GetTodoByName(taskName)
 		if err != nil {
 			return err
 		}
@@ -212,6 +218,7 @@ var updateStatusToConcluded = &cobra.Command{
 	Use:     i18n.T("commands.commands.updateStatusUse"),
 	Short:   i18n.T("commands.commands.updateStatusShort"),
 	Aliases: []string{"us"},
+	Args: cobra.MaximumNArgs(1),
 	Example: i18n.T("commands.commands.updateStatusExample"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -219,7 +226,13 @@ var updateStatusToConcluded = &cobra.Command{
 			return err
 		}
 
-		err = tkm.UpdateToConcluded(name, notes)
+		taskName := name
+
+		if len(args) > 0 {
+			taskName = args[0]
+		}
+
+		err = tkm.UpdateToConcluded(taskName, notes)
 		if err != nil {
 			return err
 		}
@@ -312,9 +325,10 @@ var initCmd = &cobra.Command{
 
 // delByName deletes a single task by name.
 var delByName = &cobra.Command{
-	Use:     "delete-by-name",
+	Use:     i18n.T("commands.commands.delByNameUse"),
 	Short:   i18n.T("commands.commands.delByNameShort"),
 	Aliases: []string{"deln", "dn"},
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !deleteYes {
 			return errors.New(i18n.T("commands.error.destructiveAction"))
@@ -325,7 +339,13 @@ var delByName = &cobra.Command{
 			return err
 		}
 
-		err = tkm.DeleteByName(name)
+		taskName := name
+
+		if len(args) > 0 {
+			taskName = args[0]
+		}
+
+		err = tkm.DeleteByName(taskName)
 		if err != nil {
 			return err
 		}
@@ -356,16 +376,23 @@ var getAllDaily = &cobra.Command{
 
 // getTodoCurrentStreak returns the current completion streak for a task.
 var getTodoCurrentStreak = &cobra.Command{
-	Use:     "streak",
+	Use:     i18n.T("commands.commands.getTodoCurrentStreakUse"),
 	Short:   i18n.T("commands.commands.getTodoCurrentStreakShort"),
 	Aliases: []string{"curr", "cs"},
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
 		if err != nil {
 			return err
 		}
 
-		err = tkm.GetCurrentStreak(name)
+		taskName := name
+
+		if len(args) > 0 {
+			taskName = args[0]
+		}
+
+		err = tkm.GetCurrentStreak(taskName)
 		if err != nil {
 			return err
 		}
@@ -375,7 +402,7 @@ var getTodoCurrentStreak = &cobra.Command{
 
 // getTodoStreakHistory returns the streak history timeline for a task.
 var getTodoStreakHistory = &cobra.Command{
-	Use:     "history",
+	Use:     i18n.T("commands.commands.getTodoStreakHistoryUse"),
 	Short:   i18n.T("commands.commands.getTodoStreakHistoryShort"),
 	Aliases: []string{"his", "sh"},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -384,7 +411,13 @@ var getTodoStreakHistory = &cobra.Command{
 			return err
 		}
 
-		err = tkm.GetStreakHistory(name)
+		taskName := name
+
+		if len(args) > 0 {
+			taskName = args[0]
+		}
+
+		err = tkm.GetStreakHistory(taskName)
 		if err != nil {
 			return err
 		}
