@@ -9,6 +9,12 @@ import (
 	"time"
 )
 
+type Dump struct {
+	ID        interface{}
+	Name      string
+	CreatedAt sql.NullTime
+}
+
 type Todo struct {
 	ID           interface{}
 	Name         string
@@ -19,7 +25,7 @@ type Todo struct {
 	ExpiresAt    time.Time
 	Priority     string
 	IsDaily      bool
-	HistorySince sql.NullString
+	HistorySince sql.NullTime
 }
 
 type TodosHistory struct {

@@ -29,7 +29,7 @@ type AddTodoParams struct {
 	ExpiresAt    time.Time
 	Priority     string
 	IsDaily      bool
-	HistorySince sql.NullString
+	HistorySince sql.NullTime
 }
 
 func (q *Queries) AddTodo(ctx context.Context, arg AddTodoParams) (Todo, error) {
@@ -190,14 +190,14 @@ WITH ranked_todos AS (
   SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since,
     CASE
     -- same text 
-    WHEN LOWER(name) = LOWER(?) THEN 1
+    WHEN name = ? THEN 1
     -- begins with the term 
-    WHEN LOWER(name) LIKE LOWER(?) || '%' THEN 2
-    WHEN LOWER(name) LIKE '%' || LOWER(?) || '%' THEN 3
+    WHEN name LIKE ? || '%' THEN 2
+    WHEN name LIKE '%' || ? || '%' THEN 3
     ELSE 4 
     END as relevance
   FROM todos
-  WHERE LOWER(name) LIKE '%' || LOWER(?) || '%'
+  WHERE name LIKE '%' || ? || '%'
 ) 
 SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, relevance FROM ranked_todos
 ORDER BY relevance, name COLLATE NOCASE
@@ -205,10 +205,10 @@ LIMIT 1
 `
 
 type GetTodoByNameParams struct {
-	LOWER   string
-	LOWER_2 string
-	LOWER_3 string
-	LOWER_4 string
+	Name    string
+	Column2 sql.NullString
+	Column3 sql.NullString
+	Column4 sql.NullString
 }
 
 type GetTodoByNameRow struct {
@@ -221,16 +221,16 @@ type GetTodoByNameRow struct {
 	ExpiresAt    time.Time
 	Priority     string
 	IsDaily      bool
-	HistorySince sql.NullString
+	HistorySince sql.NullTime
 	Relevance    int64
 }
 
 func (q *Queries) GetTodoByName(ctx context.Context, arg GetTodoByNameParams) (GetTodoByNameRow, error) {
 	row := q.db.QueryRowContext(ctx, getTodoByName,
-		arg.LOWER,
-		arg.LOWER_2,
-		arg.LOWER_3,
-		arg.LOWER_4,
+		arg.Name,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
 	)
 	var i GetTodoByNameRow
 	err := row.Scan(

@@ -1,7 +1,7 @@
 -- name: AddTodoHistory :one
 -- Logs a completion for "today" (local time). Used by `done` for both
 -- daily and one-off tasks. ON CONFLICT DO UPDATE means calling this
--- more than once on the same day always reflects the latest state —
+-- more than once on the same day always reflects the latest state -
 -- there is no separate "reset" step that can race against it.
 INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
 VALUES (
@@ -28,7 +28,7 @@ WHERE date = date('now', 'localtime') AND completed = 1;
 
 -- name: BackfillDailyDone :one
 -- Records a real completion for a past date the user forgot to log.
--- Unlike the old backfill, this always writes completed = true — there
+-- Unlike the old backfill, this always writes completed = true - there
 -- is no "neutral" state. Dates before a task's history_since are simply
 -- never considered by the streak queries below, so there is nothing
 -- left to accidentally overwrite or misclassify.
@@ -51,9 +51,9 @@ WITH ordered AS (
         date,
         completed,
         julianday(date) - julianday(LAG(date) OVER (ORDER BY date ASC)) AS days_diff
-    FROM todos_history
-    WHERE todo_id = ?
-      AND date >= (SELECT history_since FROM todos WHERE id = ?)
+    FROM todos_history AS th
+    WHERE th.todo_id = ?
+      AND date >= (SELECT history_since FROM todos AS t WHERE t.id = ?)
       AND date <= date('now', 'localtime')
     ORDER BY date ASC
 ),
@@ -88,9 +88,9 @@ WITH ordered AS (
         date,
         completed,
         julianday(date) - julianday(LAG(date) OVER (ORDER BY date ASC)) AS days_diff
-    FROM todos_history
-    WHERE todo_id = ?
-      AND date >= (SELECT history_since FROM todos WHERE id = ?)
+    FROM todos_history AS th
+    WHERE th.todo_id = ?
+      AND date >= (SELECT history_since FROM todos AS t WHERE t.id = ?)
     ORDER BY date ASC
 ),
 grouped AS (
