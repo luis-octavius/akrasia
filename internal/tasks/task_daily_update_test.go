@@ -113,7 +113,6 @@ func TestBackfillDoesNotInflateStreak(t *testing.T) {
 
 	streak, err := tkm.Queries.GetCurrentStreak(ctx, database.GetCurrentStreakParams{
 		TodoID:   todo.ID,
-		TodoID_2: todo.ID,
 	})
 	if err != nil {
 		t.Fatalf("GetCurrentStreak() error = %v", err)
@@ -172,7 +171,6 @@ func TestGapBreaksStreakWithoutAMissedDayRow(t *testing.T) {
 
 	streak, err := tkm.Queries.GetCurrentStreak(ctx, database.GetCurrentStreakParams{
 		TodoID:   todo.ID,
-		TodoID_2: todo.ID,
 	})
 	if err != nil {
 		t.Fatalf("GetCurrentStreak() error = %v", err)

@@ -3,7 +3,7 @@
 //   sqlc v1.30.0
 // source: todos.sql
 
-package out
+package database
 
 import (
 	"context"
@@ -29,7 +29,7 @@ type AddTodoParams struct {
 	ExpiresAt    time.Time
 	Priority     string
 	IsDaily      bool
-	HistorySince sql.NullTime
+	HistorySince sql.NullString
 }
 
 func (q *Queries) AddTodo(ctx context.Context, arg AddTodoParams) (Todo, error) {

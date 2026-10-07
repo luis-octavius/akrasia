@@ -2,7 +2,7 @@
 // versions:
 //   sqlc v1.30.0
 
-package out
+package database
 
 import (
 	"database/sql"
@@ -25,7 +25,7 @@ type Todo struct {
 	ExpiresAt    time.Time
 	Priority     string
 	IsDaily      bool
-	HistorySince sql.NullTime
+	HistorySince sql.NullString
 }
 
 type TodosHistory struct {

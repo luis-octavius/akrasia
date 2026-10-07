@@ -3,7 +3,7 @@
 //   sqlc v1.30.0
 // source: dump.sql
 
-package out
+package database
 
 import (
 	"context"

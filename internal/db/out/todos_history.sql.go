@@ -3,7 +3,7 @@
 //   sqlc v1.30.0
 // source: todos_history.sql
 
-package out
+package database
 
 import (
 	"context"
