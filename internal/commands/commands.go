@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"slices"
 
 	"github.com/luis-octavius/akrasia/internal/db"
 	"github.com/luis-octavius/akrasia/internal/tasks"
@@ -315,6 +316,7 @@ var delByName = &cobra.Command{
 	Use:     "delete-by-name",
 	Short:   i18n.T("commands.commands.delByNameShort"),
 	Aliases: []string{"deln", "dn"},
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !deleteYes {
 			return errors.New(i18n.T("commands.error.destructiveAction"))
@@ -453,13 +455,8 @@ var configTheme = &cobra.Command{
 		default:
 			// Try to set the theme
 			availableThemes := color.GetAvailableThemes()
-			found := false
-			for _, t := range availableThemes {
-				if t == action {
-					found = true
-					break
-				}
-			}
+
+			found := slices.Contains(availableThemes, action)
 
 			if !found {
 				return fmt.Errorf(i18n.T("commands.error.unknownTheme"), action, availableThemes)
@@ -501,13 +498,7 @@ var configLanguage = &cobra.Command{
 
 		default:
 			availableLanguages := i18n.GetAvailableLanguages()
-			found := false
-			for _, l := range availableLanguages {
-				if l == action {
-					found = true
-					break
-				}
-			}
+			found := slices.Contains(availableLanguages, action)
 
 			if !found {
 				return fmt.Errorf(i18n.T("commands.error.unknownLanguage"), action, availableLanguages)
