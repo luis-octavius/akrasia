@@ -19,6 +19,31 @@ func trimRightSpace(s string) string {
 	return strings.TrimRightFunc(s, unicode.IsSpace)
 }
 
+// shortestMember returns the shortest string in a slice
+func shortestMember(a []string) string {
+	if a == nil {
+		return ""
+	}
+	shortest := a[0]
+	for _, v := range a {
+		if len(v) < len(shortest) {
+			shortest = v
+		}
+	}
+	return shortest
+}
+
+// aliasesMaxPadding returns the largest padding necessary to align all aliases
+func aliasesMaxPadding(c []*cobra.Command) int {
+	maxLength := 0
+	for _, subcmd := range c {
+		if aliasLength := len(shortestMember(subcmd.Aliases)); aliasLength > maxLength {
+			maxLength = aliasLength
+		}
+	}
+	return maxLength
+}
+
 // useLine puts out the full usage for a given command (including parents).
 func useLine(c *cobra.Command) string {
 	var useline string
@@ -56,11 +81,12 @@ func UsageFunc(cmd *cobra.Command) error {
 	}
 	if cmd.HasAvailableSubCommands() {
 		cmds := cmd.Commands()
+		aliasPadding := aliasesMaxPadding(cmds)
 		if len(cmd.Groups()) == 0 {
 			cmd.Printf("%s", i18n.T("commands.cobra.availableCommands"))
 			for _, subcmd := range cmds {
 				if subcmd.IsAvailableCommand() || subcmd.Name() == "help" {
-					cmd.Printf("\n  %s %s", rpad(subcmd.Name(), subcmd.NamePadding()), subcmd.Short)
+					cmd.Printf("\n %s %s %s", rpad(shortestMember(subcmd.Aliases), aliasPadding), rpad(subcmd.Name(), subcmd.NamePadding()), subcmd.Short)
 				}
 			}
 		} else {
@@ -68,7 +94,7 @@ func UsageFunc(cmd *cobra.Command) error {
 				cmd.Printf("\n\n%s", group.Title)
 				for _, subcmd := range cmds {
 					if subcmd.GroupID == group.ID && (subcmd.IsAvailableCommand() || subcmd.Name() == "help") {
-						cmd.Printf("\n  %s %s", rpad(subcmd.Name(), subcmd.NamePadding()), subcmd.Short)
+						cmd.Printf("\n %s %s %s", rpad(shortestMember(subcmd.Aliases), aliasPadding), rpad(subcmd.Name(), subcmd.NamePadding()), subcmd.Short)
 					}
 				}
 			}
@@ -76,7 +102,7 @@ func UsageFunc(cmd *cobra.Command) error {
 				cmd.Printf("%s", i18n.T("commands.cobra.additionalCommands"))
 				for _, subcmd := range cmds {
 					if subcmd.GroupID == "" && (subcmd.IsAvailableCommand() || subcmd.Name() == "help") {
-						cmd.Printf("\n  %s %s", rpad(subcmd.Name(), subcmd.NamePadding()), subcmd.Short)
+						cmd.Printf("\n %s %s %s", rpad(shortestMember(subcmd.Aliases), aliasPadding), rpad(subcmd.Name(), subcmd.NamePadding()), subcmd.Short)
 					}
 				}
 			}
