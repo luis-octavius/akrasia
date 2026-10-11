@@ -1,37 +1,50 @@
-package tasks 
+package tasks
 
 import (
-	"uuid"
-	"context"	
-	"log"
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
 
 	database "github.com/luis-octavius/akrasia/internal/db/out"
+	"github.com/luis-octavius/akrasia/pkg/color"
+	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
-var (
-	ctx = context.Background();
-)
-
+// AddDump stores a named entry in the dump table and reports success.
 func (tkm *TaskManager) AddDump(name string) error {
-	dumpId := uuid.New();
-
-	_, err := tkm.Queries.AddDump(ctx, database.AddDumpParams{
-		ID: dumpId, 
+	_, err := tkm.Queries.AddDump(context.Background(), database.AddDumpParams{
+		ID:   uuid.New(),
 		Name: name,
 	})
-
 	if err != nil {
-		log.Fatalf("Error by adding dump with %v", name)
+		return fmt.Errorf("%s: %w", i18n.T("tasks.error.addDump"), err)
 	}
 
+	color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.addedDump"), name))
 	return nil
 }
 
-func (tkm *TaskManager) GetAllDump() ([]database.Dump, error) {
-	allDump, err := tkm.Queries.GetAllDump(ctx)
+// GetAllDump prints every stored dump entry, oldest first.
+func (tkm *TaskManager) GetAllDump() error {
+	allDump, err := tkm.Queries.GetAllDump(context.Background())
 	if err != nil {
-		log.Fatal("Error getting all dump")
+		return fmt.Errorf("%s: %w", i18n.T("tasks.error.getDump"), err)
 	}
 
-	return allDump, nil
+	if len(allDump) == 0 {
+		fmt.Println(i18n.T("tasks.info.noDump"))
+		return nil
+	}
+
+	for _, d := range allDump {
+		createdAt := ""
+		if d.CreatedAt.Valid {
+			createdAt = d.CreatedAt.Time.Format(time.RFC822)
+		}
+		fmt.Printf(i18n.T("tasks.dump.row"), d.Name, createdAt)
+	}
+
+	return nil
 }

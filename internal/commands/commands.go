@@ -473,6 +473,31 @@ var backfillHistory = &cobra.Command{
 	},
 }
 
+// dump stores a named entry in the dump table, or lists stored entries.
+var dumpCmd = &cobra.Command{
+	Use:     i18n.T("commands.commands.dumpUse"),
+	Short:   i18n.T("commands.commands.dumpShort"),
+	Aliases: []string{"dp"},
+	Args:    cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		dumpName := name
+		if len(args) > 0 {
+			dumpName = args[0]
+		}
+
+		if dumpName == "" {
+			return tkm.GetAllDump()
+		}
+
+		return tkm.AddDump(dumpName)
+	},
+}
+
 // config manages application settings and themes.
 var config = &cobra.Command{
 	Use:     "config",
@@ -589,6 +614,7 @@ func init() {
 		"getTodoStreakHistory":    getTodoStreakHistory,
 		"backfillHistory":         backfillHistory,
 		"debugTask":               debugTask,
+		"dumpCmd":                 dumpCmd,
 		"config":                  config,
 	}
 
@@ -623,6 +649,7 @@ func init() {
 	backfillHistory.Flags().IntVar(&daysBackfill, "days", 30, i18n.T("commands.flags.backfillHistoryDays"))
 	backfillHistory.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.backfillHistoryName"))
 	debugTask.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.debugName"))
+	dumpCmd.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.dumpName"))
 	today.Flags().StringVar(&todayOnly, "only", "", i18n.T("commands.flags.todayOnly"))
 	today.Flags().IntVar(&todayLimit, "limit", 0, i18n.T("commands.flags.todayLimit"))
 	today.Flags().BoolVar(&todayJSON, "json", false, i18n.T("commands.flags.todayJSON"))
