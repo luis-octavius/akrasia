@@ -161,7 +161,8 @@
 			"getStreakHistory": "Error getting todo streak history",
 			"findTask": "Error finding task '%s': %w",
 			"taskNotDaily": "Task '%s' is not a daily task",
-			"getDaily": "Error getting daily tasks: %w"
+			"getDaily": "Error getting daily tasks: %w",
+			"extendHistorySince": "Error extending task history window"
 		}
 	},
 	"quotes": {

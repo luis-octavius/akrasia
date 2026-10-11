@@ -160,7 +160,8 @@
 			"getStreakHistory": "Erro ao obter o histórico de ofensiva da tarefa",
 			"findTask": "Erro ao procurar pela tarefa '%s': %w",
 			"taskNotDaily": "Tarefa '%s' não é uma tarefa diária",
-			"getDaily": "Erro ao obter as tarefas diárias: %w"
+			"getDaily": "Erro ao obter as tarefas diárias: %w",
+			"extendHistorySince": "Erro ao estender a janela de histórico da tarefa"
 		}
 	},
 	"quotes": {
