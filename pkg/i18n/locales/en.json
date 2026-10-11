@@ -27,6 +27,8 @@
 			"getTodoStreakHistoryShort": "get the streak history of provided todo",
 			"getTodoStreakHistoryUse": "history <name>",
 			"backfillHistoryShort": "backfill missing daily task history entries",
+			"debugShort": "inspect a task's stored history and streak math (diagnostics)",
+			"debugUse": "debug <name>",
 			"configShort": "manage application settings (themes, preferences)",
 			"configThemeShort": "manage color themes",
 			"configThemeUse": "theme [list|show|<theme-name>]",
@@ -53,6 +55,7 @@
 			"getTodoStreakHistoryName": "todo streak history",
 			"backfillHistoryDays": "number of days back to backfill",
 			"backfillHistoryName": "specific task name to backfill (optional, fills all daily tasks if not set)",
+			"debugName": "task name to inspect",
 			"todayOnly": "show only one section: overdue|today|daily|soon",
 			"todayLimit": "limit items per section (0 = no limit)",
 			"todayJSON": "print today output as JSON"
@@ -121,6 +124,14 @@
 			"getStreakHistory": "\n%d. Started Date: %v | End Date: %v | Total Days: %d\n",
 			"done": "Done",
 			"notDone": "Not done"
+		},
+		"debug": {
+			"title": "DEBUG: %s\n",
+			"meta": "  id            : %v\n  is_daily      : %v\n  created_at    : %v\n  history_since : %v\n",
+			"historyHeader": "\nHistory (%d rows):\n",
+			"historyRow": "  %s  completed=%-5v notes=%-12s in_streak=%v\n",
+			"streak": "\nCurrent streak: %d (counting history dates >= history_since = %s)\n",
+			"noWindow": "(none)"
 		},
 		"info": {
 			"NoExpiring": "Your tasks are not fleeing. You have time, yet your focus must remain steadfast.",

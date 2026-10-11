@@ -427,6 +427,31 @@ var getTodoStreakHistory = &cobra.Command{
 	},
 }
 
+// debugTask prints the raw history/streak data for a task (diagnostics).
+var debugTask = &cobra.Command{
+	Use:     i18n.T("commands.commands.debugUse"),
+	Short:   i18n.T("commands.commands.debugShort"),
+	Aliases: []string{"dbg"},
+	Args:    cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		taskName := name
+		if len(args) > 0 {
+			taskName = args[0]
+		}
+
+		if taskName == "" {
+			return errors.New(i18n.T("commands.error.emptyName"))
+		}
+
+		return tkm.DebugTask(taskName)
+	},
+}
+
 // backfillHistory inserts real completions for days the user forgot to log.
 // Excludes today — use `done` for that.
 var backfillHistory = &cobra.Command{
@@ -563,6 +588,7 @@ func init() {
 		"getTodoCurrentStreak":    getTodoCurrentStreak,
 		"getTodoStreakHistory":    getTodoStreakHistory,
 		"backfillHistory":         backfillHistory,
+		"debugTask":               debugTask,
 		"config":                  config,
 	}
 
@@ -596,6 +622,7 @@ func init() {
 	getTodoStreakHistory.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.getTodoStreakHistoryName"))
 	backfillHistory.Flags().IntVar(&daysBackfill, "days", 30, i18n.T("commands.flags.backfillHistoryDays"))
 	backfillHistory.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.backfillHistoryName"))
+	debugTask.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.debugName"))
 	today.Flags().StringVar(&todayOnly, "only", "", i18n.T("commands.flags.todayOnly"))
 	today.Flags().IntVar(&todayLimit, "limit", 0, i18n.T("commands.flags.todayLimit"))
 	today.Flags().BoolVar(&todayJSON, "json", false, i18n.T("commands.flags.todayJSON"))

@@ -27,6 +27,8 @@
 			"getTodoStreakHistoryShort": "ver o histórico de ofensivas de dada tarefa",
 			"getTodoStreakHistoryUse": "history <nome>",
 			"backfillHistoryShort": "retropreencher tarefas diárias ausentes no histórico",
+			"debugShort": "inspecionar o histórico armazenado e o cálculo da ofensiva de uma tarefa (diagnóstico)",
+			"debugUse": "debug <nome>",
 			"configShort": "gerenciar configurações da aplicação (temas, preferências)",
 			"configThemeShort": "gerenciar temas de cor",
 			"configThemeUse": "theme [list|show|<nome-do-tema>]",
@@ -53,6 +55,7 @@
 			"getTodoStreakHistoryName": "histórico de ofensivas da tarefa",
 			"backfillHistoryDays": "número de dias para retropreencher",
 			"backfillHistoryName": "nome da tarefa específica para retropreencher (opcional, preenche todas as tarefas diárias se não for definido)",
+			"debugName": "nome da tarefa para inspecionar",
 			"todayOnly": "mostrar apenas uma seção: overdue|today|daily|soon",
 			"todayLimit": "limitar itens por seção (0 = sem limite)",
 			"todayJSON": "exibir a saída do today em JSON"
@@ -120,6 +123,14 @@
 			"getStreakHistory": "\n%d. Data de Início: %v | Data de Término: %v | Dias Totais: %d\n",
 			"done": "Concluído",
 			"notDone": "Não concluído"
+		},
+		"debug": {
+			"title": "DEBUG: %s\n",
+			"meta": "  id            : %v\n  is_daily      : %v\n  created_at    : %v\n  history_since : %v\n",
+			"historyHeader": "\nHistórico (%d linhas):\n",
+			"historyRow": "  %s  completed=%-5v notes=%-12s in_streak=%v\n",
+			"streak": "\nOfensiva atual: %d (contando datas de histórico >= history_since = %s)\n",
+			"noWindow": "(nenhuma)"
 		},
 		"info": {
 			"NoExpiring": "Suas tarefas não vão embora. Tens tempo, contudo, seu foco deve permanecer inabalável.",
