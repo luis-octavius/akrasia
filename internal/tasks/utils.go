@@ -232,9 +232,9 @@ func GetTodoByName(tkm *TaskManager, name string) (database.GetTodoByNameRow, er
 
 	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
 		Name: loweredName, 
-		Column2: sql.NullString{String: loweredName},
-		Column3: sql.NullString{String: loweredName},
-		Column4: sql.NullString{String: loweredName},
+		Column2: sql.NullString{String: loweredName, Valid: true},
+		Column3: sql.NullString{String: loweredName, Valid: true},
+		Column4: sql.NullString{String: loweredName, Valid: true},
 	})
 	if err != nil {
 		// TODO: i18n here too
