@@ -329,11 +329,7 @@ var delByName = &cobra.Command{
 	Use:     i18n.T("commands.commands.delByNameUse"),
 	Short:   i18n.T("commands.commands.delByNameShort"),
 	Aliases: []string{"deln", "dn"},
-<<<<<<< HEAD
-	Args: cobra.ExactArgs(1),
-=======
-	Args: cobra.MaximumNArgs(1),
->>>>>>> main
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !deleteYes {
 			return errors.New(i18n.T("commands.error.destructiveAction"))
