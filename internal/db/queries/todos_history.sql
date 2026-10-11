@@ -122,3 +122,10 @@ SELECT
     streak_length
 FROM streaks
 ORDER BY streak_length DESC, start_date DESC;
+
+-- name: GetHistoryByTodo :many
+-- All history rows for a task, oldest first. Used by the debug command to
+-- inspect exactly what the streak queries see.
+SELECT * FROM todos_history
+WHERE todo_id = ?
+ORDER BY date ASC;

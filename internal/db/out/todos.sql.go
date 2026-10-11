@@ -134,6 +134,26 @@ func (q *Queries) DeleteTodoByName(ctx context.Context, name string) error {
 	return err
 }
 
+const extendHistorySince = `-- name: ExtendHistorySince :exec
+UPDATE todos
+SET history_since = ?1
+WHERE id = ?2
+  AND (history_since IS NULL OR history_since > ?1)
+`
+
+type ExtendHistorySinceParams struct {
+	Earliest sql.NullString
+	ID       interface{}
+}
+
+// Moves a task's streak lower bound earlier when backfill records days
+// that predate it. Never moves it later (guarded by the WHERE), so it is
+// safe to call with any candidate date.
+func (q *Queries) ExtendHistorySince(ctx context.Context, arg ExtendHistorySinceParams) error {
+	_, err := q.db.ExecContext(ctx, extendHistorySince, arg.Earliest, arg.ID)
+	return err
+}
+
 const getDailyTodos = `-- name: GetDailyTodos :many
 SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since FROM todos 
 WHERE is_daily = true

@@ -174,6 +174,44 @@ func (q *Queries) GetDoneTodayIDs(ctx context.Context) ([]interface{}, error) {
 	return items, nil
 }
 
+const getHistoryByTodo = `-- name: GetHistoryByTodo :many
+SELECT id, todo_id, date, completed, completed_at, notes FROM todos_history
+WHERE todo_id = ?
+ORDER BY date ASC
+`
+
+// All history rows for a task, oldest first. Used by the debug command to
+// inspect exactly what the streak queries see.
+func (q *Queries) GetHistoryByTodo(ctx context.Context, todoID interface{}) ([]TodosHistory, error) {
+	rows, err := q.db.QueryContext(ctx, getHistoryByTodo, todoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TodosHistory
+	for rows.Next() {
+		var i TodosHistory
+		if err := rows.Scan(
+			&i.ID,
+			&i.TodoID,
+			&i.Date,
+			&i.Completed,
+			&i.CompletedAt,
+			&i.Notes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getStreakHistory = `-- name: GetStreakHistory :many
 WITH ordered AS (
     SELECT
