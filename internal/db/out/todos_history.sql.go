@@ -98,7 +98,7 @@ WITH ordered AS (
         julianday(date) - julianday(LAG(date) OVER (ORDER BY date ASC)) AS days_diff
     FROM todos_history AS th
     WHERE th.todo_id = ?
-      AND date >= (SELECT history_since FROM todos AS t WHERE t.id = ?)
+      AND date >= COALESCE((SELECT history_since FROM todos AS t WHERE t.id = ?), '0001-01-01')
       AND date <= date('now', 'localtime')
     ORDER BY date ASC
 ),
@@ -220,7 +220,7 @@ WITH ordered AS (
         julianday(date) - julianday(LAG(date) OVER (ORDER BY date ASC)) AS days_diff
     FROM todos_history AS th
     WHERE th.todo_id = ?
-      AND date >= (SELECT history_since FROM todos AS t WHERE t.id = ?)
+      AND date >= COALESCE((SELECT history_since FROM todos AS t WHERE t.id = ?), '0001-01-01')
     ORDER BY date ASC
 ),
 grouped AS (
