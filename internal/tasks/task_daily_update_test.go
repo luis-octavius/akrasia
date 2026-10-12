@@ -3,7 +3,6 @@ package tasks
 import (
 	"context"
 	"database/sql"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -15,25 +14,14 @@ import (
 
 // newTestTaskManager spins up a throwaway sqlite DB (migrations included)
 // for each test, so these never touch the user's real akrasia.db. It points
-// db.GetDBPath() at a temp file via DB_PATH (the same override the CLI honours)
-// and restores it afterwards. The previous version reassigned a local copy of
-// the path that db.InitDB() never saw, so tests silently shared the developer's
-// real database.
+// db.GetDBPath() at a temp file via DB_PATH (the same override the CLI honours);
+// t.Setenv restores the previous value on cleanup. The previous version
+// reassigned a local copy of the path that db.InitDB() never saw, so tests
+// silently shared the developer's real database.
 func newTestTaskManager(t *testing.T) (*TaskManager, *sql.DB) {
 	t.Helper()
 
-	dbPath := filepath.Join(t.TempDir(), "akrasia-test.db")
-	oldDBPath, hadDBPath := os.LookupEnv("DB_PATH")
-	if err := os.Setenv("DB_PATH", dbPath); err != nil {
-		t.Fatalf("os.Setenv(DB_PATH) error = %v", err)
-	}
-	t.Cleanup(func() {
-		if hadDBPath {
-			_ = os.Setenv("DB_PATH", oldDBPath)
-		} else {
-			_ = os.Unsetenv("DB_PATH")
-		}
-	})
+	t.Setenv("DB_PATH", filepath.Join(t.TempDir(), "akrasia-test.db"))
 
 	conn, err := db.InitDB()
 	if err != nil {
