@@ -237,8 +237,7 @@ func GetTodoByName(tkm *TaskManager, name string) (database.GetTodoByNameRow, er
 		Column4: sql.NullString{String: loweredName, Valid: true},
 	})
 	if err != nil {
-		// TODO: i18n here too
-		return database.GetTodoByNameRow{}, fmt.Errorf("Error getting todo with %v from the database", name)
+		return database.GetTodoByNameRow{}, fmt.Errorf(i18n.T("tasks.error.getTodoByName"), err)
 	}
 
 	return todo, nil
