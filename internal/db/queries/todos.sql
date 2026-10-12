@@ -26,8 +26,8 @@ WHERE is_daily = true;
 WITH ranked_todos AS (
   SELECT *,
     CASE
-    -- same text 
-    WHEN name = ? THEN 1
+    -- same text (case-insensitive; the caller passes a lowercase term)
+    WHEN LOWER(name) = ? THEN 1
     -- begins with the term 
     WHEN name LIKE ? || '%' THEN 2
     WHEN name LIKE '%' || ? || '%' THEN 3

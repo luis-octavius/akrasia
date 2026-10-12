@@ -209,8 +209,8 @@ const getTodoByName = `-- name: GetTodoByName :one
 WITH ranked_todos AS (
   SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since,
     CASE
-    -- same text 
-    WHEN name = ? THEN 1
+    -- same text (case-insensitive; the caller passes a lowercase term)
+    WHEN LOWER(name) = ? THEN 1
     -- begins with the term 
     WHEN name LIKE ? || '%' THEN 2
     WHEN name LIKE '%' || ? || '%' THEN 3
