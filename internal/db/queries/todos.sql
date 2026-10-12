@@ -5,6 +5,15 @@ VALUES (
 )
 RETURNING *;
 
+-- name: ExtendHistorySince :exec
+-- Moves a task's streak lower bound earlier when backfill records days
+-- that predate it. Never moves it later (guarded by the WHERE), so it is
+-- safe to call with any candidate date.
+UPDATE todos
+SET history_since = sqlc.arg(earliest)
+WHERE id = sqlc.arg(id)
+  AND (history_since IS NULL OR history_since > sqlc.arg(earliest));
+
 -- name: GetTodos :many 
 SELECT * FROM todos
 ORDER BY expires_at; 
@@ -17,8 +26,8 @@ WHERE is_daily = true;
 WITH ranked_todos AS (
   SELECT *,
     CASE
-    -- same text 
-    WHEN name = ? THEN 1
+    -- same text (case-insensitive; the caller passes a lowercase term)
+    WHEN LOWER(name) = ? THEN 1
     -- begins with the term 
     WHEN name LIKE ? || '%' THEN 2
     WHEN name LIKE '%' || ? || '%' THEN 3

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"slices"
 
 	"github.com/luis-octavius/akrasia/internal/db"
 	"github.com/luis-octavius/akrasia/internal/tasks"
@@ -328,7 +329,7 @@ var delByName = &cobra.Command{
 	Use:     i18n.T("commands.commands.delByNameUse"),
 	Short:   i18n.T("commands.commands.delByNameShort"),
 	Aliases: []string{"deln", "dn"},
-	Args: cobra.MaximumNArgs(1),
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !deleteYes {
 			return errors.New(i18n.T("commands.error.destructiveAction"))
@@ -426,6 +427,31 @@ var getTodoStreakHistory = &cobra.Command{
 	},
 }
 
+// debugTask prints the raw history/streak data for a task (diagnostics).
+var debugTask = &cobra.Command{
+	Use:     i18n.T("commands.commands.debugUse"),
+	Short:   i18n.T("commands.commands.debugShort"),
+	Aliases: []string{"dbg"},
+	Args:    cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		taskName := name
+		if len(args) > 0 {
+			taskName = args[0]
+		}
+
+		if taskName == "" {
+			return errors.New(i18n.T("commands.error.emptyName"))
+		}
+
+		return tkm.DebugTask(taskName)
+	},
+}
+
 // backfillHistory inserts real completions for days the user forgot to log.
 // Excludes today — use `done` for that.
 var backfillHistory = &cobra.Command{
@@ -444,6 +470,31 @@ var backfillHistory = &cobra.Command{
 		}
 
 		return nil
+	},
+}
+
+// dump stores a named entry in the dump table, or lists stored entries.
+var dumpCmd = &cobra.Command{
+	Use:     i18n.T("commands.commands.dumpUse"),
+	Short:   i18n.T("commands.commands.dumpShort"),
+	Aliases: []string{"dp"},
+	Args:    cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		dumpName := name
+		if len(args) > 0 {
+			dumpName = args[0]
+		}
+
+		if dumpName == "" {
+			return tkm.GetAllDump()
+		}
+
+		return tkm.AddDump(dumpName)
 	},
 }
 
@@ -486,13 +537,8 @@ var configTheme = &cobra.Command{
 		default:
 			// Try to set the theme
 			availableThemes := color.GetAvailableThemes()
-			found := false
-			for _, t := range availableThemes {
-				if t == action {
-					found = true
-					break
-				}
-			}
+
+			found := slices.Contains(availableThemes, action)
 
 			if !found {
 				return fmt.Errorf(i18n.T("commands.error.unknownTheme"), action, availableThemes)
@@ -534,13 +580,7 @@ var configLanguage = &cobra.Command{
 
 		default:
 			availableLanguages := i18n.GetAvailableLanguages()
-			found := false
-			for _, l := range availableLanguages {
-				if l == action {
-					found = true
-					break
-				}
-			}
+			found := slices.Contains(availableLanguages, action)
 
 			if !found {
 				return fmt.Errorf(i18n.T("commands.error.unknownLanguage"), action, availableLanguages)
@@ -573,6 +613,8 @@ func init() {
 		"getTodoCurrentStreak":    getTodoCurrentStreak,
 		"getTodoStreakHistory":    getTodoStreakHistory,
 		"backfillHistory":         backfillHistory,
+		"debugTask":               debugTask,
+		"dumpCmd":                 dumpCmd,
 		"config":                  config,
 	}
 
@@ -606,6 +648,8 @@ func init() {
 	getTodoStreakHistory.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.getTodoStreakHistoryName"))
 	backfillHistory.Flags().IntVar(&daysBackfill, "days", 30, i18n.T("commands.flags.backfillHistoryDays"))
 	backfillHistory.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.backfillHistoryName"))
+	debugTask.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.debugName"))
+	dumpCmd.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.dumpName"))
 	today.Flags().StringVar(&todayOnly, "only", "", i18n.T("commands.flags.todayOnly"))
 	today.Flags().IntVar(&todayLimit, "limit", 0, i18n.T("commands.flags.todayLimit"))
 	today.Flags().BoolVar(&todayJSON, "json", false, i18n.T("commands.flags.todayJSON"))

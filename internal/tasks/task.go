@@ -300,7 +300,7 @@ func (tkm *TaskManager) GetCurrentStreak(name string) error {
 
 	streak, err := tkm.Queries.GetCurrentStreak(context.Background(), database.GetCurrentStreakParams{
 		TodoID:   todo.ID,
-		TodoID_2: todo.ID,
+		ID:       todo.ID,
 	})
 	if err != nil {
 		return fmt.Errorf("%s", i18n.T("tasks.error.getCurrentStreak"))
@@ -318,8 +318,8 @@ func (tkm *TaskManager) GetStreakHistory(name string) error {
 	}
 
 	streak_history, err := tkm.Queries.GetStreakHistory(context.Background(), database.GetStreakHistoryParams{
-		TodoID:   todo.ID,
-		TodoID_2: todo.ID,
+		TodoID: todo.ID,
+		ID:     todo.ID,
 	})
 	if err != nil {
 		return fmt.Errorf("%s", i18n.T("tasks.error.getStreakHistory"))
@@ -385,11 +385,10 @@ func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) erro
 	totalBackfilled := 0
 
 	for _, task := range dailyTasks {
-		// Start from the later of: task creation date or startDate
-		backfillStart := task.CreatedAt
-		if startDate.After(backfillStart) {
-			backfillStart = startDate
-		}
+		// Start at startDate (today - daysBack). We deliberately do NOT
+		// clamp to task.CreatedAt: users can legitimately record days from
+		// before they added the task to Akrasia.
+		backfillStart := startDate
 
 		fmt.Printf("  %s: ", task.Name)
 
@@ -429,6 +428,14 @@ func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) erro
 		totalBackfilled += taskInserted
 
 		if taskInserted > 0 {
+			// Pull the streak lower bound back to the earliest day we just
+			// recorded, so the streak queries actually count these days.
+			if err := tkm.Queries.ExtendHistorySince(ctx, database.ExtendHistorySinceParams{
+				Earliest: sql.NullString{String: backfillStart.Format(time.DateOnly), Valid: true},
+				ID:       task.ID,
+			}); err != nil {
+				return fmt.Errorf("%s: %w", i18n.T("tasks.error.extendHistorySince"), err)
+			}
 			fmt.Printf(" %d days marked as completed\n", taskInserted)
 		} else {
 			fmt.Println(" no days to backfill")

@@ -27,6 +27,10 @@
 			"getTodoStreakHistoryShort": "ver o histórico de ofensivas de dada tarefa",
 			"getTodoStreakHistoryUse": "history <nome>",
 			"backfillHistoryShort": "retropreencher tarefas diárias ausentes no histórico",
+			"debugShort": "inspecionar o histórico armazenado e o cálculo da ofensiva de uma tarefa (diagnóstico)",
+			"debugUse": "debug <nome>",
+			"dumpShort": "armazenar uma entrada nomeada, ou listar as armazenadas",
+			"dumpUse": "dump [<nome>]",
 			"configShort": "gerenciar configurações da aplicação (temas, preferências)",
 			"configThemeShort": "gerenciar temas de cor",
 			"configThemeUse": "theme [list|show|<nome-do-tema>]",
@@ -53,6 +57,8 @@
 			"getTodoStreakHistoryName": "histórico de ofensivas da tarefa",
 			"backfillHistoryDays": "número de dias para retropreencher",
 			"backfillHistoryName": "nome da tarefa específica para retropreencher (opcional, preenche todas as tarefas diárias se não for definido)",
+			"debugName": "nome da tarefa para inspecionar",
+			"dumpName": "nome da entrada a armazenar",
 			"todayOnly": "mostrar apenas uma seção: overdue|today|daily|soon",
 			"todayLimit": "limitar itens por seção (0 = sem limite)",
 			"todayJSON": "exibir a saída do today em JSON"
@@ -121,6 +127,17 @@
 			"done": "Concluído",
 			"notDone": "Não concluído"
 		},
+		"debug": {
+			"title": "DEBUG: %s\n",
+			"meta": "  id            : %v\n  is_daily      : %v\n  created_at    : %v\n  history_since : %v\n",
+			"historyHeader": "\nHistórico (%d linhas):\n",
+			"historyRow": "  %s  completed=%-5v notes=%-12s in_streak=%v\n",
+			"streak": "\nOfensiva atual: %d (contando datas de histórico >= history_since = %s)\n",
+			"noWindow": "(nenhuma)"
+		},
+		"dump": {
+			"row": "%s | %v\n"
+		},
 		"info": {
 			"NoExpiring": "Suas tarefas não vão embora. Tens tempo, contudo, seu foco deve permanecer inabalável.",
 			"SuccessDelete": "Tarefas Concluídas deletadas com sucesso!",
@@ -138,7 +155,9 @@
 			"noDailyToBackfill": "Nenhuma tarefa diária encontrada para retropreencher",
 			"cantBackfillTask": "Aviso: não foi possível retropreencher %s para a data %s: %v\n",
 			"backfilledTask": "Retropreenchidas %d entradas no histórico para a tarefa '%s'",
-			"backfilledDailyTask": "Retropreenchidas %d entradas no histórico para %d tarefa(s) diária(s)"
+			"backfilledDailyTask": "Retropreenchidas %d entradas no histórico para %d tarefa(s) diária(s)",
+			"addedDump": "Dump '%s' adicionado\n",
+			"noDump": "Nenhuma entrada de dump armazenada"
 		},
 		"error": {
 			"createTask": "Erro ao criar a tarefa: %w",
@@ -160,7 +179,10 @@
 			"getStreakHistory": "Erro ao obter o histórico de ofensiva da tarefa",
 			"findTask": "Erro ao procurar pela tarefa '%s': %w",
 			"taskNotDaily": "Tarefa '%s' não é uma tarefa diária",
-			"getDaily": "Erro ao obter as tarefas diárias: %w"
+			"getDaily": "Erro ao obter as tarefas diárias: %w",
+			"extendHistorySince": "Erro ao estender a janela de histórico da tarefa",
+			"addDump": "Erro ao adicionar dump",
+			"getDump": "Erro ao obter as entradas de dump"
 		}
 	},
 	"quotes": {

@@ -27,6 +27,10 @@
 			"getTodoStreakHistoryShort": "get the streak history of provided todo",
 			"getTodoStreakHistoryUse": "history <name>",
 			"backfillHistoryShort": "backfill missing daily task history entries",
+			"debugShort": "inspect a task's stored history and streak math (diagnostics)",
+			"debugUse": "debug <name>",
+			"dumpShort": "store a named dump entry, or list stored entries",
+			"dumpUse": "dump [<name>]",
 			"configShort": "manage application settings (themes, preferences)",
 			"configThemeShort": "manage color themes",
 			"configThemeUse": "theme [list|show|<theme-name>]",
@@ -53,6 +57,8 @@
 			"getTodoStreakHistoryName": "todo streak history",
 			"backfillHistoryDays": "number of days back to backfill",
 			"backfillHistoryName": "specific task name to backfill (optional, fills all daily tasks if not set)",
+			"debugName": "task name to inspect",
+			"dumpName": "entry name to store",
 			"todayOnly": "show only one section: overdue|today|daily|soon",
 			"todayLimit": "limit items per section (0 = no limit)",
 			"todayJSON": "print today output as JSON"
@@ -122,6 +128,17 @@
 			"done": "Done",
 			"notDone": "Not done"
 		},
+		"debug": {
+			"title": "DEBUG: %s\n",
+			"meta": "  id            : %v\n  is_daily      : %v\n  created_at    : %v\n  history_since : %v\n",
+			"historyHeader": "\nHistory (%d rows):\n",
+			"historyRow": "  %s  completed=%-5v notes=%-12s in_streak=%v\n",
+			"streak": "\nCurrent streak: %d (counting history dates >= history_since = %s)\n",
+			"noWindow": "(none)"
+		},
+		"dump": {
+			"row": "%s | %v\n"
+		},
 		"info": {
 			"NoExpiring": "Your tasks are not fleeing. You have time, yet your focus must remain steadfast.",
 			"SuccessDelete": "Concluded Todos deleted successfully!",
@@ -139,7 +156,9 @@
 			"noDailyToBackfill": "No daily tasks found to backfill",
 			"cantBackfillTask": "Warning: Could not backfill %s for date %s: %v\n",
 			"backfilledTask": "Backfilled %d history entries for task '%s'",
-			"backfilledDailyTask": "Backfilled %d history entries for %d daily task(s)"
+			"backfilledDailyTask": "Backfilled %d history entries for %d daily task(s)",
+			"addedDump": "Dump '%s' added\n",
+			"noDump": "No dump entries stored"
 		},
 		"error": {
 			"createTask": "Error creating task: %w",
@@ -161,7 +180,10 @@
 			"getStreakHistory": "Error getting todo streak history",
 			"findTask": "Error finding task '%s': %w",
 			"taskNotDaily": "Task '%s' is not a daily task",
-			"getDaily": "Error getting daily tasks: %w"
+			"getDaily": "Error getting daily tasks: %w",
+			"extendHistorySince": "Error extending task history window",
+			"addDump": "Error adding dump",
+			"getDump": "Error getting dump entries"
 		}
 	},
 	"quotes": {

@@ -2,12 +2,18 @@
 // versions:
 //   sqlc v1.30.0
 
-package out
+package database
 
 import (
 	"database/sql"
 	"time"
 )
+
+type Dump struct {
+	ID        interface{}
+	Name      string
+	CreatedAt sql.NullTime
+}
 
 type Todo struct {
 	ID           interface{}
