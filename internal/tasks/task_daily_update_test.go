@@ -195,3 +195,59 @@ func TestGapBreaksStreakWithoutAMissedDayRow(t *testing.T) {
 
 	_ = conn // silence unused warning if the count check above is trimmed later
 }
+
+// A task created today must still be backfillable: backfill records days
+// before its creation date (a habit the user already had) and pulls the
+// streak window (history_since) back so those days actually count.
+func TestBackfillRecordsBeforeCreationAndExtendsWindow(t *testing.T) {
+	tkm, conn := newTestTaskManager(t)
+	ctx := context.Background()
+
+	now := time.Now()
+	todo, err := tkm.Queries.AddTodo(ctx, database.AddTodoParams{
+		ID:           uuid.New(),
+		Name:         "fresh-daily",
+		CreatedAt:    now,
+		UpdatedAt:    now,
+		Concluded:    false,
+		ExpiresAt:    now.Add(24 * time.Hour),
+		Priority:     "medium",
+		IsDaily:      true,
+		HistorySince: sql.NullString{String: now.Format(time.DateOnly), Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("AddTodo() error = %v", err)
+	}
+
+	if err := tkm.BackfillDailyHistory(10, todo.Name); err != nil {
+		t.Fatalf("BackfillDailyHistory() error = %v", err)
+	}
+
+	var rows int
+	if err := conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM todos_history WHERE todo_id = ?", todo.ID).Scan(&rows); err != nil {
+		t.Fatalf("count query error = %v", err)
+	}
+	if rows != 10 {
+		t.Fatalf("expected 10 backfilled rows even for a task created today, got %d", rows)
+	}
+
+	var since sql.NullString
+	if err := conn.QueryRowContext(ctx, "SELECT date(history_since) FROM todos WHERE id = ?", todo.ID).Scan(&since); err != nil {
+		t.Fatalf("history_since query error = %v", err)
+	}
+	expectedSince := now.AddDate(0, 0, -10).Format(time.DateOnly)
+	if since.String != expectedSince {
+		t.Fatalf("expected history_since %s after backfill, got %s", expectedSince, since.String)
+	}
+
+	streak, err := tkm.Queries.GetCurrentStreak(ctx, database.GetCurrentStreakParams{
+		TodoID: todo.ID,
+		ID:     todo.ID,
+	})
+	if err != nil {
+		t.Fatalf("GetCurrentStreak() error = %v", err)
+	}
+	if streak != 10 {
+		t.Fatalf("expected streak 10 after backfilling 10 days, got %d", streak)
+	}
+}
