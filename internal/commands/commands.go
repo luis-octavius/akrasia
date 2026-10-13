@@ -242,32 +242,6 @@ var updateStatusToConcluded = &cobra.Command{
 	},
 }
 
-// deleteConcluded removes all concluded tasks after explicit confirmation.
-var deleteConcluded = &cobra.Command{
-	Use:     "delete-concluded",
-	Short:   i18n.T("commands.commands.deleteConcludedShort"),
-	Aliases: []string{"dc", "delc"},
-	Example: "akrasia delete-concluded --yes",
-	Args:    cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if !deleteYes {
-			return errors.New(i18n.T("commands.error.destructiveAction"))
-		}
-
-		tkm, err := taskManagerFromContext(cmd.Context())
-		if err != nil {
-			return err
-		}
-
-		err = tkm.DeleteConcluded()
-		if err != nil {
-			return err
-		}
-
-		return nil
-	},
-}
-
 // checkExpired lists expired non-daily tasks.
 var checkExpired = &cobra.Command{
 	Use:     "check-expired",
@@ -604,7 +578,6 @@ func init() {
 		"focus":                   focus,
 		"getTodoByName":           getTodoByName,
 		"updateStatusToConcluded": updateStatusToConcluded,
-		"deleteConcluded":         deleteConcluded,
 		"checkExpiring":           checkExpiring,
 		"checkExpired":            checkExpired,
 		"initCmd":                 initCmd,
@@ -643,7 +616,6 @@ func init() {
 	delByName.Flags().BoolVar(&deleteYes, "yes", false, i18n.T("commands.flags.delByNameDeleteYes"))
 	updateStatusToConcluded.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.updateStatusToConcludedName"))
 	updateStatusToConcluded.Flags().StringVar(&notes, "notes", "", i18n.T("commands.flags.updateStatusToConcludedNotes"))
-	deleteConcluded.Flags().BoolVar(&deleteYes, "yes", false, i18n.T("commands.flags.deleteConcludedDeleteYes"))
 	getTodoCurrentStreak.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.getTodoCurrentStreakName"))
 	getTodoStreakHistory.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.getTodoStreakHistoryName"))
 	backfillHistory.Flags().IntVar(&daysBackfill, "days", 30, i18n.T("commands.flags.backfillHistoryDays"))

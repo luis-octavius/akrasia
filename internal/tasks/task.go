@@ -197,19 +197,6 @@ func (tkm *TaskManager) UpdateToConcluded(name, notes string) error {
 	return nil
 }
 
-// deleteConcluded removes all tasks with concluded status.
-func (tkm *TaskManager) DeleteConcluded() error {
-	err := tkm.Queries.DeleteConcluded(context.Background())
-	if err != nil {
-		return fmt.Errorf(i18n.T("tasks.error.deleteConcludedTasks"), err)
-	}
-
-	color.MsgSuccess(SuccessDelete)
-	generateRandomQuote()
-
-	return nil
-}
-
 // getAllDailyTodos lists every task marked as daily, with today's status.
 func (tkm *TaskManager) GetAllDailyTodos() error {
 	todos, err := tkm.Queries.GetDailyTodos(context.Background())

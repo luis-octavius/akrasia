@@ -54,10 +54,6 @@ RETURNING *;
 DELETE FROM todos 
 WHERE name = ?;
 
--- name: DeleteConcluded :exec 
-DELETE FROM todos 
-WHERE concluded = true; 
-
 -- name: CheckExpired :many 
 SELECT * FROM todos 
 WHERE expires_at < datetime('now') AND is_daily = false
