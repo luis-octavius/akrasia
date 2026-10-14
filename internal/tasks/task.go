@@ -99,13 +99,8 @@ func (tkm *TaskManager) GetAllDailyTodos() error {
 		return fmt.Errorf(i18n.T("tasks.error.getAllDailyTodos"), err)
 	}
 
-	doneToday, err := tkm.doneTodaySet()
-	if err != nil {
-		return fmt.Errorf(i18n.T("tasks.error.getAllDailyTodos"), err)
-	}
-
 	for _, todo := range todos {
-		printDailyTodo(todo, doneToday[todoKey(todo.ID)])
+		printTodo(tkm, todo)
 	}
 
 	return nil

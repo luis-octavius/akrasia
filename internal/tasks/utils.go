@@ -46,23 +46,6 @@ func todoKey(id interface{}) string {
 	return fmt.Sprintf("%v", id)
 }
 
-// printDailyTodo renders a daily task using today's real completion state
-// instead of todo.Concluded, which stays true forever once a daily task is
-// marked done for the first time.
-func printDailyTodo(todo database.Todo, doneToday bool) {
-	todoTime := todo.ExpiresAt.Format(time.RFC822)
-
-	var status string
-	if doneToday {
-		status = i18n.T("tasks.tasks.done")
-	} else {
-		status = i18n.T("tasks.tasks.notDone")
-	}
-
-	s := fmt.Sprintf("%v | %v\n%v | %v\n\n", todo.Name, todo.Description.String, todoTime, status)
-	color.MsgSuccess(s)
-}
-
 // printTodo receives a Todo and create a readable output
 func printTodo(tkm *TaskManager, todo database.Todo) {
 	icon, status := "○", i18n.T("tasks.tasks.notDone")
@@ -76,7 +59,7 @@ func printTodo(tkm *TaskManager, todo database.Todo) {
 	fmt.Fprintf(&b, "%s %s\n", icon, todo.Name)
 
 	if desc := todo.Description.String; desc != "" {
-		fmt.Fprintf(&b, " %s\n", desc)
+		fmt.Fprintf(&b, "- %s\n", desc)
 	}
 
 	fmt.Fprintf(&b, "  %s · %s\n", todo.ExpiresAt.Format("02 Jan 06 15:04"), status)
