@@ -28,6 +28,7 @@ func validateDescription(description string) sql.NullString {
 	return descriptionField
 }
 
+// checkIfTodoExpires checks if a task will expire by 5 days
 func checkIfTodoExpires(expiresAt time.Time) bool {
 	actualDay := time.Now()
 
@@ -48,39 +49,40 @@ func todoKey(id interface{}) string {
 
 // printTodo receives a Todo and create a readable output
 func printTodo(todo database.Todo) {
+	fmt.Println(renderTodo(todo))
+}
+
+// renderTodo mounts the string to beautifully output the task
+func renderTodo(todo database.Todo) string {
 	icon, status := "○", i18n.T("tasks.tasks.notDone")
 
 	if todo.Concluded {
 		icon, status = "✔", i18n.T("tasks.tasks.done")
 	}
 
-	state := color.StyleMuted 
+	state := color.Muted()
 	switch {
 	case todo.Concluded:
-		state = color.StyleSuccess
+		state = color.Success()
 	case checkIfTodoExpires(todo.ExpiresAt):
-		state = color.StyleWarning
+		state = color.Warning()
 	}
 
-	var b strings.Builder 
-	fmt.Fprintf(&b, "%s %s\n", state(icon), color.StyleTitle(todo.Name))
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s %s\n", state.Render(icon), color.Title().Render(todo.Name))
 
 	if desc := todo.Description.String; desc != "" {
 		fmt.Fprintf(&b, "- %s\n", desc)
 	}
 
-	fmt.Fprintf(&b, "  %s · %s\n", todo.ExpiresAt.Format("02 Jan 06 15:04"), status)
+	expires := fmt.Sprintf("%s · %s\n", todo.ExpiresAt.Format("02 Jan 06 15:04"), status)
+	fmt.Fprintf(&b, "  %s\n", color.Muted().Render(expires))
 
 	if priority := todo.Priority; priority != "" {
-		fmt.Fprintf(&b, "  Priority: %s\n", todo.Priority)
+		fmt.Fprintf(&b, "  %s\n", color.Muted().Render("Priority: " + todo.Priority))
 	}
 
-	if !todo.Concluded || checkIfTodoExpires(todo.ExpiresAt) {
-		color.MsgWarning(b.String())
-		return
-	}
-
-	color.MsgSuccess(b.String())
+	return b.String()
 }
 
 // filterTodosByPriority keeps only tasks matching the provided priority.
@@ -229,7 +231,7 @@ func GetTodoByName(tkm *TaskManager, name string) (database.GetTodoByNameRow, er
 	loweredName := strings.ToLower(name)
 
 	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
-		Name: loweredName, 
+		Name:    loweredName,
 		Column2: sql.NullString{String: loweredName, Valid: true},
 		Column3: sql.NullString{String: loweredName, Valid: true},
 		Column4: sql.NullString{String: loweredName, Valid: true},
@@ -244,16 +246,16 @@ func GetTodoByName(tkm *TaskManager, name string) (database.GetTodoByNameRow, er
 func transformListTodosToTodo(todoStatus database.ListTodosWithTodayStatusRow) database.Todo {
 	var todo database.Todo
 	todo = database.Todo{
-		ID: todoStatus.ID,
-		Name: todoStatus.Name, 
-		Description: todoStatus.Description,
-		CreatedAt: todoStatus.CreatedAt,
-		UpdatedAt: todoStatus.UpdatedAt,
-		ExpiresAt: todoStatus.ExpiresAt,
+		ID:           todoStatus.ID,
+		Name:         todoStatus.Name,
+		Description:  todoStatus.Description,
+		CreatedAt:    todoStatus.CreatedAt,
+		UpdatedAt:    todoStatus.UpdatedAt,
+		ExpiresAt:    todoStatus.ExpiresAt,
 		HistorySince: todoStatus.HistorySince,
-		IsDaily: todoStatus.IsDaily,
-		Concluded: todoStatus.DoneToday, 
-		Priority: todoStatus.Priority,
+		IsDaily:      todoStatus.IsDaily,
+		Concluded:    todoStatus.DoneToday,
+		Priority:     todoStatus.Priority,
 	}
 
 	return todo

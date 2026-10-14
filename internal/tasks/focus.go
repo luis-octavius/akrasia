@@ -90,5 +90,3 @@ func (tkm *TaskManager) GetFocus(limit int, priorityFilter string) error {
 
 	return nil
 }
-
-

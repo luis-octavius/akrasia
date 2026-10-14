@@ -77,6 +77,7 @@ func (tkm *TaskManager) GetTodos(priorityFilter string) error {
 
 	return nil
 }
+
 // getTodoByName retrieves and prints a single task by fuzzy name search.
 func (tkm *TaskManager) GetTodoByName(name string) error {
 	todo, err := GetTodoByName(tkm, name)
@@ -120,5 +121,3 @@ func (tkm *TaskManager) DeleteByName(name string) error {
 
 	return nil
 }
-
-

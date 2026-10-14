@@ -19,13 +19,13 @@ func (tkm *TaskManager) UpdateToConcluded(name, notes string) error {
 	}
 
 	// only updates status to concluded if is not a daily task
-	if (!todo.IsDaily) {
+	if !todo.IsDaily {
 		_, err = tkm.Queries.UpdateTodoStatusById(context.Background(), todo.ID)
 		if err != nil {
 			return fmt.Errorf(i18n.T("tasks.error.updateTaskStatus"), name, err)
 		}
 	}
-	
+
 	_, err = tkm.Queries.AddTodoHistory(context.Background(), database.AddTodoHistoryParams{
 		ID:          uuid.New(),
 		TodoID:      todo.ID,
@@ -41,5 +41,3 @@ func (tkm *TaskManager) UpdateToConcluded(name, notes string) error {
 	generateRandomQuote()
 	return nil
 }
-
-

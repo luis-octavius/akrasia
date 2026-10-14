@@ -56,7 +56,7 @@ func (tkm *TaskManager) CheckExpiring() error {
 func (tkm *TaskManager) CheckIfTodoIsDoneToday(id interface{}) (bool, error) {
 	isDoneToday, err := tkm.Queries.IsDoneToday(context.Background(), id)
 	if err != nil {
-		return false, fmt.Errorf(i18n.T("tasks.error.findTask"))
+		return false, fmt.Errorf("%s", i18n.T("tasks.error.findTask"))
 	}
 
 	if isDoneToday == 1 {
