@@ -3,7 +3,6 @@ package tasks
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 
