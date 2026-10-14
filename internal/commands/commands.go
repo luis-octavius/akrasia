@@ -10,8 +10,8 @@ import (
 	"github.com/luis-octavius/akrasia/internal/db"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/color"
-	"github.com/spf13/cobra"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -33,7 +33,7 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "akrasia",
 	Short: i18n.T("commands.commands.rootCmdShort"),
-	Long: i18n.T("commands.commands.rootCmdLong"),
+	Long:  i18n.T("commands.commands.rootCmdLong"),
 }
 
 // Execute runs the root command and exits the process on fatal command errors.
@@ -58,7 +58,7 @@ var add = &cobra.Command{
 	Short:   i18n.T("commands.commands.addShort"),
 	Aliases: []string{"a"},
 	Example: i18n.T("commands.commands.addExample"),
-	Args: cobra.MaximumNArgs(2),
+	Args:    cobra.MaximumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
 		if err != nil {
@@ -219,7 +219,7 @@ var updateStatusToConcluded = &cobra.Command{
 	Use:     i18n.T("commands.commands.updateStatusUse"),
 	Short:   i18n.T("commands.commands.updateStatusShort"),
 	Aliases: []string{"us"},
-	Args: cobra.MaximumNArgs(1),
+	Args:    cobra.MaximumNArgs(1),
 	Example: i18n.T("commands.commands.updateStatusExample"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -354,7 +354,7 @@ var getTodoCurrentStreak = &cobra.Command{
 	Use:     i18n.T("commands.commands.getTodoCurrentStreakUse"),
 	Short:   i18n.T("commands.commands.getTodoCurrentStreakShort"),
 	Aliases: []string{"curr", "cs"},
-	Args: cobra.MaximumNArgs(1),
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
 		if err != nil {
