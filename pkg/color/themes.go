@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	""
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -18,7 +17,7 @@ type Theme struct {
 	Warning ColorStyle `json:"warning"`
 	Success ColorStyle `json:"success"`
 	Quote   ColorStyle `json:"quote"`
-	Muted		ColorStyle `json:"muted"`
+	Muted   ColorStyle `json:"muted"`
 	Title   ColorStyle `json:"title"`
 }
 
@@ -71,26 +70,40 @@ var ansiCodes = map[string]string{
 	HiBlue: "12", HiMagenta: "13", HiCyan: "14", HiWhite: "15",
 }
 
+func colorValue(name string) (lipgloss.Color, bool) {
+	if c, ok := ansiCodes[name]; ok {
+		return lipgloss.Color(c), true
+	}
+
+	if strings.HasPrefix(name, "#") {
+		return lipgloss.Color(name), true
+	}
+
+	return "", false
+}
+
+// styleFrom creates a lipgloss Style based on 
+// a ColorStyle struct
 func styleFrom(s ColorStyle) lipgloss.Style {
 	st := lipgloss.NewStyle()
-	if c, ok := ansiCodes[s.Fg]; ok {
+	if c, ok := colorValue(s.Fg); ok {
 		st = st.Foreground(lipgloss.Color(c))
 	}
-	if c, ok := ansiCodes[s.Bg]; ok {
+	if c, ok := colorValue(s.Bg); ok {
 		st = st.Background(lipgloss.Color(c))
 	}
 
 	for _, a := range s.Attributes {
 		switch a {
-		case Bold: 
+		case Bold:
 			st = st.Bold(true)
-		case Italic: 
+		case Italic:
 			st = st.Italic(true)
-		case Underline: 
+		case Underline:
 			st = st.Underline(true)
 		case CrossOut:
 			st = st.Strikethrough(true)
-		case BlinkSlow, BlinkRapid: 
+		case BlinkSlow, BlinkRapid:
 			st = st.Blink(true)
 		}
 	}
@@ -145,7 +158,7 @@ func getDefaultTheme() *Theme {
 			Attributes: []string{Underline},
 		},
 		Muted: ColorStyle{
-			Fg: 				HiBlack,
+			Fg: HiBlack,
 		},
 		Title: ColorStyle{
 			Attributes: []string{Bold},
@@ -175,18 +188,47 @@ func getHighContrastTheme() *Theme {
 			Attributes: []string{Bold, Underline},
 		},
 		Muted: ColorStyle{
-			Fg: HiBlack,
+			Fg: White,
 		},
 		Title: ColorStyle{
-			Fg: 				HiWhite,
+			Fg:         HiWhite,
 			Attributes: []string{Bold},
 		},
 	}
 }
 
+func getPurpleTheme() *Theme {
+	return &Theme{
+		Name: "purple",
+		Error: ColorStyle{
+			Fg:         HiRed,
+			Attributes: []string{Bold},
+		},
+		Warning: ColorStyle{
+			Fg:         HiYellow,
+			Attributes: []string{Bold},
+		},
+		Success: ColorStyle{
+			Fg:         "#a78bfa",
+			Attributes: []string{Bold},
+		},
+		Quote: ColorStyle{
+			Bg:         "#4c1d95",
+			Fg:         "#ede9fe",
+			Attributes: []string{Italic},
+		},
+		Muted: ColorStyle{
+			Fg: "#7c6f9f",
+		},
+		Title: ColorStyle{
+			Fg:         HiMagenta,
+			Attributes: []string{Bold},
+		},
+	}
+}
 // GetAvailableThemes returns a list of all available themes
 func GetAvailableThemes() []string {
-	return []string{"default", "high-contrast"}
+	return []string{"default", "high-contrast", "purple"}
 }
 
 // GetThemeByName returns a theme by its name
@@ -196,6 +238,8 @@ func GetThemeByName(name string) *Theme {
 		return getDefaultTheme()
 	case "high-contrast":
 		return getHighContrastTheme()
+	case "purple":
+		return getPurpleTheme()
 	default:
 		return getDefaultTheme()
 	}
@@ -263,4 +307,3 @@ func SaveTheme(themeName string) error {
 	currentTheme = theme
 	return nil
 }
-
