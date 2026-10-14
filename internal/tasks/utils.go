@@ -47,16 +47,23 @@ func todoKey(id interface{}) string {
 }
 
 // printTodo receives a Todo and create a readable output
-func printTodo(tkm *TaskManager, todo database.Todo) {
+func printTodo(todo database.Todo) {
 	icon, status := "○", i18n.T("tasks.tasks.notDone")
 
-	isDailyDone, _ := tkm.CheckIfTodoIsDoneToday(todo.ID)
-	if isDailyDone {
+	if todo.Concluded {
 		icon, status = "✔", i18n.T("tasks.tasks.done")
 	}
 
+	state := color.StyleMuted 
+	switch {
+	case todo.Concluded:
+		state = color.StyleSuccess
+	case checkIfTodoExpires(todo.ExpiresAt):
+		state = color.StyleWarning
+	}
+
 	var b strings.Builder 
-	fmt.Fprintf(&b, "%s %s\n", icon, todo.Name)
+	fmt.Fprintf(&b, "%s %s\n", state(icon), color.StyleTitle(todo.Name))
 
 	if desc := todo.Description.String; desc != "" {
 		fmt.Fprintf(&b, "- %s\n", desc)
@@ -64,7 +71,11 @@ func printTodo(tkm *TaskManager, todo database.Todo) {
 
 	fmt.Fprintf(&b, "  %s · %s\n", todo.ExpiresAt.Format("02 Jan 06 15:04"), status)
 
-	if !isDailyDone && checkIfTodoExpires(todo.ExpiresAt) || checkIfTodoExpires(todo.ExpiresAt) {
+	if priority := todo.Priority; priority != "" {
+		fmt.Fprintf(&b, "  Priority: %s\n", todo.Priority)
+	}
+
+	if !todo.Concluded && (checkIfTodoExpires(todo.ExpiresAt) || checkIfTodoExpires(todo.ExpiresAt)) {
 		color.MsgWarning(b.String())
 		return
 	}
@@ -210,7 +221,7 @@ func printTodaySection(tkm *TaskManager, title string, todos []database.Todo) {
 
 	fmt.Printf("\n%s (%d)\n", title, len(todos))
 	for _, todo := range todos {
-		printTodo(tkm, todo)
+		printTodo(todo)
 	}
 }
 
@@ -230,3 +241,20 @@ func GetTodoByName(tkm *TaskManager, name string) (database.GetTodoByNameRow, er
 	return todo, nil
 }
 
+func transformListTodosToTodo(todoStatus database.ListTodosWithTodayStatusRow) database.Todo {
+	var todo database.Todo
+	todo = database.Todo{
+		ID: todoStatus.ID,
+		Name: todoStatus.Name, 
+		Description: todoStatus.Description,
+		CreatedAt: todoStatus.CreatedAt,
+		UpdatedAt: todoStatus.UpdatedAt,
+		ExpiresAt: todoStatus.ExpiresAt,
+		HistorySince: todoStatus.HistorySince,
+		IsDaily: todoStatus.IsDaily,
+		Concluded: todoStatus.DoneToday, 
+		Priority: todoStatus.Priority,
+	}
+
+	return todo
+}

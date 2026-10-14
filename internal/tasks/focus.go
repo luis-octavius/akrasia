@@ -85,7 +85,7 @@ func (tkm *TaskManager) GetFocus(limit int, priorityFilter string) error {
 
 	fmt.Printf(i18n.T("tasks.tasks.focus"), len(focus))
 	for _, todo := range focus {
-		printTodo(tkm, todo)
+		printTodo(todo)
 	}
 
 	return nil
