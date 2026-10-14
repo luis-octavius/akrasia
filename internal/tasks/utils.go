@@ -64,25 +64,29 @@ func printDailyTodo(todo database.Todo, doneToday bool) {
 }
 
 // printTodo receives a Todo and create a readable output
-func printTodo(todo database.Todo) {
-	todoTime := todo.ExpiresAt.Format(time.RFC822)
+func printTodo(tkm *TaskManager, todo database.Todo) {
+	icon, status := "○", i18n.T("tasks.tasks.notDone")
 
-	var status string
-
-	if todo.Concluded == true {
-		status = i18n.T("tasks.tasks.done")
-	} else {
-		status = i18n.T("tasks.tasks.notDone")
+	isDailyDone, _ := tkm.CheckIfTodoIsDoneToday(todo.ID)
+	if isDailyDone {
+		icon, status = "✔", i18n.T("tasks.tasks.done")
 	}
 
-	s := fmt.Sprintf("%v | %v\n%v | %v\n\n", todo.Name, todo.Description.String, todoTime, status)
+	var b strings.Builder 
+	fmt.Fprintf(&b, "%s %s\n", icon, todo.Name)
 
-	if ok := checkIfTodoExpires(todo.ExpiresAt); !ok {
-		color.MsgSuccess(s)
+	if desc := todo.Description.String; desc != "" {
+		fmt.Fprintf(&b, " %s\n", desc)
+	}
+
+	fmt.Fprintf(&b, "  %s · %s\n", todo.ExpiresAt.Format("02 Jan 06 15:04"), status)
+
+	if !isDailyDone && checkIfTodoExpires(todo.ExpiresAt) || checkIfTodoExpires(todo.ExpiresAt) {
+		color.MsgWarning(b.String())
 		return
 	}
 
-	color.MsgWarning(s)
+	color.MsgSuccess(b.String())
 }
 
 // filterTodosByPriority keeps only tasks matching the provided priority.
@@ -216,14 +220,14 @@ func priorityRank(priority string) int {
 }
 
 // printTodaySection renders one titled section from the today dashboard.
-func printTodaySection(title string, todos []database.Todo) {
+func printTodaySection(tkm *TaskManager, title string, todos []database.Todo) {
 	if len(todos) == 0 {
 		return
 	}
 
 	fmt.Printf("\n%s (%d)\n", title, len(todos))
 	for _, todo := range todos {
-		printTodo(todo)
+		printTodo(tkm, todo)
 	}
 }
 
@@ -242,3 +246,4 @@ func GetTodoByName(tkm *TaskManager, name string) (database.GetTodoByNameRow, er
 
 	return todo, nil
 }
+

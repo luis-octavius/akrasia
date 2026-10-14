@@ -74,7 +74,7 @@ func (tkm *TaskManager) GetTodos(priorityFilter string) error {
 	fmt.Println(i18n.T("tasks.tasks.tasks"))
 
 	for _, todo := range todos {
-		printTodo(todo)
+		printTodo(tkm, todo)
 	}
 
 	return nil

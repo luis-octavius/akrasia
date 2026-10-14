@@ -43,10 +43,10 @@ func (tkm *TaskManager) GetTodayFocus(opts TodayOptions) error {
 
 	fmt.Println(i18n.T("tasks.tasks.todayFocus"))
 
-	printTodaySection(i18n.T("tasks.tasks.overdue"), view.Overdue)
-	printTodaySection(i18n.T("tasks.tasks.dueToday"), view.DueToday)
-	printTodaySection(i18n.T("tasks.tasks.dailyPending"), view.Daily)
-	printTodaySection(i18n.T("tasks.tasks.expiringSoon"), view.ExpiringSoon)
+	printTodaySection(tkm, i18n.T("tasks.tasks.overdue"), view.Overdue)
+	printTodaySection(tkm, i18n.T("tasks.tasks.dueToday"), view.DueToday)
+	printTodaySection(tkm, i18n.T("tasks.tasks.dailyPending"), view.Daily)
+	printTodaySection(tkm, i18n.T("tasks.tasks.expiringSoon"), view.ExpiringSoon)
 
 	return nil
 }
@@ -85,7 +85,7 @@ func (tkm *TaskManager) GetFocus(limit int, priorityFilter string) error {
 
 	fmt.Printf(i18n.T("tasks.tasks.focus"), len(focus))
 	for _, todo := range focus {
-		printTodo(todo)
+		printTodo(tkm, todo)
 	}
 
 	return nil

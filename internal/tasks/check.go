@@ -22,7 +22,7 @@ func (tkm *TaskManager) CheckExpired() error {
 
 	fmt.Println(i18n.T("tasks.tasks.expired"))
 	for _, todo := range todos {
-		printTodo(todo)
+		printTodo(tkm, todo)
 	}
 
 	return nil
@@ -41,7 +41,7 @@ func (tkm *TaskManager) CheckExpiring() error {
 		isTodoExpiring := checkIfTodoExpires(todo.ExpiresAt)
 		if isTodoExpiring && !todo.Concluded {
 			fmt.Println(i18n.T("tasks.tasks.expiring"))
-			printTodo(todo)
+			printTodo(tkm, todo)
 			countExpiring++
 		}
 	}
@@ -53,4 +53,16 @@ func (tkm *TaskManager) CheckExpiring() error {
 	return nil
 }
 
+func (tkm *TaskManager) CheckIfTodoIsDoneToday(id interface{}) (bool, error) {
+	isDoneToday, err := tkm.Queries.IsDoneToday(context.Background(), id)
+	if err != nil {
+		return false, fmt.Errorf(i18n.T("tasks.error.findTask"))
+	}
 
+	if isDoneToday == 1 {
+		return true, nil
+	}
+
+	return false, nil
+
+}
