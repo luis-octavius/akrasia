@@ -20,7 +20,7 @@ func (tkm *TaskManager) UpdateToConcluded(name, notes string) error {
 
 	// only updates status to concluded if is not a daily task
 	if (!todo.IsDaily) {
-		_, err = tkm.Queries.UpdateTodoStatusByName(context.Background(), name)
+		_, err = tkm.Queries.UpdateTodoStatusById(context.Background(), todo.ID)
 		if err != nil {
 			return fmt.Errorf(i18n.T("tasks.error.updateTaskStatus"), name, err)
 		}

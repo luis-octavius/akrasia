@@ -114,16 +114,6 @@ func (q *Queries) CheckExpired(ctx context.Context) ([]Todo, error) {
 	return items, nil
 }
 
-const deleteConcluded = `-- name: DeleteConcluded :exec
-DELETE FROM todos 
-WHERE concluded = true
-`
-
-func (q *Queries) DeleteConcluded(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, deleteConcluded)
-	return err
-}
-
 const deleteTodoByName = `-- name: DeleteTodoByName :exec
 DELETE FROM todos 
 WHERE name = ?
@@ -308,15 +298,15 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 	return items, nil
 }
 
-const updateTodoStatusByName = `-- name: UpdateTodoStatusByName :one
+const updateTodoStatusById = `-- name: UpdateTodoStatusById :one
 UPDATE todos 
-SET concluded = true, updated_at = datetime('now', 'localtime')
-WHERE name LIKE ?
+SET concluded = 1, updated_at = datetime('now', 'localtime')
+WHERE id = ?
 RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since
 `
 
-func (q *Queries) UpdateTodoStatusByName(ctx context.Context, name string) (Todo, error) {
-	row := q.db.QueryRowContext(ctx, updateTodoStatusByName, name)
+func (q *Queries) UpdateTodoStatusById(ctx context.Context, id interface{}) (Todo, error) {
+	row := q.db.QueryRowContext(ctx, updateTodoStatusById, id)
 	var i Todo
 	err := row.Scan(
 		&i.ID,

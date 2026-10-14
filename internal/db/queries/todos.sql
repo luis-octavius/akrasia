@@ -44,10 +44,10 @@ LIMIT 1;
 SELECT id FROM todos 
 WHERE name = ?;
 
--- name: UpdateTodoStatusByName :one 
+-- name: UpdateTodoStatusById :one 
 UPDATE todos 
-SET concluded = true, updated_at = datetime('now', 'localtime')
-WHERE name LIKE ?
+SET concluded = 1, updated_at = datetime('now', 'localtime')
+WHERE id = ?
 RETURNING *;
 
 -- name: DeleteTodoByName :exec 
