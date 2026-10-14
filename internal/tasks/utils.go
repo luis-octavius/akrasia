@@ -28,6 +28,7 @@ func validateDescription(description string) sql.NullString {
 	return descriptionField
 }
 
+// checkIfTodoExpires checks if a task will expire by 5 days
 func checkIfTodoExpires(expiresAt time.Time) bool {
 	actualDay := time.Now()
 
@@ -46,43 +47,42 @@ func todoKey(id interface{}) string {
 	return fmt.Sprintf("%v", id)
 }
 
-// printDailyTodo renders a daily task using today's real completion state
-// instead of todo.Concluded, which stays true forever once a daily task is
-// marked done for the first time.
-func printDailyTodo(todo database.Todo, doneToday bool) {
-	todoTime := todo.ExpiresAt.Format(time.RFC822)
-
-	var status string
-	if doneToday {
-		status = i18n.T("tasks.tasks.done")
-	} else {
-		status = i18n.T("tasks.tasks.notDone")
-	}
-
-	s := fmt.Sprintf("%v | %v\n%v | %v\n\n", todo.Name, todo.Description.String, todoTime, status)
-	color.MsgSuccess(s)
-}
-
 // printTodo receives a Todo and create a readable output
 func printTodo(todo database.Todo) {
-	todoTime := todo.ExpiresAt.Format(time.RFC822)
+	fmt.Println(renderTodo(todo))
+}
 
-	var status string
+// renderTodo mounts the string to beautifully output the task
+func renderTodo(todo database.Todo) string {
+	icon, status := "○", i18n.T("tasks.tasks.notDone")
 
-	if todo.Concluded == true {
-		status = i18n.T("tasks.tasks.done")
-	} else {
-		status = i18n.T("tasks.tasks.notDone")
+	if todo.Concluded {
+		icon, status = "✔", i18n.T("tasks.tasks.done")
 	}
 
-	s := fmt.Sprintf("%v | %v\n%v | %v\n\n", todo.Name, todo.Description.String, todoTime, status)
-
-	if ok := checkIfTodoExpires(todo.ExpiresAt); !ok {
-		color.MsgSuccess(s)
-		return
+	state := color.Muted()
+	switch {
+	case todo.Concluded:
+		state = color.Success()
+	case checkIfTodoExpires(todo.ExpiresAt):
+		state = color.Warning()
 	}
 
-	color.MsgWarning(s)
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s %s\n", state.Render(icon), color.Title().Render(todo.Name))
+
+	if desc := todo.Description.String; desc != "" {
+		fmt.Fprintf(&b, "- %s\n", desc)
+	}
+
+	expires := fmt.Sprintf("%s · %s\n", todo.ExpiresAt.Format("02 Jan 06 15:04"), status)
+	fmt.Fprintf(&b, "  %s\n", color.Muted().Render(expires))
+
+	if priority := todo.Priority; priority != "" {
+		fmt.Fprintf(&b, "  %s\n", color.Muted().Render("Priority: " + todo.Priority))
+	}
+
+	return b.String()
 }
 
 // filterTodosByPriority keeps only tasks matching the provided priority.
@@ -216,7 +216,7 @@ func priorityRank(priority string) int {
 }
 
 // printTodaySection renders one titled section from the today dashboard.
-func printTodaySection(title string, todos []database.Todo) {
+func printTodaySection(tkm *TaskManager, title string, todos []database.Todo) {
 	if len(todos) == 0 {
 		return
 	}
@@ -231,7 +231,7 @@ func GetTodoByName(tkm *TaskManager, name string) (database.GetTodoByNameRow, er
 	loweredName := strings.ToLower(name)
 
 	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
-		Name: loweredName, 
+		Name:    loweredName,
 		Column2: sql.NullString{String: loweredName, Valid: true},
 		Column3: sql.NullString{String: loweredName, Valid: true},
 		Column4: sql.NullString{String: loweredName, Valid: true},
@@ -241,4 +241,22 @@ func GetTodoByName(tkm *TaskManager, name string) (database.GetTodoByNameRow, er
 	}
 
 	return todo, nil
+}
+
+func transformListTodosToTodo(todoStatus database.ListTodosWithTodayStatusRow) database.Todo {
+	var todo database.Todo
+	todo = database.Todo{
+		ID:           todoStatus.ID,
+		Name:         todoStatus.Name,
+		Description:  todoStatus.Description,
+		CreatedAt:    todoStatus.CreatedAt,
+		UpdatedAt:    todoStatus.UpdatedAt,
+		ExpiresAt:    todoStatus.ExpiresAt,
+		HistorySince: todoStatus.HistorySince,
+		IsDaily:      todoStatus.IsDaily,
+		Concluded:    todoStatus.DoneToday,
+		Priority:     todoStatus.Priority,
+	}
+
+	return todo
 }

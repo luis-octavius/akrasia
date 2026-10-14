@@ -16,8 +16,8 @@ func (tkm *TaskManager) GetCurrentStreak(name string) error {
 	}
 
 	streak, err := tkm.Queries.GetCurrentStreak(context.Background(), database.GetCurrentStreakParams{
-		TodoID:   todo.ID,
-		ID:       todo.ID,
+		TodoID: todo.ID,
+		ID:     todo.ID,
 	})
 	if err != nil {
 		return fmt.Errorf("%s", i18n.T("tasks.error.getCurrentStreak"))
@@ -48,5 +48,3 @@ func (tkm *TaskManager) GetStreakHistory(name string) error {
 
 	return nil
 }
-
-

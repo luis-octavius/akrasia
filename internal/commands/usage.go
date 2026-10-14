@@ -5,8 +5,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/spf13/cobra"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
+	"github.com/spf13/cobra"
 )
 
 // rpad adds padding to the right of a string.
@@ -61,7 +61,6 @@ func useLine(c *cobra.Command) string {
 	}
 	return useline
 }
-
 
 func UsageFunc(cmd *cobra.Command) error {
 	cmd.Print(i18n.T("commands.cobra.usage"))
@@ -129,5 +128,5 @@ func UsageFunc(cmd *cobra.Command) error {
 	}
 	cmd.Println()
 	return nil
-	
+
 }

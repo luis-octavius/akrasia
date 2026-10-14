@@ -64,21 +64,20 @@ func (tkm *TaskManager) AddTodo(name, description, priority string, isDaily bool
 
 // getTodos lists all tasks, optionally filtered by priority.
 func (tkm *TaskManager) GetTodos(priorityFilter string) error {
-	todos, err := tkm.Queries.GetTodos(context.Background())
+	todos, err := tkm.Queries.ListTodosWithTodayStatus(context.Background())
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.getTaskDatabase"), err)
 	}
 
-	todos = filterTodosByPriority(todos, priorityFilter)
-
-	fmt.Println(i18n.T("tasks.tasks.tasks"))
+	fmt.Println(i18n.T("tasks.tasks.allTasks"))
 
 	for _, todo := range todos {
-		printTodo(todo)
+		printTodo(transformListTodosToTodo(todo))
 	}
 
 	return nil
 }
+
 // getTodoByName retrieves and prints a single task by fuzzy name search.
 func (tkm *TaskManager) GetTodoByName(name string) error {
 	todo, err := GetTodoByName(tkm, name)
@@ -99,13 +98,8 @@ func (tkm *TaskManager) GetAllDailyTodos() error {
 		return fmt.Errorf(i18n.T("tasks.error.getAllDailyTodos"), err)
 	}
 
-	doneToday, err := tkm.doneTodaySet()
-	if err != nil {
-		return fmt.Errorf(i18n.T("tasks.error.getAllDailyTodos"), err)
-	}
-
 	for _, todo := range todos {
-		printDailyTodo(todo, doneToday[todoKey(todo.ID)])
+		printTodo(todo)
 	}
 
 	return nil
@@ -127,5 +121,3 @@ func (tkm *TaskManager) DeleteByName(name string) error {
 
 	return nil
 }
-
-

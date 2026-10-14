@@ -44,10 +44,10 @@ LIMIT 1;
 SELECT id FROM todos 
 WHERE name = ?;
 
--- name: UpdateTodoStatusByName :one 
+-- name: UpdateTodoStatusById :one 
 UPDATE todos 
-SET concluded = true, updated_at = datetime('now', 'localtime')
-WHERE name LIKE ?
+SET concluded = 1, updated_at = datetime('now', 'localtime')
+WHERE id = ?
 RETURNING *;
 
 -- name: DeleteTodoByName :exec 
@@ -63,3 +63,10 @@ ORDER BY expires_at DESC;
 SELECT name FROM todos 
 WHERE NAME LIKE ? || '%'
 ORDER BY NAME LIMIT 5;
+
+-- name: ListTodosWithTodayStatus :many 
+SELECT t.*, COALESCE(h.completed, 0) AS done_today
+FROM todos t 
+LEFT JOIN todos_history h 
+ON h.todo_id = t.id AND h.date = date('now', 'localtime')
+ORDER BY t.expires_at;

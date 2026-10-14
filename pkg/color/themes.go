@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/fatih/color"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // Theme defines the color configuration for the application
@@ -16,6 +17,8 @@ type Theme struct {
 	Warning ColorStyle `json:"warning"`
 	Success ColorStyle `json:"success"`
 	Quote   ColorStyle `json:"quote"`
+	Muted   ColorStyle `json:"muted"`
+	Title   ColorStyle `json:"title"`
 }
 
 // ColorStyle defines foreground and background colors with attributes
@@ -42,6 +45,7 @@ const (
 	HiMagenta = "hi_magenta"
 	HiCyan    = "hi_cyan"
 	HiWhite   = "hi_white"
+	HiBlack   = "hi_black"
 )
 
 // Available attributes
@@ -49,16 +53,63 @@ const (
 	Bold       = "bold"
 	Italic     = "italic"
 	Underline  = "underline"
+	CrossOut   = "crossed_out"
 	BlinkSlow  = "blink_slow"
 	BlinkRapid = "blink_rapid"
-	Concealed  = "concealed"
-	CrossOut   = "crossed_out"
 )
 
 var (
 	currentTheme *Theme
 	configDir    string
 )
+
+var ansiCodes = map[string]string{
+	Black: "0", Red: "1", Green: "2", Yellow: "3",
+	Blue: "4", Magenta: "5", Cyan: "6", White: "7",
+	HiBlack: "8", HiRed: "9", HiGreen: "10", HiYellow: "11",
+	HiBlue: "12", HiMagenta: "13", HiCyan: "14", HiWhite: "15",
+}
+
+func colorValue(name string) (lipgloss.Color, bool) {
+	if c, ok := ansiCodes[name]; ok {
+		return lipgloss.Color(c), true
+	}
+
+	if strings.HasPrefix(name, "#") {
+		return lipgloss.Color(name), true
+	}
+
+	return "", false
+}
+
+// styleFrom creates a lipgloss Style based on 
+// a ColorStyle struct
+func styleFrom(s ColorStyle) lipgloss.Style {
+	st := lipgloss.NewStyle()
+	if c, ok := colorValue(s.Fg); ok {
+		st = st.Foreground(lipgloss.Color(c))
+	}
+	if c, ok := colorValue(s.Bg); ok {
+		st = st.Background(lipgloss.Color(c))
+	}
+
+	for _, a := range s.Attributes {
+		switch a {
+		case Bold:
+			st = st.Bold(true)
+		case Italic:
+			st = st.Italic(true)
+		case Underline:
+			st = st.Underline(true)
+		case CrossOut:
+			st = st.Strikethrough(true)
+		case BlinkSlow, BlinkRapid:
+			st = st.Blink(true)
+		}
+	}
+
+	return st
+}
 
 func init() {
 	// Initialize config directory
@@ -106,6 +157,12 @@ func getDefaultTheme() *Theme {
 			Fg:         Black,
 			Attributes: []string{Underline},
 		},
+		Muted: ColorStyle{
+			Fg: HiBlack,
+		},
+		Title: ColorStyle{
+			Attributes: []string{Bold},
+		},
 	}
 }
 
@@ -130,12 +187,48 @@ func getHighContrastTheme() *Theme {
 			Fg:         HiWhite,
 			Attributes: []string{Bold, Underline},
 		},
+		Muted: ColorStyle{
+			Fg: White,
+		},
+		Title: ColorStyle{
+			Fg:         HiWhite,
+			Attributes: []string{Bold},
+		},
 	}
 }
 
+func getPurpleTheme() *Theme {
+	return &Theme{
+		Name: "purple",
+		Error: ColorStyle{
+			Fg:         HiRed,
+			Attributes: []string{Bold},
+		},
+		Warning: ColorStyle{
+			Fg:         HiYellow,
+			Attributes: []string{Bold},
+		},
+		Success: ColorStyle{
+			Fg:         "#a78bfa",
+			Attributes: []string{Bold},
+		},
+		Quote: ColorStyle{
+			Bg:         "#4c1d95",
+			Fg:         "#ede9fe",
+			Attributes: []string{Italic},
+		},
+		Muted: ColorStyle{
+			Fg: "#7c6f9f",
+		},
+		Title: ColorStyle{
+			Fg:         HiMagenta,
+			Attributes: []string{Bold},
+		},
+	}
+}
 // GetAvailableThemes returns a list of all available themes
 func GetAvailableThemes() []string {
-	return []string{"default", "high-contrast"}
+	return []string{"default", "high-contrast", "purple"}
 }
 
 // GetThemeByName returns a theme by its name
@@ -145,6 +238,8 @@ func GetThemeByName(name string) *Theme {
 		return getDefaultTheme()
 	case "high-contrast":
 		return getHighContrastTheme()
+	case "purple":
+		return getPurpleTheme()
 	default:
 		return getDefaultTheme()
 	}
@@ -173,8 +268,21 @@ func loadTheme() error {
 		return err
 	}
 
+	def := getDefaultTheme()
+	if isEmpty(theme.Muted) {
+		theme.Muted = def.Muted
+	}
+
+	if isEmpty(theme.Title) {
+		theme.Title = def.Title
+	}
+
 	currentTheme = &theme
 	return nil
+}
+
+func isEmpty(s ColorStyle) bool {
+	return s.Fg == "" && s.Bg == "" && len(s.Attributes) == 0
 }
 
 // SaveTheme saves the theme to config file
@@ -198,128 +306,4 @@ func SaveTheme(themeName string) error {
 
 	currentTheme = theme
 	return nil
-}
-
-// colorNameToValue converts color name string to fatih/color constant
-func colorNameToValue(name string) color.Attribute {
-	switch name {
-	case Red:
-		return color.FgRed
-	case Green:
-		return color.FgGreen
-	case Yellow:
-		return color.FgYellow
-	case Blue:
-		return color.FgBlue
-	case Magenta:
-		return color.FgMagenta
-	case Cyan:
-		return color.FgCyan
-	case White:
-		return color.FgWhite
-	case Black:
-		return color.FgBlack
-	case HiRed:
-		return color.FgHiRed
-	case HiGreen:
-		return color.FgHiGreen
-	case HiYellow:
-		return color.FgHiYellow
-	case HiBlue:
-		return color.FgHiBlue
-	case HiMagenta:
-		return color.FgHiMagenta
-	case HiCyan:
-		return color.FgHiCyan
-	case HiWhite:
-		return color.FgHiWhite
-	default:
-		return color.FgWhite
-	}
-}
-
-// bgColorNameToValue converts background color name string to fatih/color constant
-func bgColorNameToValue(name string) color.Attribute {
-	switch name {
-	case Red:
-		return color.BgRed
-	case Green:
-		return color.BgGreen
-	case Yellow:
-		return color.BgYellow
-	case Blue:
-		return color.BgBlue
-	case Magenta:
-		return color.BgMagenta
-	case Cyan:
-		return color.BgCyan
-	case White:
-		return color.BgWhite
-	case Black:
-		return color.BgBlack
-	case HiRed:
-		return color.BgHiRed
-	case HiGreen:
-		return color.BgHiGreen
-	case HiYellow:
-		return color.BgHiYellow
-	case HiBlue:
-		return color.BgHiBlue
-	case HiMagenta:
-		return color.BgHiMagenta
-	case HiCyan:
-		return color.BgHiCyan
-	case HiWhite:
-		return color.BgHiWhite
-	default:
-		return color.BgBlack
-	}
-}
-
-// attributeNameToValue converts attribute name string to fatih/color constant
-func attributeNameToValue(name string) color.Attribute {
-	switch name {
-	case Bold:
-		return color.Bold
-	case Italic:
-		return color.Italic
-	case Underline:
-		return color.Underline
-	case BlinkSlow:
-		return color.BlinkSlow
-	case BlinkRapid:
-		return color.BlinkRapid
-	case Concealed:
-		return color.Concealed
-	case CrossOut:
-		return color.CrossedOut
-	default:
-		return color.Reset
-	}
-}
-
-// applyColorStyle returns a color.Color with the specified style applied
-func applyColorStyle(style ColorStyle) *color.Color {
-	var attrs []color.Attribute
-
-	// Add foreground color
-	if style.Fg != "" {
-		attrs = append(attrs, colorNameToValue(style.Fg))
-	}
-
-	// Add background color
-	if style.Bg != "" {
-		attrs = append(attrs, bgColorNameToValue(style.Bg))
-	}
-
-	// Add attributes
-	for _, attr := range style.Attributes {
-		attrs = append(attrs, attributeNameToValue(attr))
-	}
-
-	if len(attrs) == 0 {
-		return color.New()
-	}
-
-	return color.New(attrs...)
 }

@@ -2,9 +2,9 @@ package commands
 
 import (
 	"fmt"
+	"github.com/luis-octavius/akrasia/pkg/i18n"
 	"log"
 	"time"
-	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
 func isDateBefore(date time.Time) (bool, error) {

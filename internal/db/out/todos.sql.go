@@ -114,16 +114,6 @@ func (q *Queries) CheckExpired(ctx context.Context) ([]Todo, error) {
 	return items, nil
 }
 
-const deleteConcluded = `-- name: DeleteConcluded :exec
-DELETE FROM todos 
-WHERE concluded = true
-`
-
-func (q *Queries) DeleteConcluded(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, deleteConcluded)
-	return err
-}
-
 const deleteTodoByName = `-- name: DeleteTodoByName :exec
 DELETE FROM todos 
 WHERE name = ?
@@ -308,15 +298,72 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 	return items, nil
 }
 
-const updateTodoStatusByName = `-- name: UpdateTodoStatusByName :one
+const listTodosWithTodayStatus = `-- name: ListTodosWithTodayStatus :many
+SELECT t.id, t.name, t.description, t.created_at, t.updated_at, t.concluded, t.expires_at, t.priority, t.is_daily, t.history_since, COALESCE(h.completed, 0) AS done_today
+FROM todos t 
+LEFT JOIN todos_history h 
+ON h.todo_id = t.id AND h.date = date('now', 'localtime')
+ORDER BY t.expires_at
+`
+
+type ListTodosWithTodayStatusRow struct {
+	ID           interface{}
+	Name         string
+	Description  sql.NullString
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	Concluded    bool
+	ExpiresAt    time.Time
+	Priority     string
+	IsDaily      bool
+	HistorySince sql.NullString
+	DoneToday    bool
+}
+
+func (q *Queries) ListTodosWithTodayStatus(ctx context.Context) ([]ListTodosWithTodayStatusRow, error) {
+	rows, err := q.db.QueryContext(ctx, listTodosWithTodayStatus)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTodosWithTodayStatusRow
+	for rows.Next() {
+		var i ListTodosWithTodayStatusRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Concluded,
+			&i.ExpiresAt,
+			&i.Priority,
+			&i.IsDaily,
+			&i.HistorySince,
+			&i.DoneToday,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateTodoStatusById = `-- name: UpdateTodoStatusById :one
 UPDATE todos 
-SET concluded = true, updated_at = datetime('now', 'localtime')
-WHERE name LIKE ?
+SET concluded = 1, updated_at = datetime('now', 'localtime')
+WHERE id = ?
 RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since
 `
 
-func (q *Queries) UpdateTodoStatusByName(ctx context.Context, name string) (Todo, error) {
-	row := q.db.QueryRowContext(ctx, updateTodoStatusByName, name)
+func (q *Queries) UpdateTodoStatusById(ctx context.Context, id interface{}) (Todo, error) {
+	row := q.db.QueryRowContext(ctx, updateTodoStatusById, id)
 	var i Todo
 	err := row.Scan(
 		&i.ID,

@@ -1,15 +1,14 @@
 package i18n
 
 import (
+	"embed"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"encoding/json"
-	"embed"
 
-	"github.com/nicksnyder/go-i18n/v2/i18n"	
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
-	
 )
 
 // Language defines the language config for the application
@@ -18,9 +17,9 @@ type Language struct {
 }
 
 var (
-	lcz *i18n.Localizer
+	lcz             *i18n.Localizer
 	currentLanguage *Language
-	configDir string
+	configDir       string
 )
 
 //go:embed locales
@@ -33,7 +32,7 @@ func init() {
 		// Try with environment
 		loadLanguageEnv()
 	}
-	
+
 	// Initialize parser
 	bnd := i18n.NewBundle(language.English)
 	lcz = i18n.NewLocalizer(bnd, currentLanguage.Code)
@@ -41,7 +40,7 @@ func init() {
 	// Load message files
 	locales := GetAvailableLanguages()
 	for _, lcl := range locales {
-		file := filepath.Join("locales", lcl + ".json")
+		file := filepath.Join("locales", lcl+".json")
 		bnd.LoadMessageFileFS(localeFS, file)
 	}
 }
@@ -139,5 +138,3 @@ func loadLanguageEnv() {
 	lang.Code = getEnvLanguage().String()
 	currentLanguage = &lang
 }
-
-

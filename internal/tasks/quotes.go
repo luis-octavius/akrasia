@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/luis-octavius/akrasia/pkg/color"
-	"golang.org/x/term"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
+	"golang.org/x/term"
 )
 
 var quotes = []string{
