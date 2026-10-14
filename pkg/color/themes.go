@@ -16,6 +16,8 @@ type Theme struct {
 	Warning ColorStyle `json:"warning"`
 	Success ColorStyle `json:"success"`
 	Quote   ColorStyle `json:"quote"`
+	Muted		ColorStyle `json:"muted"`
+	Title   ColorStyle `json:"title"`
 }
 
 // ColorStyle defines foreground and background colors with attributes
@@ -42,6 +44,7 @@ const (
 	HiMagenta = "hi_magenta"
 	HiCyan    = "hi_cyan"
 	HiWhite   = "hi_white"
+	HiBlack   = "hi_black"
 )
 
 // Available attributes
@@ -106,6 +109,12 @@ func getDefaultTheme() *Theme {
 			Fg:         Black,
 			Attributes: []string{Underline},
 		},
+		Muted: ColorStyle{
+			Fg: 				HiBlack,
+		},
+		Title: ColorStyle{
+			Attributes: []string{Bold},
+		},
 	}
 }
 
@@ -129,6 +138,13 @@ func getHighContrastTheme() *Theme {
 			Bg:         Black,
 			Fg:         HiWhite,
 			Attributes: []string{Bold, Underline},
+		},
+		Muted: ColorStyle{
+			Fg: HiBlack,
+		},
+		Title: ColorStyle{
+			Fg: 				HiWhite,
+			Attributes: []string{Bold},
 		},
 	}
 }
@@ -173,8 +189,21 @@ func loadTheme() error {
 		return err
 	}
 
+	def := getDefaultTheme()
+	if isEmpty(theme.Muted) {
+		theme.Muted = def.Muted
+	}
+
+	if isEmpty(theme.Title) {
+		theme.Title = def.Title
+	}
+
 	currentTheme = &theme
 	return nil
+}
+
+func isEmpty(s ColorStyle) bool {
+	return s.Fg == "" && s.Bg == "" && len(s.Attributes) == 0
 }
 
 // SaveTheme saves the theme to config file
@@ -233,6 +262,8 @@ func colorNameToValue(name string) color.Attribute {
 		return color.FgHiCyan
 	case HiWhite:
 		return color.FgHiWhite
+	case HiBlack: 
+		return color.FgHiBlack
 	default:
 		return color.FgWhite
 	}
@@ -271,6 +302,8 @@ func bgColorNameToValue(name string) color.Attribute {
 		return color.BgHiCyan
 	case HiWhite:
 		return color.BgHiWhite
+	case HiBlack: 
+		return color.BgHiBlack
 	default:
 		return color.BgBlack
 	}
