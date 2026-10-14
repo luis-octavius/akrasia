@@ -75,7 +75,7 @@ func printTodo(todo database.Todo) {
 		fmt.Fprintf(&b, "  Priority: %s\n", todo.Priority)
 	}
 
-	if !todo.Concluded && (checkIfTodoExpires(todo.ExpiresAt) || checkIfTodoExpires(todo.ExpiresAt)) {
+	if !todo.Concluded || checkIfTodoExpires(todo.ExpiresAt) {
 		color.MsgWarning(b.String())
 		return
 	}

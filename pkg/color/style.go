@@ -1,7 +1,20 @@
 package color
 
-func StyleError(text string) string   { return applyColorStyle(GetCurrentTheme().Error).Sprint(text) }
-func StyleWarning(text string) string { return applyColorStyle(GetCurrentTheme().Warning).Sprint(text) }
-func StyleSuccess(text string) string { return applyColorStyle(GetCurrentTheme().Success).Sprint(text) }
-func StyleMuted(text string) string   { return applyColorStyle(GetCurrentTheme().Muted).Sprint(text) }
-func StyleTitle(text string) string   { return applyColorStyle(GetCurrentTheme().Title).Sprint(text) }
+import (
+	"fmt"
+
+	"github.com/charmbracelet/lipgloss"
+)
+
+func Success() lipgloss.Style { return styleFrom(GetCurrentTheme().Success) }
+func Warning() lipgloss.Style { return styleFrom(GetCurrentTheme().Warning) }
+func Muted() lipgloss.Style { return styleFrom(GetCurrentTheme().Muted) }
+func Title() lipgloss.Style { return styleFrom(GetCurrentTheme().Title) }
+func Error() lipgloss.Style { return styleFrom(GetCurrentTheme().Error) }
+
+func MsgSuccess(text string) { fmt.Println(Success().Render(text)) }
+func MsgError(text string) { fmt.Println(Error().Render(text))}
+func MsgMuted(text string) { fmt.Println(Muted().Render(text))}
+func MsgWarning(text string) { fmt.Println(Warning().Render(text))}
+func MsgTitle(text string) { fmt.Println(Title().Render(text))}
+
