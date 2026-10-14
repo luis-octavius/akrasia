@@ -101,19 +101,19 @@
 			"setLanguage": "falha ao definir a linguagem: %w",
 			"tkmNotFound": "gerenciador de tarefas não foi encontrado",
 			"error": "Erro: %v",
-			"dateBeforeNow": "data %v está antes de agora - coloque uma data válida",
+			"dateBeforeNow": "Data %v está antes da atual - coloque uma data válida",
 			"dateNotEnoughArguments": "Argumentos insuficientes na data",
-			"invalidMonthNumber": "número do mês não está entre 1 e 12"
+			"invalidMonthNumber": "Número do mês não está entre 1 e 12"
 		}
 	},
 	"db": {
 		"error": {
-			"invalidDatabasePath": "caminho da base de dados inválido"
+			"invalidDatabasePath": "Caminho da base de dados inválido"
 		}
 	},
 	"tasks": {
 		"tasks": {
-			"tasks": "Tarefas: ",
+			"allTasks": "Tarefas: ",
 			"todayFocus": "FOCO DE HOJE",
 			"overdue": "ATRASADAS",
 			"dueToday": "PARA HOJE",
@@ -160,29 +160,29 @@
 			"noDump": "Nenhuma entrada de dump armazenada"
 		},
 		"error": {
-			"createTask": "Erro ao criar a tarefa: %w",
+			"createTask": "erro ao criar a tarefa: %w",
 			"getTaskDatabase": "erro ao obter tarefas da base de dados: %w",
 			"encodeTodayJSON": "erro ao codificar a saída de hoje para json: %w",
 			"getTaskByName": "erro ao obter a tarefa do nome providenciado: %w",
-			"updateTaskStatus":"Erro ao atualizar o estado da tarefa '%v': %w",
-			"createTaskHistory": "Erro ao criar o histórico de tarefas",
-			"deleteConcludedTasks": "Erro ao deletar tarefas concluídas: %w",
+			"updateTaskStatus":"erro ao atualizar o estado da tarefa '%v': %w",
+			"createTaskHistory": "erro ao criar o histórico de tarefas",
+			"deleteConcludedTasks": "erro ao deletar tarefas concluídas: %w",
 			"getAllDailyTodos": "erro em getAllDailyTodos: %v",
-			"checkExpiredTasks": "Erro ao verificar tarefas expiradas: %w",
-			"checkExpiringTasks": "Erro ao obter tarefas: %w",
+			"checkExpiredTasks": "erro ao verificar tarefas expiradas: %w",
+			"checkExpiringTasks": "erro ao obter tarefas: %w",
 			"getTodoByName": "erro ao obter a tarefa pelo nome: %w",
 			"deleteTaskByName": "erro ao deletar a tarefa pelo nome: %w",
 			"getDailyTasks": "erro ao obter as tarefas diárias: %w",
-			"updateDailyTasks": "Erro ao atualizar as tarefas diárias: %w",
-			"getTodoByNameStreak": "Erro ao obter a tarefa pelo nome",
-			"getCurrentStreak": "Erro ao obter a ofensiva da tarefa atual",
-			"getStreakHistory": "Erro ao obter o histórico de ofensiva da tarefa",
-			"findTask": "Erro ao procurar pela tarefa '%s': %w",
-			"taskNotDaily": "Tarefa '%s' não é uma tarefa diária",
-			"getDaily": "Erro ao obter as tarefas diárias: %w",
-			"extendHistorySince": "Erro ao estender a janela de histórico da tarefa",
-			"addDump": "Erro ao adicionar dump",
-			"getDump": "Erro ao obter as entradas de dump"
+			"updateDailyTasks": "erro ao atualizar as tarefas diárias: %w",
+			"getTodoByNameStreak": "erro ao obter a tarefa pelo nome",
+			"getCurrentStreak": "erro ao obter a ofensiva da tarefa atual",
+			"getStreakHistory": "erro ao obter o histórico de ofensiva da tarefa",
+			"findTask": "erro ao procurar pela tarefa '%s': %w",
+			"taskNotDaily": "tarefa '%s' não é uma tarefa diária",
+			"getDaily": "erro ao obter as tarefas diárias: %w",
+			"extendHistorySince": "erro ao estender a janela de histórico da tarefa",
+			"addDump": "erro ao adicionar dump",
+			"getDump": "erro ao obter as entradas de dump"
 		}
 	},
 	"quotes": {
