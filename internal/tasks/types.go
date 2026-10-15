@@ -1,6 +1,10 @@
 package tasks
 
 import (
+	"database/sql"
+	"time"
+
+	"github.com/google/uuid"
 	database "github.com/luis-octavius/akrasia/internal/db/out"
 )
 
@@ -22,4 +26,15 @@ type TodayOptions struct {
 	Limit    int
 	JSON     bool
 	Priority string
+}
+
+type TodoView struct {
+	ID					uuid.UUID
+	Name 				string 
+	Description sql.NullString
+	Concluded 	bool 
+	ExpiresAt 	time.Time 
+	Priority 		string 
+	IsDaily 		bool
+	DoneToday   bool
 }

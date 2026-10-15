@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	database "github.com/luis-octavius/akrasia/internal/db/out"
 	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
@@ -243,20 +244,32 @@ func GetTodoByName(tkm *TaskManager, name string) (database.GetTodoByNameRow, er
 	return todo, nil
 }
 
-func transformListTodosToTodo(todoStatus database.ListTodosWithTodayStatusRow) database.Todo {
-	var todo database.Todo
-	todo = database.Todo{
-		ID:           todoStatus.ID,
+func newTodoView(todoStatus database.ListTodosWithTodayStatusRow) TodoView {
+	id, err := toUUID(todoStatus.ID)
+	if err != nil {
+		return TodoView{}
+	}
+
+	return TodoView{
+		ID:           id,
 		Name:         todoStatus.Name,
 		Description:  todoStatus.Description,
-		CreatedAt:    todoStatus.CreatedAt,
-		UpdatedAt:    todoStatus.UpdatedAt,
 		ExpiresAt:    todoStatus.ExpiresAt,
-		HistorySince: todoStatus.HistorySince,
 		IsDaily:      todoStatus.IsDaily,
 		Concluded:    todoStatus.DoneToday,
 		Priority:     todoStatus.Priority,
 	}
+}
 
-	return todo
+func toUUID(v interface{}) (uuid.UUID, error) {
+	switch id := v.(type) {
+	case uuid.UUID:
+		return id, nil
+	case string:
+		return uuid.Parse(id)
+	case []byte:
+		return uuid.ParseBytes(id)
+	default: 
+		return uuid.Nil, fmt.Errorf("unexpected id type %T", v)
+	}
 }
