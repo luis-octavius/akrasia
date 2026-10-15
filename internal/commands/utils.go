@@ -59,32 +59,19 @@ func getMonthByNum(num int) time.Month {
 		log.Fatal(i18n.T("commands.error.invalidMonthNumber"))
 	}
 
-	switch num {
-	case 1:
-		return time.January
-	case 2:
-		return time.February
-	case 3:
-		return time.March
-	case 4:
-		return time.April
-	case 5:
-		return time.May
-	case 6:
-		return time.June
-	case 7:
-		return time.July
-	case 8:
-		return time.August
-	case 9:
-		return time.September
-	case 10:
-		return time.October
-	case 11:
-		return time.November
-	case 12:
-		return time.December
+	if month, ok := monthCodes[num]; ok {
+		return month
 	}
-
+	
+	// fallback
 	return time.Now().Month()
 }
+
+var monthCodes map[int]time.Month = map[int]time.Month{
+	1: time.January, 2: time.February, 3: time.March, 
+	4: time.April, 5: time.May, 6: time.June, 7: time.July,
+	8: time.August, 9: time.September, 10: time.October, 
+	11: time.November, 12: time.December,
+}
+	
+
