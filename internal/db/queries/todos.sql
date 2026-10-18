@@ -65,7 +65,7 @@ WHERE NAME LIKE ? || '%'
 ORDER BY NAME LIMIT 5;
 
 -- name: ListTodosWithTodayStatus :many 
-SELECT t.*, COALESCE(h.completed, 0) AS done_today
+SELECT t.*, CAST(COALESCE(h.completed, 0) AS BOOLEAN) AS done_today
 FROM todos t 
 LEFT JOIN todos_history h 
 ON h.todo_id = t.id AND h.date = date('now', 'localtime')

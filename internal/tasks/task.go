@@ -80,7 +80,7 @@ func (tkm *TaskManager) GetTodos(priorityFilter string) error {
 
 // getTodoByName retrieves and prints a single task by fuzzy name search.
 func (tkm *TaskManager) GetTodoByName(name string) error {
-	todo, err := GetTodoByName(tkm, name)
+	todo, err := GetTodoByName(tkm, name)	
 
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.getTaskByName"), err)
@@ -105,14 +105,18 @@ func (tkm *TaskManager) GetAllDailyTodos() error {
 	return nil
 }
 
+func (tkm *TaskManager) DailyTodos(ctx context.Context) ([]TodoView, error) {
+
+}
+
 // deleteByName removes one task identified by name.
-func (tkm *TaskManager) DeleteByName(name string) error {
+func (tkm *TaskManager) DeleteByName(ctx context.Context, name string) error {
 	todo, err := GetTodoByName(tkm, name)
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.getTodoByName"), err)
 	}
 
-	err = tkm.Queries.DeleteTodoByName(context.Background(), todo.Name)
+	err = tkm.Queries.DeleteTodoByName(ctx, todo.Name)
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.deleteTaskByName"), err)
 	}

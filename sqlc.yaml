@@ -12,3 +12,5 @@ sql:
             go_type: "database/sql.NullString"
           - column: "todos_history.date"
             go_type: "string"
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"

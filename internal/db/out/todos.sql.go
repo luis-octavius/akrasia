@@ -299,7 +299,7 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 }
 
 const listTodosWithTodayStatus = `-- name: ListTodosWithTodayStatus :many
-SELECT t.id, t.name, t.description, t.created_at, t.updated_at, t.concluded, t.expires_at, t.priority, t.is_daily, t.history_since, COALESCE(h.completed, 0) AS done_today
+SELECT t.id, t.name, t.description, t.created_at, t.updated_at, t.concluded, t.expires_at, t.priority, t.is_daily, t.history_since, CAST(COALESCE(h.completed, 0) AS BOOLEAN) AS done_today
 FROM todos t 
 LEFT JOIN todos_history h 
 ON h.todo_id = t.id AND h.date = date('now', 'localtime')
