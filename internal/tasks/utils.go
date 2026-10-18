@@ -75,8 +75,10 @@ func renderTodo(todo database.Todo) string {
 		fmt.Fprintf(&b, "- %s\n", desc)
 	}
 
-	expires := fmt.Sprintf("%s · %s\n", todo.ExpiresAt.Format("02 Jan 06 15:04"), status)
-	fmt.Fprintf(&b, "  %s\n", color.Muted().Render(expires))
+	if !todo.IsDaily {
+		expires := fmt.Sprintf("%s · %s\n", todo.ExpiresAt.Format("02 Jan 06 15:04"), status)
+		fmt.Fprintf(&b, "  %s\n", color.Muted().Render(expires))
+	}
 
 	if priority := todo.Priority; priority != "" {
 		fmt.Fprintf(&b, "  %s\n", color.Muted().Render("Priority: " + todo.Priority))
