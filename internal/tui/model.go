@@ -20,6 +20,7 @@ type Service interface {
 	DailyTodos(ctx context.Context) ([]tasks.TodoView, error)
 	Dumps(ctx context.Context) ([]tasks.DumpEntry, error)
 	AddTodo(ctx context.Context, in tasks.NewTodo) (tasks.TodoView, error)
+	EditTodo(ctx context.Context, name string, patch tasks.TodoPatch) (tasks.TodoView, error)
 	Complete(ctx context.Context, name, notes string) (tasks.TodoView, error)
 	DeleteByName(ctx context.Context, name string) (tasks.TodoView, error)
 	AddDump(ctx context.Context, name string) (tasks.DumpEntry, error)

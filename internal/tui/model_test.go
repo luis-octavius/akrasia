@@ -25,6 +25,7 @@ type fakeService struct {
 	err      error
 
 	calls     map[string]int
+	edited    []editCall
 	completed []string // "name|notes"
 	deleted   []string
 	added     []tasks.NewTodo
@@ -63,6 +64,11 @@ func (f *fakeService) AddTodo(_ context.Context, in tasks.NewTodo) (tasks.TodoVi
 	return tasks.TodoView{Name: in.Name}, nil
 }
 
+func (f *fakeService) EditTodo(_ context.Context, name string, patch tasks.TodoPatch) (tasks.TodoView, error) {
+	f.edited = append(f.edited, editCall{name, patch})
+	return tasks.TodoView{Name: name}, nil
+}
+
 func (f *fakeService) Complete(_ context.Context, name, notes string) (tasks.TodoView, error) {
 	f.completed = append(f.completed, name+"|"+notes)
 	f.progress.Done++
@@ -91,6 +97,11 @@ func (f *fakeService) TodayProgress(context.Context) (tasks.Progress, error) {
 
 func (f *fakeService) StreakHistory(_ context.Context, name string) (tasks.TodoView, []tasks.StreakPeriod, error) {
 	return tasks.TodoView{Name: name}, f.periods, nil
+}
+
+type editCall struct {
+	name  string
+	patch tasks.TodoPatch
 }
 
 // send runs each msg through Update and keeps feeding back the model's own
@@ -563,7 +574,16 @@ func TestFullHelpLinesShareMargin(t *testing.T) {
 	m := send(t, start(t, &fakeService{}, KeymapDefault), tea.WindowSizeMsg{Width: 120, Height: 30}, runes("?"))
 
 	lines := strings.Split(ansi.Strip(m.View().Content), "\n")
-	help := lines[len(lines)-4:] // the full help has four rows
+	var help []string
+	for i, l := range lines {
+		if strings.Contains(l, "NORMAL") {
+			help = lines[i+1:] // everything below the status bar
+			break
+		}
+	}
+	if len(help) < 2 {
+		t.Fatalf("full help should span several rows:\n%s", strings.Join(lines, "\n"))
+	}
 	for i, l := range help {
 		if margin := len(l) - len(strings.TrimLeft(l, " ")); margin != 1 {
 			t.Fatalf("help row %d starts at column %d, want 1:\n%s", i, margin, strings.Join(help, "\n"))
@@ -593,5 +613,71 @@ func TestProgressLineWithNothingDue(t *testing.T) {
 
 	if view := ansi.Strip(m.View().Content); !strings.Contains(view, "Today: nothing due") || !strings.Contains(view, "100%") {
 		t.Fatalf("an empty day should read as done:\n%s", view)
+	}
+}
+
+func keyBackspace() tea.KeyPressMsg { return tea.KeyPressMsg{Code: tea.KeyBackspace} }
+
+func TestEditSendsOnlyChangedFields(t *testing.T) {
+	taxes := todo("taxes")
+	taxes.Priority = "high"
+	svc := &fakeService{all: []tasks.TodoView{taxes}}
+	m := send(t, start(t, svc, KeymapDefault), keyTab, runes("e"))
+
+	if m.mode != modeAddTodo || m.form.editing == nil {
+		t.Fatalf("e should open the edit form")
+	}
+	if view := ansi.Strip(m.View().Content); !strings.Contains(view, "Edit task") || !strings.Contains(view, "taxes") {
+		t.Fatalf("form should be titled Edit task and prefilled:\n%s", view)
+	}
+
+	// priority field: clear "high", type "low", then enter through to save
+	m = send(t, m, keyDown, keyDown)
+	for range "high" {
+		m = send(t, m, keyBackspace())
+	}
+	m = send(t, m, runes("low"), keyEnter, keyEnter, keyEnter)
+
+	if len(svc.edited) != 1 {
+		t.Fatalf("expected one edit, got %d (form err %v)", len(svc.edited), m.form.err)
+	}
+	got := svc.edited[0]
+	if got.name != "taxes" || got.patch.Priority == nil || *got.patch.Priority != "low" {
+		t.Fatalf("expected priority low for taxes, got %+v", got)
+	}
+	if got.patch.Name != nil || got.patch.Description != nil || got.patch.IsDaily != nil || got.patch.ExpiresAt != nil {
+		t.Fatalf("only the priority should change, got %+v", got.patch)
+	}
+	if !strings.Contains(m.status, "taxes") {
+		t.Fatalf("status should confirm the update, got %q", m.status)
+	}
+}
+
+func TestEditWithoutChangesSavesNothing(t *testing.T) {
+	// an overdue task: its prefilled date is in the past and must not be
+	// re-validated when left untouched
+	late := tasks.TodoView{Name: "late", ExpiresAt: time.Now().AddDate(0, 0, -3)}
+	svc := &fakeService{all: []tasks.TodoView{late}}
+
+	m := send(t, start(t, svc, KeymapDefault), keyTab, runes("e"), keyEnter, keyEnter, keyEnter, keyEnter, keyEnter)
+
+	if m.form.err != nil {
+		t.Fatalf("untouched form should not fail validation: %v", m.form.err)
+	}
+	if m.mode != modeNormal || len(svc.edited) != 0 {
+		t.Fatalf("no change should just close the form, mode %v edits %v", m.mode, svc.edited)
+	}
+}
+
+func TestEditDailyToggle(t *testing.T) {
+	daily := todo("read")
+	daily.IsDaily = true
+	svc := &fakeService{all: []tasks.TodoView{daily}}
+
+	// daily field: y -> n
+	m := send(t, start(t, svc, KeymapDefault), keyTab, runes("e"), keyDown, keyDown, keyDown, keyBackspace(), runes("n"), keyEnter, keyEnter)
+
+	if len(svc.edited) != 1 || svc.edited[0].patch.IsDaily == nil || *svc.edited[0].patch.IsDaily {
+		t.Fatalf("expected daily=false, got %+v (form err %v)", svc.edited, m.form.err)
 	}
 }

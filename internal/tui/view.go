@@ -437,7 +437,11 @@ func (m Model) renderModal(width int) string {
 }
 
 func (m Model) renderForm() string {
-	lines := []string{color.Accent().Render(i18n.T("tui.form.title")), ""}
+	title := i18n.T("tui.form.title")
+	if m.form.editing != nil {
+		title = i18n.T("tui.form.editTitle")
+	}
+	lines := []string{color.Accent().Render(title), ""}
 	labelStyle := lipgloss.NewStyle().Width(labelWidth())
 	for i := range m.form.fields {
 		label := labelStyle.Render(fieldLabel(i))
@@ -506,6 +510,9 @@ func (m Model) modeLabel() string {
 	case modeAddDump:
 		return i18n.T("tui.mode.dump")
 	case modeAddTodo:
+		if m.form.editing != nil {
+			return i18n.T("tui.mode.edit")
+		}
 		return i18n.T("tui.mode.add")
 	default:
 		return i18n.T("tui.mode.normal")

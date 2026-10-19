@@ -12,6 +12,7 @@ Below the tabs, a bar shows today's progress (see `akrasia progress`).
 | `tab` `shift+tab` / `←` `→` | switch tabs (Today, All, Daily, Dump) |
 | `space` | complete the selected task (asks for optional notes) |
 | `a` | new task (on the Dump tab: new dump entry) |
+| `e` | edit the selected task (the form opens prefilled; only what you change is saved) |
 | `x` | delete the selected task (asks for confirmation) |
 | `enter` | toggle the details panel (streak and streak history for daily tasks) |
 | `/` | filter by name; `esc` clears it |
@@ -49,6 +50,7 @@ Available Commands:
  dbg debug            inspect a task's stored history and streak math (diagnostics)
  dn  delete-by-name   delete a todo by name
  dp  dump             store a named dump entry, or list stored entries
+ e   edit             change the name, description, priority, daily mode or date of a task
  fc  focus            show top 1-3 priority items to focus on right now
  ga  get-all          returns all the todos saved in storage
  gn  get-by-name      search for a task by name (case-insensitive, fuzzy match)
@@ -76,6 +78,7 @@ Available Commands:
 | Command | Flags |
 | --- | --- |
 | `add` | `--desc`, `--priority high\|medium\|low`, `--daily`, `--date dd` or `--date dd,mm` (default: tomorrow), `--name` (instead of the positional name) |
+| `edit` | `--name`, `--desc` (`""` clears it), `--priority` (`""` clears it), `--daily=true\|false`, `--date dd` or `--date dd,mm`; only the flags you pass are changed |
 | `today` | `--only overdue\|today\|daily\|soon`, `--limit N`, `--priority`, `--json` |
 | `focus` | `--limit 1-3` (default 3), `--priority` |
 | `get-all` | `--priority` |

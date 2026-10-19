@@ -44,6 +44,8 @@ func (m Model) handleNormalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.startDelete()
 	case key.Matches(msg, m.keys.Add):
 		return m.startAdd()
+	case key.Matches(msg, m.keys.Edit):
+		return m.startEdit()
 
 	case key.Matches(msg, m.keys.Search):
 		m.mode = modeSearch
@@ -132,6 +134,20 @@ func (m Model) startAdd() (tea.Model, tea.Cmd) {
 	return m, textinput.Blink
 }
 
+// startEdit opens the form prefilled with the selected task.
+func (m Model) startEdit() (tea.Model, tea.Cmd) {
+	r, ok := m.selected()
+	if !ok || r.todo == nil {
+		m.setStatus(i18n.T("tui.prompt.noSelection"), nil)
+		return m, nil
+	}
+
+	m.mode = modeAddTodo
+	m.status = ""
+	m.form = newEditForm(modalWidth(m.width), *r.todo)
+	return m, textinput.Blink
+}
+
 func (m *Model) openInput(value string) {
 	m.input.SetValue(value)
 	m.input.CursorEnd()
@@ -204,6 +220,9 @@ func (m Model) handleFormKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.form.next()
 			return m, nil
 		}
+		if m.form.editing != nil {
+			return m.submitEdit()
+		}
 		in, err := m.form.value()
 		if err != nil {
 			m.form.err = err
@@ -224,6 +243,29 @@ func (m Model) handleFormKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	m.form.err = nil // typing clears the last validation error
 	cmd := m.form.update(msg)
 	return m, cmd
+}
+
+// submitEdit saves only the fields that changed; with no change it just
+// closes the form.
+func (m Model) submitEdit() (tea.Model, tea.Cmd) {
+	patch, err := m.form.patch()
+	if err != nil {
+		m.form.err = err
+		return m, nil
+	}
+	m.mode = modeNormal
+	if patch.Empty() {
+		return m, nil
+	}
+	return m, m.editCmd(m.form.editing.Name, patch)
+}
+
+func (m Model) editCmd(name string, patch tasks.TodoPatch) tea.Cmd {
+	ctx, svc := m.ctx, m.svc
+	return func() tea.Msg {
+		todo, err := svc.EditTodo(ctx, name, patch)
+		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.updated"), todo.Name), err: err}
+	}
 }
 
 func (m Model) completeCmd(name, notes string) tea.Cmd {

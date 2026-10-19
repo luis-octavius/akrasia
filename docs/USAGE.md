@@ -48,6 +48,26 @@ Updated successfully
 Daily tasks count as done only for the day you complete them. One-off tasks stay
 done.
 
+### Editing tasks
+
+```bash
+# only the flags you pass change; the history (and the streak) is kept
+akrasia edit "Morning run" --name "Morning walk"
+Task Morning walk updated
+
+akrasia edit stend --priority low --desc "" --date 30,11
+Task Stendhal updated
+
+# turn a one-off task into a daily one, or back with --daily=false
+akrasia edit Stendhal --daily
+Task Stendhal updated
+
+akrasia edit Stendhal --name "Morning walk"
+Error: there is already a task called 'Morning walk'
+```
+
+In the TUI, press `e` on a task: the form opens prefilled.
+
 ### Listing tasks
 
 ```bash

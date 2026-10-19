@@ -15,6 +15,17 @@ All notable changes to Akrasia are documented here. The format follows
   - It opens `akrasia today` and `akrasia focus`.
   - New command: `akrasia progress` (alias `pg`).
   - `today --json` gains a `Progress` field (`Done`, `Total`).
+- **Editing tasks.** Change a task's name, description, priority, daily mode
+  or due date. Its history and streak are kept.
+  - CLI: `akrasia edit <name>` (alias `e`) with `--name`, `--desc`,
+    `--priority`, `--daily=true|false` and `--date`. Only the flags you
+    pass are changed; `--desc ""` clears the description.
+  - TUI: press `e` on a task. The form opens prefilled and only changed
+    fields are saved, so an overdue task can be edited without touching its
+    date.
+  - A one-off task turned daily starts its streak window that day.
+  - Clear errors when the new name is already taken or the priority is
+    invalid.
 
 ## [2.0.0] - unreleased
 

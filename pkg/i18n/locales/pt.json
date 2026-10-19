@@ -39,7 +39,10 @@
 			"tuiShort": "abrir a interface interativa no terminal",
 			"configKeymapShort": "gerenciar o layout de teclas da TUI",
 			"configKeymapUse": "keymap [list|show|default|vim]",
-			"progressShort": "mostrar o progresso de hoje (tarefas feitas sobre as de hoje)"
+			"progressShort": "mostrar o progresso de hoje (tarefas feitas sobre as de hoje)",
+			"editUse": "edit <nome>",
+			"editShort": "alterar nome, descrição, prioridade, modo diário ou data de uma tarefa",
+			"editExample": "akrasia edit \"Corrida\" --name \"Caminhada\"\nakrasia edit stendhal --priority low --date 30,11\nakrasia edit \"Ler\" --daily=false --desc \"\""
 		},
 		"flags": {
 			"addDate": "adicionar data para a tarefa (dd,mm)",
@@ -65,7 +68,12 @@
 			"dumpName": "nome da entrada a armazenar",
 			"todayOnly": "mostrar apenas uma seção: overdue|today|daily|soon",
 			"todayLimit": "limitar itens por seção (0 = sem limite)",
-			"todayJSON": "exibir a saída do today em JSON"
+			"todayJSON": "exibir a saída do today em JSON",
+			"editName": "novo nome da tarefa",
+			"editDescription": "nova descrição (\"\" apaga)",
+			"editPriority": "nova prioridade (high|medium|low, \"\" apaga)",
+			"editDaily": "tornar a tarefa diária (true) ou única (false)",
+			"editDate": "novo prazo (dd ou dd,mm)"
 		},
 		"cobra": {
 			"usage": "Uso:",
@@ -112,7 +120,8 @@
 			"dateNotEnoughArguments": "Argumentos insuficientes na data",
 			"invalidMonthNumber": "Número do mês não está entre 1 e 12",
 			"unknownKeymap": "keymap desconhecido: %q (disponíveis: %v)",
-			"setKeymap": "falha ao definir o keymap: %w"
+			"setKeymap": "falha ao definir o keymap: %w",
+			"nothingToEdit": "nada para alterar: use ao menos um de --name, --desc, --priority, --daily ou --date"
 		}
 	},
 	"db": {
@@ -168,7 +177,8 @@
 			"backfilledTask": "Retropreenchidas %d entradas no histórico para a tarefa '%s'",
 			"backfilledDailyTask": "Retropreenchidas %d entradas no histórico para %d tarefa(s) diária(s)",
 			"addedDump": "Dump '%s' adicionado\n",
-			"noDump": "Nenhuma entrada de dump armazenada"
+			"noDump": "Nenhuma entrada de dump armazenada",
+			"updatedTask": "Tarefa %s atualizada"
 		},
 		"error": {
 			"createTask": "erro ao criar a tarefa: %w",
@@ -194,7 +204,11 @@
 			"getDaily": "erro ao obter as tarefas diárias: %w",
 			"extendHistorySince": "erro ao estender a janela de histórico da tarefa",
 			"addDump": "erro ao adicionar dump",
-			"getDump": "erro ao obter as entradas de dump"
+			"getDump": "erro ao obter as entradas de dump",
+			"nameTaken": "já existe uma tarefa chamada '%s'",
+			"invalidPriority": "a prioridade deve ser high, medium, low ou vazia (recebido '%s')",
+			"emptyName": "o nome da tarefa não pode ser vazio",
+			"updateTask": "erro ao atualizar a tarefa: %w"
 		}
 	},
 	"quotes": {
@@ -238,7 +252,8 @@
 			"confirm": "confirmar",
 			"cancel": "cancelar",
 			"nextField": "próximo campo",
-			"theme": "próximo tema"
+			"theme": "próximo tema",
+			"edit": "editar"
 		},
 		"loading": "Carregando...",
 		"empty": "Nada por aqui ainda.",
@@ -263,7 +278,8 @@
 			"desc": "Descrição",
 			"priorityHint": "high / medium / low",
 			"dailyHint": "s / n",
-			"dateHint": "dd ou dd/mm, vazio = amanhã"
+			"dateHint": "dd ou dd/mm, vazio = amanhã",
+			"editTitle": "Editar tarefa"
 		},
 		"status": {
 			"completed": "✔ %s concluída",
@@ -272,7 +288,8 @@
 			"dumpAdded": "Dump %q adicionado",
 			"filter": "filtro",
 			"priority": "prioridade",
-			"theme": "tema: %s"
+			"theme": "tema: %s",
+			"updated": "✔ %s atualizada"
 		},
 		"details": {
 			"expires": "Expira",
@@ -293,7 +310,8 @@
 			"notes": "NOTAS",
 			"delete": "DELETAR",
 			"dump": "DUMP",
-			"add": "NOVA"
+			"add": "NOVA",
+			"edit": "EDITAR"
 		}
 	}
 }

@@ -7,6 +7,8 @@ import "errors"
 var (
 	ErrTodoNotFound = errors.New("todo not found")
 	ErrNotDaily     = errors.New("todo is not daily")
+	ErrNameTaken    = errors.New("todo name already taken")
+	ErrInvalidInput = errors.New("invalid todo field")
 )
 
 // localizedError shows a translated message to the user while still

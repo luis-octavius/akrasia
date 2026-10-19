@@ -39,7 +39,10 @@
 			"tuiShort": "open the interactive terminal interface",
 			"configKeymapShort": "manage the TUI key layout",
 			"configKeymapUse": "keymap [list|show|default|vim]",
-			"progressShort": "show today's progress (tasks done out of today's tasks)"
+			"progressShort": "show today's progress (tasks done out of today's tasks)",
+			"editUse": "edit <name>",
+			"editShort": "change the name, description, priority, daily mode or date of a task",
+			"editExample": "akrasia edit \"Morning run\" --name \"Morning walk\"\nakrasia edit stendhal --priority low --date 30,11\nakrasia edit \"Read\" --daily=false --desc \"\""
 		},
 		"flags": {
 			"addDate": "add date to task (dd,mm)",
@@ -65,7 +68,12 @@
 			"dumpName": "entry name to store",
 			"todayOnly": "show only one section: overdue|today|daily|soon",
 			"todayLimit": "limit items per section (0 = no limit)",
-			"todayJSON": "print today output as JSON"
+			"todayJSON": "print today output as JSON",
+			"editName": "new task name",
+			"editDescription": "new description (\"\" clears it)",
+			"editPriority": "new priority (high|medium|low, \"\" clears it)",
+			"editDaily": "make the task daily (true) or one-off (false)",
+			"editDate": "new due date (dd or dd,mm)"
 		},
 		"cobra": {
 			"usage": "Usage:",
@@ -112,7 +120,8 @@
 			"dateNotEnoughArguments": "Not enough arguments in date",
 			"invalidMonthNumber": "month number is not between 1 and 12",
 			"unknownKeymap": "unknown keymap: %q (available: %v)",
-			"setKeymap": "failed to set keymap: %w"
+			"setKeymap": "failed to set keymap: %w",
+			"nothingToEdit": "nothing to change: pass at least one of --name, --desc, --priority, --daily or --date"
 		}
 	},
 	"db": {
@@ -168,7 +177,8 @@
 			"backfilledTask": "Backfilled %d history entries for task '%s'",
 			"backfilledDailyTask": "Backfilled %d history entries for %d daily task(s)",
 			"addedDump": "Dump '%s' added\n",
-			"noDump": "No dump entries stored"
+			"noDump": "No dump entries stored",
+			"updatedTask": "Task %s updated"
 		},
 		"error": {
 			"createTask": "error creating task: %w",
@@ -194,7 +204,11 @@
 			"getDaily": "error getting daily tasks: %w",
 			"extendHistorySince": "error extending task history window",
 			"addDump": "error adding dump",
-			"getDump": "error getting dump entries"
+			"getDump": "error getting dump entries",
+			"nameTaken": "there is already a task called '%s'",
+			"invalidPriority": "priority must be high, medium, low or empty (got '%s')",
+			"emptyName": "the task name can't be empty",
+			"updateTask": "error updating task: %w"
 		}
 	},
 	"quotes": {
@@ -238,7 +252,8 @@
 			"confirm": "confirm",
 			"cancel": "cancel",
 			"nextField": "next field",
-			"theme": "next theme"
+			"theme": "next theme",
+			"edit": "edit"
 		},
 		"loading": "Loading...",
 		"empty": "Nothing here yet.",
@@ -263,7 +278,8 @@
 			"desc": "Description",
 			"priorityHint": "high / medium / low",
 			"dailyHint": "y / n",
-			"dateHint": "dd or dd/mm, empty = tomorrow"
+			"dateHint": "dd or dd/mm, empty = tomorrow",
+			"editTitle": "Edit task"
 		},
 		"status": {
 			"completed": "✔ %s completed",
@@ -272,7 +288,8 @@
 			"dumpAdded": "Dump %q added",
 			"filter": "filter",
 			"priority": "priority",
-			"theme": "theme: %s"
+			"theme": "theme: %s",
+			"updated": "✔ %s updated"
 		},
 		"details": {
 			"expires": "Expires",
@@ -293,7 +310,8 @@
 			"notes": "NOTES",
 			"delete": "DELETE",
 			"dump": "DUMP",
-			"add": "NEW"
+			"add": "NEW",
+			"edit": "EDIT"
 		}
 	}
 }

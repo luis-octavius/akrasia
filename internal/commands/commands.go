@@ -30,6 +30,13 @@ var (
 	filterPriority string
 	deleteYes      bool
 	focusLimit     int
+
+	// edit flags; only the ones the user passes are applied
+	editName        string
+	editDescription string
+	editPriority    string
+	editDaily       bool
+	editDate        []int
 )
 
 // rootCmd is the CLI entrypoint that registers all Akrasia subcommands.
@@ -553,6 +560,65 @@ var dumpCmd = &cobra.Command{
 	},
 }
 
+// editCmd changes the fields of an existing task.
+var editCmd = &cobra.Command{
+	Use:     i18n.T("commands.commands.editUse"),
+	Short:   i18n.T("commands.commands.editShort"),
+	Aliases: []string{"e"},
+	Example: i18n.T("commands.commands.editExample"),
+	Args:    cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		patch, err := editPatch(cmd)
+		if err != nil {
+			return err
+		}
+		if patch.Empty() {
+			return errors.New(i18n.T("commands.error.nothingToEdit"))
+		}
+
+		todo, err := tkm.EditTodo(cmd.Context(), args[0], patch)
+		if err != nil {
+			return err
+		}
+
+		color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.updatedTask"), todo.Name))
+		return nil
+	},
+}
+
+// editPatch builds the patch from the flags that were actually passed, so
+// `--desc ""` clears the description while leaving it out keeps it.
+func editPatch(cmd *cobra.Command) (tasks.TodoPatch, error) {
+	var patch tasks.TodoPatch
+	flags := cmd.Flags()
+
+	if flags.Changed("name") {
+		patch.Name = &editName
+	}
+	if flags.Changed("desc") {
+		patch.Description = &editDescription
+	}
+	if flags.Changed("priority") {
+		patch.Priority = &editPriority
+	}
+	if flags.Changed("daily") {
+		patch.IsDaily = &editDaily
+	}
+	if flags.Changed("date") {
+		expiresAt, err := tasks.ParseDate(editDate)
+		if err != nil {
+			return patch, err
+		}
+		patch.ExpiresAt = &expiresAt
+	}
+	return patch, nil
+}
+
 // progressCmd shows how many of today's tasks are done.
 var progressCmd = &cobra.Command{
 	Use:     "progress",
@@ -746,6 +812,7 @@ func init() {
 		"dumpCmd":                 dumpCmd,
 		"tuiCmd":                  tuiCmd,
 		"progressCmd":             progressCmd,
+		"editCmd":                 editCmd,
 		"config":                  config,
 	}
 
@@ -780,6 +847,11 @@ func init() {
 	backfillHistory.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.backfillHistoryName"))
 	debugTask.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.debugName"))
 	dumpCmd.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.dumpName"))
+	editCmd.Flags().StringVar(&editName, "name", "", i18n.T("commands.flags.editName"))
+	editCmd.Flags().StringVar(&editDescription, "desc", "", i18n.T("commands.flags.editDescription"))
+	editCmd.Flags().StringVar(&editPriority, "priority", "", i18n.T("commands.flags.editPriority"))
+	editCmd.Flags().BoolVar(&editDaily, "daily", false, i18n.T("commands.flags.editDaily"))
+	editCmd.Flags().IntSliceVar(&editDate, "date", nil, i18n.T("commands.flags.editDate"))
 	today.Flags().StringVar(&todayOnly, "only", "", i18n.T("commands.flags.todayOnly"))
 	today.Flags().IntVar(&todayLimit, "limit", 0, i18n.T("commands.flags.todayLimit"))
 	today.Flags().BoolVar(&todayJSON, "json", false, i18n.T("commands.flags.todayJSON"))
