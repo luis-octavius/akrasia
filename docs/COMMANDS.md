@@ -1,3 +1,9 @@
+## Interactive interface
+
+Run `akrasia` with no arguments to open the TUI (`akrasia tui` does the same).
+When stdin or stdout is not a terminal, such as in a pipe or a script, it
+prints the help instead. Use `akrasia help` to see the help at any time.
+
 ## Commands
 
 ```

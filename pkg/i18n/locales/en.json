@@ -2,7 +2,7 @@
 	"commands": {
 		"commands": {
 			"rootCmdShort": "An app that helps with fighting akrasia",
-			"rootCmdLong": "Akrasia is a word in greek that means \"Incontinence\", which means a lack of self-control.\nThis app is constructed to simply help to fight akrasía rapidly in the terminal, by adding things to do\nand to keep track of these things for you.",
+			"rootCmdLong": "Akrasia is a word in greek that means \"Incontinence\", which means a lack of self-control.\nThis app is constructed to simply help to fight akrasía rapidly in the terminal, by adding things to do\nand to keep track of these things for you.\n\nRun `akrasia` alone to open the interactive interface, or `akrasia help` to list every command.",
 			"updateDailyTodoShort": "reset daily tasks for a new day and record completion history (runs via cron)",
 			"addShort": "create a new task with optional description, priority, and expiration date",
 			"addUse": "add [<name> [<description>]]",

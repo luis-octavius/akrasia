@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"slices"
 
 	"github.com/luis-octavius/akrasia/internal/db"
@@ -13,6 +14,7 @@ import (
 	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var (
@@ -31,10 +33,31 @@ var (
 )
 
 // rootCmd is the CLI entrypoint that registers all Akrasia subcommands.
+// Run without arguments it opens the TUI; `akrasia help` shows the help.
 var rootCmd = &cobra.Command{
 	Use:   "akrasia",
 	Short: i18n.T("commands.commands.rootCmdShort"),
 	Long:  i18n.T("commands.commands.rootCmdLong"),
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// pipes and scripts get the help instead of a TUI they can't drive
+		if !isInteractive() {
+			return cmd.Help()
+		}
+
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		return tui.Run(cmd.Context(), tkm)
+	},
+}
+
+// isInteractive reports whether both stdin and stdout are terminals. It is
+// a variable so tests can force either path.
+var isInteractive = func() bool {
+	return term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd()))
 }
 
 // Execute runs the root command and exits the process on fatal command errors.
