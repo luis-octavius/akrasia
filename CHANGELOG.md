@@ -50,6 +50,21 @@ All notable changes to Akrasia are documented here. The format follows
     created (for example, the name is taken), the entry stays.
   - In the TUI, on the Dump tab: `x` deletes with confirmation, and `c`
     opens the new-task form prefilled with the entry.
+- **Backups to a folder you already sync.** No account or server: point
+  Akrasia at a Google Drive, Dropbox, OneDrive or Syncthing folder and the
+  sync tool takes the copies off the machine.
+  - `akrasia config backup dir <path>` turns it on; `keep <n>` (default
+    14), `profile <name>` (default: the hostname), `show` and `off`.
+  - Once a day, the first command (or opening the TUI) saves a checked,
+    compacted copy and deletes the oldest ones beyond `keep`. A failure is
+    only a warning.
+  - Each machine has its own profile, so several can share one folder.
+  - `akrasia backup` (alias `bk`) saves a copy now; `akrasia backup list`
+    shows them.
+  - `akrasia restore <file|latest>` checks the copy, saves the current
+    database first, then replaces it. `--profile` restores another
+    machine's copies; `--yes` skips the question.
+  - The TUI status bar shows the date of the last backup.
 - **Years in due dates.** `--date dd,mm,yyyy` in `add` and `edit`, and
   `dd/mm/yyyy` in the TUI form (a two-digit year means 20yy). The edit form
   prefills the full date.

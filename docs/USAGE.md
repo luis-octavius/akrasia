@@ -248,6 +248,46 @@ akrasia delete-by-name "Pay electricity" --yes
 Todo Pay electricity bill deleted successfully
 ```
 
+### Backups
+
+The database lives only on this machine. To avoid losing it, point Akrasia
+at a folder a sync tool already copies elsewhere (Google Drive, Dropbox,
+OneDrive, Syncthing). There is no account and no server: the sync tool does
+the transport.
+
+```bash
+akrasia config backup dir ~/Dropbox/akrasia
+```
+
+From then on, the first command of each day (or opening the TUI) saves a
+copy to that folder, and the newest 14 are kept. A failed backup only shows
+a warning. The TUI status bar shows the date of the last one.
+
+```bash
+akrasia backup                         # a copy now
+akrasia backup list                    # this machine's copies, newest first
+akrasia config backup keep 30          # how many copies to keep
+akrasia config backup show
+akrasia config backup off              # stop; existing copies stay
+```
+
+Each machine writes under its own profile (the hostname by default), so a
+personal and a work PC can share the folder without overwriting each
+other's copies. `akrasia config backup profile work-pc` sets the name.
+
+To restore, for example on a new PC:
+
+```bash
+akrasia config backup dir ~/Dropbox/akrasia
+akrasia backup list --profile old-laptop
+akrasia restore latest --profile old-laptop
+# or a specific file
+akrasia restore ~/Dropbox/akrasia/akrasia-old-laptop-2026-10-19_093000.db
+```
+
+`restore` checks the copy first, saves the current database to the backup
+folder, then replaces it. It asks before replacing; scripts pass `--yes`.
+
 ### Settings
 
 ```bash

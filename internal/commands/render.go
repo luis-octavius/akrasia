@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"charm.land/lipgloss/v2"
+	"github.com/luis-octavius/akrasia/internal/backup"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
@@ -248,6 +250,43 @@ func printDumps(entries []tasks.DumpEntry) {
 			createdAt = d.CreatedAt.Format("02 Jan 06 15:04")
 		}
 		fmt.Printf("%d. "+i18n.T("tasks.dump.row"), i+1, d.Name, createdAt)
+	}
+}
+
+func printBackups(dir, profile string, copies []backup.Copy) {
+	color.MsgTitle(fmt.Sprintf(i18n.T("commands.info.backupList"), profile, dir))
+	if len(copies) == 0 {
+		color.MsgMuted(i18n.T("commands.info.noBackups"))
+		return
+	}
+
+	for _, c := range copies {
+		fmt.Printf("  %s  %8s  %s\n", c.Time.Format("2006-01-02 15:04:05"), formatSize(c.Size), filepath.Base(c.Path))
+	}
+}
+
+func printBackupConfig(cfg backup.Config) {
+	dir := color.Muted().Render(i18n.T("commands.info.backupNotSet"))
+	last := color.Muted().Render(i18n.T("commands.info.backupNever"))
+	if cfg.Enabled() {
+		dir = cfg.Dir
+		if latest, ok, err := backup.Latest(cfg.Dir, cfg.ProfileName()); err == nil && ok {
+			last = latest.Time.Format("2006-01-02 15:04")
+		}
+	}
+
+	lipgloss.Printf(i18n.T("commands.info.backupConfig"), dir, cfg.KeepN(), cfg.ProfileName(), last)
+}
+
+// formatSize shows a file size in B, KB or MB.
+func formatSize(n int64) string {
+	switch {
+	case n >= 1<<20:
+		return fmt.Sprintf("%.1f MB", float64(n)/(1<<20))
+	case n >= 1<<10:
+		return fmt.Sprintf("%.1f KB", float64(n)/(1<<10))
+	default:
+		return fmt.Sprintf("%d B", n)
 	}
 }
 

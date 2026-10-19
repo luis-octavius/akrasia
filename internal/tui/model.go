@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/textinput"
@@ -187,12 +188,19 @@ type Model struct {
 
 	status    string
 	statusErr bool
+
+	// backup is the status bar's note on the last backup, read once at
+	// start; backupOn is false when no backup folder is set
+	backup   string
+	backupOn bool
 }
 
 // New builds the root model with the saved keymap. ctx is used for every
 // query, so cancelling it aborts in-flight loads.
 func New(ctx context.Context, svc Service) Model {
-	return newModel(ctx, svc, CurrentKeymap())
+	m := newModel(ctx, svc, CurrentKeymap())
+	m.backup, m.backupOn = lastBackup(time.Now())
+	return m
 }
 
 func newModel(ctx context.Context, svc Service, layout string) Model {

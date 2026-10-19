@@ -30,7 +30,7 @@
 			"debugUse": "debug <nome>",
 			"dumpShort": "guardar um item no dump, listar, apagar um ou transformar um em tarefa",
 			"dumpUse": "dump [<item>]",
-			"configShort": "gerenciar configurações (tema, idioma, teclas da TUI)",
+			"configShort": "gerenciar configurações (tema, idioma, keymap da TUI, backups)",
 			"configThemeShort": "gerenciar temas de cor",
 			"configThemeUse": "theme [list|show|<nome-do-tema>]",
 			"configLanguageShort": "gerenciar linguagens",
@@ -45,7 +45,15 @@
 			"notesUse": "notes <nome>",
 			"notesShort": "mostrar as notas escritas em cada dia em que a tarefa foi concluída",
 			"notesExample": "akrasia notes \"Estudar Rust\"\nakrasia notes rust --limit 7",
-			"dumpExample": "akrasia dump \"estudar índices em sql\"\nakrasia dump                      # lista numerada\nakrasia dump --delete 2\nakrasia dump --to-task 1 --priority high --date 30,11"
+			"dumpExample": "akrasia dump \"estudar índices em sql\"\nakrasia dump                      # lista numerada\nakrasia dump --delete 2\nakrasia dump --to-task 1 --priority high --date 30,11",
+			"backupShort": "copiar o banco de dados para a pasta de backup agora",
+			"backupListShort": "listar os backups desta máquina, do mais novo ao mais antigo",
+			"restoreUse": "restore <arquivo|latest>",
+			"restoreShort": "substituir o banco de dados por um backup (o atual é salvo antes)",
+			"restoreExample": "akrasia restore latest\nakrasia restore latest --profile pc-trabalho\nakrasia restore ~/Dropbox/akrasia/akrasia-casa-2026-10-19_093000.db --yes",
+			"configBackupUse": "backup [show|off|dir <caminho>|keep <n>|profile <nome>]",
+			"configBackupShort": "definir a pasta de backup, quantas cópias manter e o nome do perfil",
+			"configBackupExample": "akrasia config backup dir ~/Dropbox/akrasia\nakrasia config backup keep 30\nakrasia config backup profile pc-trabalho\nakrasia config backup show\nakrasia config backup off"
 		},
 		"flags": {
 			"addDate": "prazo: dd, dd,mm ou dd,mm,aaaa (padrão: amanhã)",
@@ -82,7 +90,9 @@
 			"dumpToTask": "transformar o item do dump com este número em tarefa (com --priority, --daily, --date)",
 			"dumpPriority": "prioridade da tarefa criada com --to-task",
 			"dumpDaily": "tornar diária a tarefa criada com --to-task",
-			"dumpDate": "prazo da tarefa criada com --to-task: dd, dd,mm ou dd,mm,aaaa"
+			"dumpDate": "prazo da tarefa criada com --to-task: dd, dd,mm ou dd,mm,aaaa",
+			"backupProfile": "usar os backups de outra máquina (padrão: o perfil desta máquina)",
+			"restoreYes": "restaurar sem perguntar"
 		},
 		"cobra": {
 			"usage": "Uso:",
@@ -107,7 +117,19 @@
 			"languageSet": "Linguagem definida para: %s\n",
 			"availableKeymaps": "Keymaps disponíveis:",
 			"currentKeymap": "Keymap atual: %s\n",
-			"keymapSet": "Keymap definido para: %s\n"
+			"keymapSet": "Keymap definido para: %s\n",
+			"backupCreated": "Backup salvo em %s",
+			"backupPruned": "%d backup(s) antigo(s) removido(s)",
+			"backupList": "Backups de %s em %s:",
+			"noBackups": "  nenhum backup ainda",
+			"backupNotSet": "não definida (backups desligados)",
+			"backupNever": "nunca",
+			"backupConfig": "Pasta de backup: %s\nManter:          %d cópias\nPerfil:          %s\nÚltimo backup:   %s\n",
+			"backupOff": "Backups desligados. As cópias existentes foram mantidas.",
+			"restoreConfirm": "Substituir %s por %s? O banco de dados atual é salvo antes.",
+			"restoreCancelled": "Nada foi restaurado.",
+			"restored": "%s restaurado",
+			"restoreSafety": "O banco de dados anterior foi salvo em %s"
 		},
 		"error": {
 			"taskName": "nome da tarefa é obrigatório (use o argumento posicional ou a opção --name)",
@@ -133,7 +155,14 @@
 			"nothingToEdit": "nada para alterar: use ao menos um de --name, --desc, --priority, --daily ou --date",
 			"invalidDay": "o dia %d não existe em %02d/%d",
 			"dumpFlags": "use apenas um de --delete e --to-task, sem um item novo",
-			"dumpTaskFlags": "--priority, --daily e --date só valem com --to-task"
+			"dumpTaskFlags": "--priority, --daily e --date só valem com --to-task",
+			"backupOff": "nenhuma pasta de backup definida: rode `akrasia config backup dir <caminho>`",
+			"noBackups": "nenhum backup de %q em %s",
+			"backupValue": "%s precisa de um valor",
+			"backupKeep": "número de cópias inválido: %q (use um número a partir de 1)",
+			"backupProfile": "perfil inválido: %q (use letras, números, \".\", \"_\" e \"-\")",
+			"backupAction": "opção desconhecida: %q (use show, off, dir, keep ou profile)",
+			"dailyBackup": "o backup diário falhou: %v"
 		}
 	},
 	"db": {
@@ -324,7 +353,10 @@
 			"updated": "✔ %s atualizada",
 			"noteUpdated": "✔ nota de %s atualizada",
 			"promoted": "✔ %s agora é uma tarefa",
-			"dumpDeleted": "dump %s apagado"
+			"dumpDeleted": "dump %s apagado",
+			"backup": "backup %s",
+			"backupToday": "backup hoje",
+			"noBackup": "sem backup"
 		},
 		"details": {
 			"expires": "Expira",

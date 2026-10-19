@@ -6,6 +6,10 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"time"
+
+	"github.com/luis-octavius/akrasia/internal/backup"
+	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
 const (
@@ -67,4 +71,23 @@ func keymapFile() string {
 		configHome = filepath.Join(home, ".config")
 	}
 	return filepath.Join(configHome, "akrasia", "keymap.json")
+}
+
+// lastBackup describes this machine's newest backup for the status bar,
+// and reports whether backups are set up at all.
+func lastBackup(now time.Time) (string, bool) {
+	cfg, err := backup.LoadConfig()
+	if err != nil || !cfg.Enabled() {
+		return i18n.T("tui.status.noBackup"), false
+	}
+
+	latest, ok, err := backup.Latest(cfg.Dir, cfg.ProfileName())
+	switch {
+	case err != nil || !ok:
+		return fmt.Sprintf(i18n.T("tui.status.backup"), i18n.T("commands.info.backupNever")), true
+	case latest.Time.Format(time.DateOnly) == now.Format(time.DateOnly):
+		return i18n.T("tui.status.backupToday"), true
+	default:
+		return fmt.Sprintf(i18n.T("tui.status.backup"), latest.Time.Format(time.DateOnly)), true
+	}
 }

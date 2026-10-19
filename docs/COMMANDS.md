@@ -46,10 +46,11 @@ Usage:
 Available Commands:
  a   add              create a new task with optional description, priority, and expiration date
  bf  backfill-history backfill missing daily task history entries
+ bk  backup           copy the database to the backup folder now
  ce  check-expired    show tasks that have passed their expiration date
  cx  check-expiring   check todos that are expiring in 5 days
      completion       Generate the autocompletion script for the specified shell
- cfg config           manage settings (theme, language, TUI keymap)
+ cfg config           manage settings (theme, language, TUI keymap, backups)
  dbg debug            inspect a task's stored history and streak math (diagnostics)
  dn  delete-by-name   delete a todo by name
  dp  dump             store a dump entry, list them, delete one or turn one into a task
@@ -63,6 +64,7 @@ Available Commands:
      init             initialize akrasia app
  nt  notes            show the notes written each day a task was completed
  pg  progress         show today's progress (tasks done out of today's tasks)
+     restore          replace the database with a backup (the current one is saved first)
  cs  streak           get the current streak of provided todo
  td  today            show a daily focus dashboard (overdue, due today, daily pending, expiring soon)
      tui              open the interactive terminal interface
@@ -72,6 +74,7 @@ Available Commands:
 ### Config
 
 ```
+ b backup      set the backup folder, copies and profile   backup [show|off|dir <path>|keep <n>|profile <name>]
  k keymap      manage the TUI key layout        keymap [list|show|default|vim]
  l language    manage languages                 language [list|show|en|pt]
  t theme       manage color themes              theme [list|show|<theme-name>]
@@ -90,6 +93,8 @@ Available Commands:
 | `dump` | `--delete N`, `--to-task N` (with optional `--priority`, `--daily`, `--date`); `N` is the number `akrasia dump` prints |
 | `notes` | `--limit N` days (default 30, `0` = all) |
 | `delete-by-name` | `--yes` (required) |
+| `backup list` | `--profile <name>` (another machine's copies) |
+| `restore` | `--yes` (skip the question; required in scripts), `--profile <name>` (with `latest`) |
 | `backfill-history` | `--days N` (default 30), `--task <name>` (default: every daily task) |
 
 Names are matched case-insensitively and fuzzily: `akrasia get-by-name stend`
@@ -100,4 +105,5 @@ finds "Stendhal".
 | What | Where |
 | --- | --- |
 | Database | `$DB_PATH`, or `akrasia/akrasia.db` inside the OS config directory (`~/.config` on Linux) |
-| Theme, language, keymap | `theme.json`, `lang.json`, `keymap.json` in `$XDG_CONFIG_HOME/akrasia` (default `~/.config/akrasia`) |
+| Theme, language, keymap, backups | `theme.json`, `lang.json`, `keymap.json`, `backup.json` in `$XDG_CONFIG_HOME/akrasia` (default `~/.config/akrasia`) |
+| Backups | `akrasia-<profile>-<yyyy-mm-dd_hhmmss>.db` in the folder set with `config backup dir` |
