@@ -8,43 +8,51 @@ import (
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
-// getCurrentStreak prints the current streak count for a named task.
-func (tkm *TaskManager) GetCurrentStreak(name string) error {
-	todo, err := GetTodoByName(tkm, name)
+// CurrentStreak returns the task that best matches name and its current
+// streak in days.
+func (tkm *TaskManager) CurrentStreak(ctx context.Context, name string) (TodoView, int64, error) {
+	todo, err := findTodoByName(ctx, tkm, name)
 	if err != nil {
-		return fmt.Errorf("%s", i18n.T("tasks.error.getTodoByNameStreak"))
+		return TodoView{}, 0, err
 	}
 
-	streak, err := tkm.Queries.GetCurrentStreak(context.Background(), database.GetCurrentStreakParams{
+	streak, err := tkm.Queries.GetCurrentStreak(ctx, database.GetCurrentStreakParams{
 		TodoID: todo.ID,
 		ID:     todo.ID,
 	})
 	if err != nil {
-		return fmt.Errorf("%s", i18n.T("tasks.error.getCurrentStreak"))
+		return TodoView{}, 0, fmt.Errorf("%s: %w", i18n.T("tasks.error.getCurrentStreak"), err)
 	}
 
-	fmt.Printf(i18n.T("tasks.info.currentStreak"), todo.Name, streak)
-	return nil
+	view, err := viewFromNameRow(todo)
+	return view, streak, err
 }
 
-// getStreakHistory prints historical streak intervals for a named task.
-func (tkm *TaskManager) GetStreakHistory(name string) error {
-	todo, err := GetTodoByName(tkm, name)
+// StreakHistory returns the task that best matches name and its completed
+// streak intervals, longest first.
+func (tkm *TaskManager) StreakHistory(ctx context.Context, name string) (TodoView, []StreakPeriod, error) {
+	todo, err := findTodoByName(ctx, tkm, name)
 	if err != nil {
-		return fmt.Errorf("%s", i18n.T("tasks.error.getTaskByName"))
+		return TodoView{}, nil, err
 	}
 
-	streak_history, err := tkm.Queries.GetStreakHistory(context.Background(), database.GetStreakHistoryParams{
+	rows, err := tkm.Queries.GetStreakHistory(ctx, database.GetStreakHistoryParams{
 		TodoID: todo.ID,
 		ID:     todo.ID,
 	})
 	if err != nil {
-		return fmt.Errorf("%s", i18n.T("tasks.error.getStreakHistory"))
+		return TodoView{}, nil, fmt.Errorf("%s: %w", i18n.T("tasks.error.getStreakHistory"), err)
 	}
 
-	for i, streak := range streak_history {
-		fmt.Printf(i18n.T("tasks.tasks.getStreakHistory"), i+1, streak.StartDate, streak.EndDate, streak.StreakLength)
+	periods := make([]StreakPeriod, 0, len(rows))
+	for _, r := range rows {
+		periods = append(periods, StreakPeriod{
+			StartDate: fmt.Sprint(r.StartDate),
+			EndDate:   fmt.Sprint(r.EndDate),
+			Days:      r.StreakLength,
+		})
 	}
 
-	return nil
+	view, err := viewFromNameRow(todo)
+	return view, periods, err
 }

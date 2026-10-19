@@ -2,91 +2,40 @@ package tasks
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"time"
-
-	database "github.com/luis-octavius/akrasia/internal/db/out"
-	"github.com/luis-octavius/akrasia/pkg/color"
-	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
-// getTodayFocus builds and prints the daily dashboard, or JSON when requested.
-func (tkm *TaskManager) GetTodayFocus(opts TodayOptions) error {
-	todos, err := tkm.Queries.GetTodos(context.Background())
+// Today builds the daily dashboard: overdue, due today, pending daily and
+// expiring-soon tasks, filtered and limited by opts.
+func (tkm *TaskManager) Today(ctx context.Context, opts TodayOptions) (TodayView, error) {
+	todos, err := tkm.ListTodos(ctx, opts.Priority)
 	if err != nil {
-		return fmt.Errorf(i18n.T("tasks.error.getTaskDatabase"), err)
+		return TodayView{}, err
 	}
 
-	todos = filterTodosByPriority(todos, opts.Priority)
-	doneToday, err := tkm.doneTodaySet()
-	if err != nil {
-		return fmt.Errorf(i18n.T("tasks.error.getTaskDatabase"), err)
-	}
-	view := buildTodayView(todos, time.Now(), doneToday)
-	view = applyTodayOptions(view, opts)
-
-	if opts.JSON {
-		payload, err := json.MarshalIndent(view, "", "  ")
-		if err != nil {
-			return fmt.Errorf(i18n.T("tasks.error.encodeTodayJSON"), err)
-		}
-
-		fmt.Println(string(payload))
-		return nil
-	}
-
-	if len(view.Overdue) == 0 && len(view.DueToday) == 0 && len(view.Daily) == 0 && len(view.ExpiringSoon) == 0 {
-		color.MsgSuccess(i18n.T("tasks.info.noPendingTasks"))
-		return nil
-	}
-
-	fmt.Println(i18n.T("tasks.tasks.todayFocus"))
-
-	printTodaySection(tkm, i18n.T("tasks.tasks.overdue"), view.Overdue)
-	printTodaySection(tkm, i18n.T("tasks.tasks.dueToday"), view.DueToday)
-	printTodaySection(tkm, i18n.T("tasks.tasks.dailyPending"), view.Daily)
-	printTodaySection(tkm, i18n.T("tasks.tasks.expiringSoon"), view.ExpiringSoon)
-
-	return nil
+	view := buildTodayView(todos, time.Now())
+	return applyTodayOptions(view, opts), nil
 }
 
-// getFocus returns the top actionable items across today sections.
-func (tkm *TaskManager) GetFocus(limit int, priorityFilter string) error {
-	todos, err := tkm.Queries.GetTodos(context.Background())
+// Focus returns up to limit actionable tasks, taken from the today
+// sections in order of urgency.
+func (tkm *TaskManager) Focus(ctx context.Context, limit int, priorityFilter string) ([]TodoView, error) {
+	todos, err := tkm.ListTodos(ctx, priorityFilter)
 	if err != nil {
-		return fmt.Errorf(i18n.T("tasks.error.getTaskDatabase"), err)
+		return nil, err
 	}
 
-	todos = filterTodosByPriority(todos, priorityFilter)
-	doneToday, err := tkm.doneTodaySet()
-	if err != nil {
-		return fmt.Errorf(i18n.T("tasks.error.getTaskDatabase"), err)
-	}
-	view := buildTodayView(todos, time.Now(), doneToday)
+	view := buildTodayView(todos, time.Now())
 
-	focus := make([]database.Todo, 0, limit)
-	for _, section := range [][]database.Todo{view.Overdue, view.DueToday, view.Daily, view.ExpiringSoon} {
+	focus := make([]TodoView, 0, limit)
+	for _, section := range [][]TodoView{view.Overdue, view.DueToday, view.Daily, view.ExpiringSoon} {
 		for _, todo := range section {
 			if len(focus) >= limit {
-				break
+				return focus, nil
 			}
 			focus = append(focus, todo)
 		}
-		if len(focus) >= limit {
-			break
-		}
 	}
 
-	if len(focus) == 0 {
-		color.MsgSuccess(i18n.T("tasks.info.noFocusTasks"))
-		return nil
-	}
-
-	fmt.Printf(i18n.T("tasks.tasks.focus"), len(focus))
-	for _, todo := range focus {
-		printTodo(todo)
-	}
-
-	return nil
+	return focus, nil
 }

@@ -3,48 +3,55 @@ package tasks
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 
 	database "github.com/luis-octavius/akrasia/internal/db/out"
-	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
-// AddDump stores a named entry in the dump table and reports success.
-func (tkm *TaskManager) AddDump(name string) error {
-	_, err := tkm.Queries.AddDump(context.Background(), database.AddDumpParams{
+// AddDump stores a named entry in the dump table and returns it.
+func (tkm *TaskManager) AddDump(ctx context.Context, name string) (DumpEntry, error) {
+	d, err := tkm.Queries.AddDump(ctx, database.AddDumpParams{
 		ID:   uuid.New(),
 		Name: name,
 	})
 	if err != nil {
-		return fmt.Errorf("%s: %w", i18n.T("tasks.error.addDump"), err)
+		return DumpEntry{}, fmt.Errorf("%s: %w", i18n.T("tasks.error.addDump"), err)
 	}
 
-	color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.addedDump"), name))
-	return nil
+	return dumpEntry(d)
 }
 
-// GetAllDump prints every stored dump entry, oldest first.
-func (tkm *TaskManager) GetAllDump() error {
-	allDump, err := tkm.Queries.GetAllDump(context.Background())
+// Dumps returns every stored dump entry, oldest first.
+func (tkm *TaskManager) Dumps(ctx context.Context) ([]DumpEntry, error) {
+	rows, err := tkm.Queries.GetAllDump(ctx)
 	if err != nil {
-		return fmt.Errorf("%s: %w", i18n.T("tasks.error.getDump"), err)
+		return nil, fmt.Errorf("%s: %w", i18n.T("tasks.error.getDump"), err)
 	}
 
-	if len(allDump) == 0 {
-		fmt.Println(i18n.T("tasks.info.noDump"))
-		return nil
-	}
-
-	for _, d := range allDump {
-		createdAt := ""
-		if d.CreatedAt.Valid {
-			createdAt = d.CreatedAt.Time.Format(time.RFC822)
+	entries := make([]DumpEntry, 0, len(rows))
+	for _, d := range rows {
+		entry, err := dumpEntry(d)
+		if err != nil {
+			return nil, err
 		}
-		fmt.Printf(i18n.T("tasks.dump.row"), d.Name, createdAt)
+		entries = append(entries, entry)
 	}
 
-	return nil
+	return entries, nil
+}
+
+func dumpEntry(d database.Dump) (DumpEntry, error) {
+	id, err := toUUID(d.ID)
+	if err != nil {
+		return DumpEntry{}, err
+	}
+
+	entry := DumpEntry{ID: id, Name: d.Name}
+	if d.CreatedAt.Valid {
+		entry.CreatedAt = d.CreatedAt.Time
+	}
+
+	return entry, nil
 }

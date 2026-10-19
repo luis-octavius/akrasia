@@ -1,4 +1,4 @@
-package commands
+package tasks
 
 import (
 	"testing"
@@ -12,7 +12,7 @@ func TestParseDateWithoutArgs(t *testing.T) {
 	}
 
 	expected := time.Now().Add(oneDay).Day()
-	result, err := parseDate([]int{})
+	result, err := ParseDate([]int{})
 	dayResult := result.Day()
 	if err != nil {
 		t.Fatal("Error in parseTime: ", err)
@@ -24,7 +24,7 @@ func TestParseDateWithoutArgs(t *testing.T) {
 }
 
 func TestIsDateBeforeFalse(t *testing.T) {
-	date := time.Date(2026, time.November, 03, 0, 0, 0, 0, time.UTC)
+	date := time.Now().AddDate(0, 0, 7)
 
 	isBefore, _ := isDateBefore(date)
 
@@ -42,4 +42,18 @@ func TestIsDateBeforeTrue(t *testing.T) {
 		t.Errorf("expected %v to be %v", date, true)
 	}
 
+}
+
+func TestParseDateTooManyArgsReturnsError(t *testing.T) {
+	if _, err := ParseDate([]int{1, 2, 3}); err == nil {
+		t.Error("expected error for more than two date parts")
+	}
+}
+
+func TestGetMonthByNumInvalid(t *testing.T) {
+	for _, num := range []int{0, 13, -1} {
+		if _, err := getMonthByNum(num); err == nil {
+			t.Errorf("expected error for month %d", num)
+		}
+	}
 }

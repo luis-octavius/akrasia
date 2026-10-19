@@ -3,111 +3,35 @@ package tasks
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	database "github.com/luis-octavius/akrasia/internal/db/out"
-	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
+// ExpiringWindow is how close to its deadline a task must be to count as
+// expiring soon.
+const ExpiringWindow = 5 * 24 * time.Hour
+
 func validateDescription(description string) sql.NullString {
-	descriptionField := sql.NullString{}
-
-	if description == "" {
-		descriptionField.String = ""
-		descriptionField.Valid = false
-	} else {
-		descriptionField.String = description
-		descriptionField.Valid = true
-	}
-
-	return descriptionField
+	return sql.NullString{String: description, Valid: description != ""}
 }
 
-// checkIfTodoExpires checks if a task will expire by 5 days
-func checkIfTodoExpires(expiresAt time.Time) bool {
-	actualDay := time.Now()
-
-	diff := expiresAt.Sub(actualDay).String()
-	hour, _, _ := strings.Cut(diff, "h")
-	hourToInt, _ := strconv.Atoi(hour)
-	if hourToInt <= (24 * 5) {
-		return true
-	}
-	return false
-}
-
-// todoKey turns a todo's ID (stored generically as interface{}) into a
-// comparable map key, since it can't be used directly as one.
-func todoKey(id interface{}) string {
-	return fmt.Sprintf("%v", id)
-}
-
-// printTodo receives a Todo and create a readable output
-func printTodo(todo database.Todo) {
-	fmt.Println(renderTodo(todo))
-}
-
-// renderTodo mounts the string to beautifully output the task
-func renderTodo(todo database.Todo) string {
-	icon, status := "○", i18n.T("tasks.tasks.notDone")
-
-	if todo.Concluded {
-		icon, status = "✔", i18n.T("tasks.tasks.done")
-	}
-
-	state := color.Muted()
-	switch {
-	case todo.Concluded:
-		state = color.Success()
-	case checkIfTodoExpires(todo.ExpiresAt):
-		state = color.Warning()
-	}
-
-	var b strings.Builder
-	fmt.Fprintf(&b, "%s %s\n", state.Render(icon), color.Title().Render(todo.Name))
-
-	if desc := todo.Description.String; desc != "" {
-		fmt.Fprintf(&b, "- %s\n", desc)
-	}
-
-	if !todo.IsDaily {
-		expires := fmt.Sprintf("%s · %s\n", todo.ExpiresAt.Format("02 Jan 06 15:04"), status)
-		fmt.Fprintf(&b, "  %s\n", color.Muted().Render(expires))
-	}
-
-	if priority := todo.Priority; priority != "" {
-		fmt.Fprintf(&b, "  %s\n", color.Muted().Render("Priority: " + todo.Priority))
-	}
-
-	return b.String()
-}
-
-// filterTodosByPriority keeps only tasks matching the provided priority.
-func filterTodosByPriority(todos []database.Todo, priorityFilter string) []database.Todo {
-	if priorityFilter == "" {
-		return todos
-	}
-
-	filtered := make([]database.Todo, 0, len(todos))
-	for _, todo := range todos {
-		if todo.Priority == priorityFilter {
-			filtered = append(filtered, todo)
-		}
-	}
-
-	return filtered
+// IsExpiringSoon reports whether expiresAt falls within ExpiringWindow from
+// now (already expired counts too).
+func IsExpiringSoon(expiresAt time.Time) bool {
+	return time.Until(expiresAt) <= ExpiringWindow
 }
 
 // buildTodayView classifies pending tasks into today-oriented sections.
-// doneToday holds the keys (see todoKey) of tasks already completed today —
-// daily tasks are judged against it instead of todo.Concluded, because that
-// flag is never reset back to false once a daily task is marked done.
-func buildTodayView(todos []database.Todo, now time.Time, doneToday map[string]bool) TodayView {
+// Daily tasks are judged by DoneToday instead of Concluded, because that
+// flag is never set for daily tasks.
+func buildTodayView(todos []TodoView, now time.Time) TodayView {
 	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	dayEnd := dayStart.Add(24 * time.Hour)
 
@@ -115,7 +39,7 @@ func buildTodayView(todos []database.Todo, now time.Time, doneToday map[string]b
 
 	for _, todo := range todos {
 		if todo.IsDaily {
-			if doneToday[todoKey(todo.ID)] {
+			if todo.DoneToday {
 				continue
 			}
 			view.Daily = append(view.Daily, todo)
@@ -131,12 +55,12 @@ func buildTodayView(todos []database.Todo, now time.Time, doneToday map[string]b
 			continue
 		}
 
-		if !todo.ExpiresAt.Before(dayStart) && todo.ExpiresAt.Before(dayEnd) {
+		if todo.ExpiresAt.Before(dayEnd) {
 			view.DueToday = append(view.DueToday, todo)
 			continue
 		}
 
-		if todo.ExpiresAt.Before(now.Add(5 * 24 * time.Hour)) {
+		if todo.ExpiresAt.Before(now.Add(ExpiringWindow)) {
 			view.ExpiringSoon = append(view.ExpiringSoon, todo)
 		}
 	}
@@ -181,7 +105,7 @@ func applyTodayOptions(view TodayView, opts TodayOptions) TodayView {
 }
 
 // limitTodos truncates a slice to the requested size when needed.
-func limitTodos(todos []database.Todo, limit int) []database.Todo {
+func limitTodos(todos []TodoView, limit int) []TodoView {
 	if limit <= 0 || len(todos) <= limit {
 		return todos
 	}
@@ -190,7 +114,7 @@ func limitTodos(todos []database.Todo, limit int) []database.Todo {
 }
 
 // sortTodayTodos orders tasks by priority first, then expiration date.
-func sortTodayTodos(todos []database.Todo) {
+func sortTodayTodos(todos []TodoView) {
 	sort.Slice(todos, func(i, j int) bool {
 		leftPriority := priorityRank(todos[i].Priority)
 		rightPriority := priorityRank(todos[j].Priority)
@@ -217,27 +141,23 @@ func priorityRank(priority string) int {
 	}
 }
 
-// printTodaySection renders one titled section from the today dashboard.
-func printTodaySection(tkm *TaskManager, title string, todos []database.Todo) {
-	if len(todos) == 0 {
-		return
-	}
-
-	fmt.Printf("\n%s (%d)\n", title, len(todos))
-	for _, todo := range todos {
-		printTodo(todo)
-	}
-}
-
-func GetTodoByName(tkm *TaskManager, name string) (database.GetTodoByNameRow, error) {
+// findTodoByName runs the fuzzy name search and maps "no rows" to
+// ErrTodoNotFound.
+func findTodoByName(ctx context.Context, tkm *TaskManager, name string) (database.GetTodoByNameRow, error) {
 	loweredName := strings.ToLower(name)
 
-	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
+	todo, err := tkm.Queries.GetTodoByName(ctx, database.GetTodoByNameParams{
 		Name:    loweredName,
 		Column2: sql.NullString{String: loweredName, Valid: true},
 		Column3: sql.NullString{String: loweredName, Valid: true},
 		Column4: sql.NullString{String: loweredName, Valid: true},
 	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return database.GetTodoByNameRow{}, localizedError{
+			msg:      fmt.Sprintf(i18n.T("tasks.error.todoNotFound"), name),
+			sentinel: ErrTodoNotFound,
+		}
+	}
 	if err != nil {
 		return database.GetTodoByNameRow{}, fmt.Errorf(i18n.T("tasks.error.getTodoByName"), err)
 	}
@@ -245,20 +165,77 @@ func GetTodoByName(tkm *TaskManager, name string) (database.GetTodoByNameRow, er
 	return todo, nil
 }
 
-func transformListTodosToTodo(todoStatus database.ListTodosWithTodayStatusRow) database.Todo {
-	var todo database.Todo
-	todo = database.Todo{
-		ID:           todoStatus.ID,
-		Name:         todoStatus.Name,
-		Description:  todoStatus.Description,
-		CreatedAt:    todoStatus.CreatedAt,
-		UpdatedAt:    todoStatus.UpdatedAt,
-		ExpiresAt:    todoStatus.ExpiresAt,
-		HistorySince: todoStatus.HistorySince,
-		IsDaily:      todoStatus.IsDaily,
-		Concluded:    todoStatus.DoneToday,
-		Priority:     todoStatus.Priority,
+func newTodoView(todoStatus database.ListTodosWithTodayStatusRow) (TodoView, error) {
+	id, err := toUUID(todoStatus.ID)
+	if err != nil {
+		return TodoView{}, err
 	}
 
-	return todo
+	return TodoView{
+		ID:          id,
+		Name:        todoStatus.Name,
+		Description: todoStatus.Description,
+		Concluded:   todoStatus.Concluded,
+		ExpiresAt:   todoStatus.ExpiresAt,
+		Priority:    todoStatus.Priority,
+		IsDaily:     todoStatus.IsDaily,
+		DoneToday:   todoStatus.DoneToday,
+	}, nil
+}
+
+// viewFromTodo converts a plain todos row; DoneToday is left false because
+// the row does not carry it.
+func viewFromTodo(todo database.Todo) (TodoView, error) {
+	id, err := toUUID(todo.ID)
+	if err != nil {
+		return TodoView{}, err
+	}
+
+	return TodoView{
+		ID:          id,
+		Name:        todo.Name,
+		Description: todo.Description,
+		Concluded:   todo.Concluded,
+		ExpiresAt:   todo.ExpiresAt,
+		Priority:    todo.Priority,
+		IsDaily:     todo.IsDaily,
+	}, nil
+}
+
+func viewFromNameRow(todo database.GetTodoByNameRow) (TodoView, error) {
+	return viewFromTodo(database.Todo{
+		ID:          todo.ID,
+		Name:        todo.Name,
+		Description: todo.Description,
+		Concluded:   todo.Concluded,
+		ExpiresAt:   todo.ExpiresAt,
+		Priority:    todo.Priority,
+		IsDaily:     todo.IsDaily,
+	})
+}
+
+func viewsFromTodos(todos []database.Todo) ([]TodoView, error) {
+	views := make([]TodoView, 0, len(todos))
+	for _, todo := range todos {
+		view, err := viewFromTodo(todo)
+		if err != nil {
+			return nil, err
+		}
+		views = append(views, view)
+	}
+
+	return views, nil
+}
+
+func toUUID(v interface{}) (uuid.UUID, error) {
+	switch id := v.(type) {
+	case uuid.UUID:
+		return id, nil
+	case string:
+		return uuid.Parse(id)
+	case []byte:
+		return uuid.ParseBytes(id)
+	default:
+		return uuid.Nil, fmt.Errorf("unexpected id type %T", v)
+	}
 }

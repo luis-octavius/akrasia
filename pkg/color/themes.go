@@ -3,11 +3,12 @@ package color
 import (
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // Theme defines the color configuration for the application
@@ -19,6 +20,22 @@ type Theme struct {
 	Quote   ColorStyle `json:"quote"`
 	Muted   ColorStyle `json:"muted"`
 	Title   ColorStyle `json:"title"`
+
+	// Accent marks what has focus: the active tab, the cursor, the app badge.
+	Accent ColorStyle `json:"accent"`
+	// Selection is the row under the cursor (usually only a background).
+	Selection ColorStyle `json:"selection"`
+	// Bar is the status bar at the bottom of the TUI.
+	Bar ColorStyle `json:"bar"`
+	// High, Medium and Low style the priority badges.
+	High   ColorStyle `json:"high"`
+	Medium ColorStyle `json:"medium"`
+	Low    ColorStyle `json:"low"`
+	// Border holds the gradient stops of focused borders; one stop draws a
+	// solid border.
+	Border []string `json:"border"`
+	// BorderMuted colors borders without focus.
+	BorderMuted string `json:"borderMuted"`
 }
 
 // ColorStyle defines foreground and background colors with attributes
@@ -70,7 +87,8 @@ var ansiCodes = map[string]string{
 	HiBlue: "12", HiMagenta: "13", HiCyan: "14", HiWhite: "15",
 }
 
-func colorValue(name string) (lipgloss.Color, bool) {
+// colorValue resolves an ANSI color name or a "#rrggbb" hex color.
+func colorValue(name string) (color.Color, bool) {
 	if c, ok := ansiCodes[name]; ok {
 		return lipgloss.Color(c), true
 	}
@@ -79,18 +97,18 @@ func colorValue(name string) (lipgloss.Color, bool) {
 		return lipgloss.Color(name), true
 	}
 
-	return "", false
+	return nil, false
 }
 
-// styleFrom creates a lipgloss Style based on 
+// styleFrom creates a lipgloss Style based on
 // a ColorStyle struct
 func styleFrom(s ColorStyle) lipgloss.Style {
 	st := lipgloss.NewStyle()
 	if c, ok := colorValue(s.Fg); ok {
-		st = st.Foreground(lipgloss.Color(c))
+		st = st.Foreground(c)
 	}
 	if c, ok := colorValue(s.Bg); ok {
-		st = st.Background(lipgloss.Color(c))
+		st = st.Background(c)
 	}
 
 	for _, a := range s.Attributes {
@@ -139,110 +157,48 @@ func getThemeFile() string {
 	return filepath.Join(configDir, "theme.json")
 }
 
-// getDefaultTheme returns the default theme configuration
-func getDefaultTheme() *Theme {
-	return &Theme{
-		Name: "default",
-		Error: ColorStyle{
-			Fg: Red,
-		},
-		Warning: ColorStyle{
-			Fg: Yellow,
-		},
-		Success: ColorStyle{
-			Fg: Blue,
-		},
-		Quote: ColorStyle{
-			Bg:         White,
-			Fg:         Black,
-			Attributes: []string{Underline},
-		},
-		Muted: ColorStyle{
-			Fg: HiBlack,
-		},
-		Title: ColorStyle{
-			Attributes: []string{Bold},
-		},
-	}
+// builtinThemes maps each theme name to its constructor; themeOrder is the
+// order shown by `config theme list` and cycled by the TUI.
+var builtinThemes = map[string]func() *Theme{
+	"default":          getDefaultTheme,
+	"high-contrast":    getHighContrastTheme,
+	"purple":           getPurpleTheme,
+	"rose-pine":        getRosePineTheme,
+	"cyberpunk":        getCyberpunkTheme,
+	"catppuccin-mocha": getCatppuccinMochaTheme,
+	"tokyo-night":      getTokyoNightTheme,
+	"gruvbox":          getGruvboxTheme,
+	"nord":             getNordTheme,
 }
 
-// getHighContrastTheme returns a high-contrast accessibility-friendly theme
-func getHighContrastTheme() *Theme {
-	return &Theme{
-		Name: "high-contrast",
-		Error: ColorStyle{
-			Fg:         HiRed,
-			Attributes: []string{Bold},
-		},
-		Warning: ColorStyle{
-			Fg:         HiYellow,
-			Attributes: []string{Bold},
-		},
-		Success: ColorStyle{
-			Fg:         HiCyan,
-			Attributes: []string{Bold},
-		},
-		Quote: ColorStyle{
-			Bg:         Black,
-			Fg:         HiWhite,
-			Attributes: []string{Bold, Underline},
-		},
-		Muted: ColorStyle{
-			Fg: White,
-		},
-		Title: ColorStyle{
-			Fg:         HiWhite,
-			Attributes: []string{Bold},
-		},
-	}
+var themeOrder = []string{
+	"default", "high-contrast", "purple",
+	"rose-pine", "cyberpunk", "catppuccin-mocha", "tokyo-night", "gruvbox", "nord",
 }
 
-func getPurpleTheme() *Theme {
-	return &Theme{
-		Name: "purple",
-		Error: ColorStyle{
-			Fg:         HiRed,
-			Attributes: []string{Bold},
-		},
-		Warning: ColorStyle{
-			Fg:         HiYellow,
-			Attributes: []string{Bold},
-		},
-		Success: ColorStyle{
-			Fg:         "#a78bfa",
-			Attributes: []string{Bold},
-		},
-		Quote: ColorStyle{
-			Bg:         "#4c1d95",
-			Fg:         "#ede9fe",
-			Attributes: []string{Italic},
-		},
-		Muted: ColorStyle{
-			Fg: "#7c6f9f",
-		},
-		Title: ColorStyle{
-			Fg:         HiMagenta,
-			Attributes: []string{Bold},
-		},
-	}
-}
 // GetAvailableThemes returns a list of all available themes
 func GetAvailableThemes() []string {
-	return []string{"default", "high-contrast", "purple"}
+	return append([]string(nil), themeOrder...)
 }
 
-// GetThemeByName returns a theme by its name
+// GetThemeByName returns a theme by its name, or the default theme when the
+// name is unknown.
 func GetThemeByName(name string) *Theme {
-	switch name {
-	case "default":
-		return getDefaultTheme()
-	case "high-contrast":
-		return getHighContrastTheme()
-	case "purple":
-		return getPurpleTheme()
-	default:
-		return getDefaultTheme()
+	if build, ok := builtinThemes[name]; ok {
+		return build()
 	}
+	return getDefaultTheme()
+}
+
+// NextTheme returns the theme after current in the list, wrapping around.
+// An unknown name starts from the first theme.
+func NextTheme(current string) string {
+	for i, name := range themeOrder {
+		if name == current {
+			return themeOrder[(i+1)%len(themeOrder)]
+		}
+	}
+	return themeOrder[0]
 }
 
 // GetCurrentTheme returns the currently active theme
@@ -253,11 +209,11 @@ func GetCurrentTheme() *Theme {
 	return currentTheme
 }
 
-// loadTheme loads the theme from config file
+// loadTheme loads the theme from config file. Fields missing from the file
+// (an older or hand-edited theme.json) are taken from the built-in theme of
+// the same name, or from the default one.
 func loadTheme() error {
-	themeFile := getThemeFile()
-
-	data, err := os.ReadFile(themeFile)
+	data, err := os.ReadFile(getThemeFile())
 	if err != nil {
 		// File doesn't exist, use default
 		return err
@@ -268,21 +224,42 @@ func loadTheme() error {
 		return err
 	}
 
-	def := getDefaultTheme()
-	if isEmpty(theme.Muted) {
-		theme.Muted = def.Muted
-	}
-
-	if isEmpty(theme.Title) {
-		theme.Title = def.Title
-	}
-
+	fillMissing(&theme, GetThemeByName(theme.Name))
 	currentTheme = &theme
 	return nil
 }
 
+// fillMissing copies every role that t leaves empty from base.
+func fillMissing(t, base *Theme) {
+	styles := []struct{ dst, src *ColorStyle }{
+		{&t.Error, &base.Error}, {&t.Warning, &base.Warning},
+		{&t.Success, &base.Success}, {&t.Quote, &base.Quote},
+		{&t.Muted, &base.Muted}, {&t.Title, &base.Title},
+		{&t.Accent, &base.Accent}, {&t.Selection, &base.Selection},
+		{&t.Bar, &base.Bar}, {&t.High, &base.High},
+		{&t.Medium, &base.Medium}, {&t.Low, &base.Low},
+	}
+	for _, s := range styles {
+		if isEmpty(*s.dst) {
+			*s.dst = *s.src
+		}
+	}
+
+	if len(t.Border) == 0 {
+		t.Border = base.Border
+	}
+	if t.BorderMuted == "" {
+		t.BorderMuted = base.BorderMuted
+	}
+}
+
 func isEmpty(s ColorStyle) bool {
 	return s.Fg == "" && s.Bg == "" && len(s.Attributes) == 0
+}
+
+// SetTheme switches the active theme for this process without saving it.
+func SetTheme(themeName string) {
+	currentTheme = GetThemeByName(themeName)
 }
 
 // SaveTheme saves the theme to config file

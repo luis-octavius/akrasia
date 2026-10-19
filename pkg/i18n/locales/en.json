@@ -2,7 +2,7 @@
 	"commands": {
 		"commands": {
 			"rootCmdShort": "An app that helps with fighting akrasia",
-			"rootCmdLong": "Akrasia is a word in greek that means \"Incontinence\", which means a lack of self-control.\nThis app is constructed to simply help to fight akrasía rapidly in the terminal, by adding things to do\nand to keep track of these things for you.",
+			"rootCmdLong": "Akrasia is a word in greek that means \"Incontinence\", which means a lack of self-control.\nThis app is constructed to simply help to fight akrasía rapidly in the terminal, by adding things to do\nand to keep track of these things for you.\n\nRun `akrasia` alone to open the interactive interface, or `akrasia help` to list every command.",
 			"updateDailyTodoShort": "reset daily tasks for a new day and record completion history (runs via cron)",
 			"addShort": "create a new task with optional description, priority, and expiration date",
 			"addUse": "add [<name> [<description>]]",
@@ -35,7 +35,10 @@
 			"configThemeShort": "manage color themes",
 			"configThemeUse": "theme [list|show|<theme-name>]",
 			"configLanguageShort": "manage languages",
-			"configLanguageUse": "language [list|show|<language-code>]"
+			"configLanguageUse": "language [list|show|<language-code>]",
+			"tuiShort": "open the interactive terminal interface",
+			"configKeymapShort": "manage the TUI key layout",
+			"configKeymapUse": "keymap [list|show|default|vim]"
 		},
 		"flags": {
 			"addDate": "add date to task (dd,mm)",
@@ -83,8 +86,10 @@
 			"themeSet": "Theme set to: %s\n",
 			"availableLanguages": "Available languages:",
 			"currentLanguage": "Current language: %s\n",
-			"languageSet": "Language set to: %s\n"
-			
+			"languageSet": "Language set to: %s\n",
+			"availableKeymaps": "Available keymaps:",
+			"currentKeymap": "Current keymap: %s\n",
+			"keymapSet": "Keymap set to: %s\n"
 		},
 		"error": {
 			"taskName": "task name is required (use positional argument or --name flag)",
@@ -104,7 +109,9 @@
 			"error": "Error: %v",
 			"dateBeforeNow": "date %v is before right now - put a valid date",
 			"dateNotEnoughArguments": "Not enough arguments in date",
-			"invalidMonthNumber": "month number is not between 1 and 12"
+			"invalidMonthNumber": "month number is not between 1 and 12",
+			"unknownKeymap": "unknown keymap: %q (available: %v)",
+			"setKeymap": "failed to set keymap: %w"
 		}
 	},
 	"db": {
@@ -165,13 +172,14 @@
 			"getTaskDatabase": "error getting tasks from database: %w",
 			"encodeTodayJSON": "error encoding today output to json: %w",
 			"getTaskByName": "error getting task from provided name: %w",
-			"updateTaskStatus":"error updating status of task '%v': %w",
+			"updateTaskStatus": "error updating status of task '%v': %w",
 			"createTaskHistory": "error creating todo history",
 			"deleteConcludedTasks": "error deleting concluded tasks: %w",
-			"getAllDailyTodos": "error in getAllDailyTodos: %v",
+			"getAllDailyTodos": "error in getAllDailyTodos: %w",
 			"checkExpiredTasks": "error checking expired tasks: %w",
 			"checkExpiringTasks": "error getting tasks: %w",
 			"getTodoByName": "error getting todo by name: %w",
+			"todoNotFound": "no task matches '%s'",
 			"deleteTaskByName": "error deleting todo by name: %w",
 			"getDailyTasks": "error getting daily tasks: %w",
 			"updateDailyTasks": "error updating daily tasks: %w",
@@ -200,5 +208,89 @@
 		"quote11": "\"I see and approve the better course, but I follow the worse.\" - Ovid, Metamorphoses",
 		"quote12": "\"The wise man is commanded by reason, the fool by passion, and the madman by whim.\" - Zeno of Citium",
 		"quote13": "\"How long will you wait before you demand the best for yourself?\" - Epictetus, Discourses"
+	},
+	"tui": {
+		"tabs": {
+			"today": "Today",
+			"all": "All",
+			"daily": "Daily",
+			"dump": "Dump"
+		},
+		"help": {
+			"up": "up",
+			"down": "down",
+			"nextTab": "next tab",
+			"prevTab": "previous tab",
+			"reload": "reload",
+			"quit": "quit",
+			"top": "top",
+			"bottom": "bottom",
+			"complete": "complete",
+			"add": "add",
+			"delete": "delete",
+			"search": "search",
+			"priority": "priority filter",
+			"details": "details",
+			"help": "more keys",
+			"confirm": "confirm",
+			"cancel": "cancel",
+			"nextField": "next field",
+			"theme": "next theme"
+		},
+		"loading": "Loading...",
+		"empty": "Nothing here yet.",
+		"prompt": {
+			"notes": "Notes for %q (optional):",
+			"delete": "Delete %q? (y/n)",
+			"search": "Search:",
+			"dumpName": "New dump:",
+			"alreadyDone": "%q is already done today",
+			"noSelection": "Nothing selected"
+		},
+		"form": {
+			"title": "New task",
+			"name": "Name",
+			"priority": "Priority",
+			"daily": "Daily",
+			"date": "Due date",
+			"nameRequired": "name is required",
+			"invalidPriority": "priority must be high, medium, low or empty",
+			"invalidDaily": "daily must be y or n",
+			"invalidDate": "date must be dd or dd/mm",
+			"desc": "Description",
+			"priorityHint": "high / medium / low",
+			"dailyHint": "y / n",
+			"dateHint": "dd or dd/mm, empty = tomorrow"
+		},
+		"status": {
+			"completed": "✔ %s completed",
+			"deleted": "%s deleted",
+			"created": "%s created",
+			"dumpAdded": "Dump %q added",
+			"filter": "filter",
+			"priority": "priority",
+			"theme": "theme: %s"
+		},
+		"details": {
+			"expires": "Expires",
+			"priority": "Priority",
+			"daily": "Daily",
+			"status": "Status",
+			"streak": "Current streak",
+			"days": "%d day(s)",
+			"yes": "yes",
+			"no": "no",
+			"desc": "Description",
+			"history": "Streak history",
+			"period": "%s → %s · %d day(s)"
+		},
+		"mode": {
+			"normal": "NORMAL",
+			"search": "SEARCH",
+			"notes": "NOTES",
+			"delete": "DELETE",
+			"dump": "DUMP",
+			"add": "NEW"
+		}
 	}
 }

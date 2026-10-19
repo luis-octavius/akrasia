@@ -3,27 +3,23 @@ package tasks
 import (
 	"testing"
 	"time"
-
-	database "github.com/luis-octavius/akrasia/internal/db/out"
 )
 
 func TestBuildTodayView(t *testing.T) {
 	now := time.Date(2026, time.March, 8, 10, 0, 0, 0, time.UTC)
 
-	todos := []database.Todo{
-		{ID: "overdue-medium-id", Name: "overdue-medium", Priority: "medium", ExpiresAt: now.Add(-24 * time.Hour)},
-		{ID: "due-today-high-id", Name: "due-today-high", Priority: "high", ExpiresAt: now.Add(2 * time.Hour)},
-		{ID: "due-today-low-id", Name: "due-today-low", Priority: "low", ExpiresAt: now.Add(3 * time.Hour)},
-		{ID: "expiring-soon-id", Name: "expiring-soon", Priority: "medium", ExpiresAt: now.Add(48 * time.Hour)},
-		{ID: "daily-pending-id", Name: "daily-pending", IsDaily: true, Priority: "high", ExpiresAt: now.Add(24 * time.Hour)},
-		{ID: "daily-done-id", Name: "daily-done", IsDaily: true, Priority: "high", ExpiresAt: now.Add(24 * time.Hour)},
-		{ID: "done-ignored-id", Name: "done-ignored", Concluded: true, ExpiresAt: now.Add(24 * time.Hour)},
-		{ID: "far-future-id", Name: "far-future", ExpiresAt: now.Add(10 * 24 * time.Hour)},
+	todos := []TodoView{
+		{Name: "overdue-medium", Priority: "medium", ExpiresAt: now.Add(-24 * time.Hour)},
+		{Name: "due-today-high", Priority: "high", ExpiresAt: now.Add(2 * time.Hour)},
+		{Name: "due-today-low", Priority: "low", ExpiresAt: now.Add(3 * time.Hour)},
+		{Name: "expiring-soon", Priority: "medium", ExpiresAt: now.Add(48 * time.Hour)},
+		{Name: "daily-pending", IsDaily: true, Priority: "high", ExpiresAt: now.Add(24 * time.Hour)},
+		{Name: "daily-done", IsDaily: true, DoneToday: true, Priority: "high", ExpiresAt: now.Add(24 * time.Hour)},
+		{Name: "done-ignored", Concluded: true, ExpiresAt: now.Add(24 * time.Hour)},
+		{Name: "far-future", ExpiresAt: now.Add(10 * 24 * time.Hour)},
 	}
 
-	doneToday := map[string]bool{"daily-done-id": true}
-
-	view := buildTodayView(todos, now, doneToday)
+	view := buildTodayView(todos, now)
 
 	if len(view.Overdue) != 1 || view.Overdue[0].Name != "overdue-medium" {
 		t.Fatalf("unexpected overdue view: %#v", view.Overdue)
@@ -37,9 +33,9 @@ func TestBuildTodayView(t *testing.T) {
 		t.Fatalf("expected high priority first in due-today, got %s", view.DueToday[0].Name)
 	}
 
-	// Only the daily task NOT in doneToday should show up as pending —
+	// Only the daily task NOT done today should show up as pending —
 	// a daily task marked done today must disappear even though
-	// todo.Concluded was never set (see buildTodayView doc comment).
+	// Concluded was never set (see buildTodayView doc comment).
 	if len(view.Daily) != 1 || view.Daily[0].Name != "daily-pending" {
 		t.Fatalf("unexpected daily view: %#v", view.Daily)
 	}
@@ -51,10 +47,10 @@ func TestBuildTodayView(t *testing.T) {
 
 func TestApplyTodayOptionsOnly(t *testing.T) {
 	view := TodayView{
-		Overdue:      []database.Todo{{Name: "o1"}},
-		DueToday:     []database.Todo{{Name: "t1"}},
-		Daily:        []database.Todo{{Name: "d1"}},
-		ExpiringSoon: []database.Todo{{Name: "s1"}},
+		Overdue:      []TodoView{{Name: "o1"}},
+		DueToday:     []TodoView{{Name: "t1"}},
+		Daily:        []TodoView{{Name: "d1"}},
+		ExpiringSoon: []TodoView{{Name: "s1"}},
 	}
 
 	filtered := applyTodayOptions(view, TodayOptions{Only: "daily"})
@@ -70,7 +66,7 @@ func TestApplyTodayOptionsOnly(t *testing.T) {
 
 func TestApplyTodayOptionsLimit(t *testing.T) {
 	view := TodayView{
-		DueToday: []database.Todo{
+		DueToday: []TodoView{
 			{Name: "a"},
 			{Name: "b"},
 			{Name: "c"},

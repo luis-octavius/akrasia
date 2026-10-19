@@ -5,13 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"slices"
 
 	"github.com/luis-octavius/akrasia/internal/db"
 	"github.com/luis-octavius/akrasia/internal/tasks"
+	"github.com/luis-octavius/akrasia/internal/tui"
 	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var (
@@ -30,10 +33,31 @@ var (
 )
 
 // rootCmd is the CLI entrypoint that registers all Akrasia subcommands.
+// Run without arguments it opens the TUI; `akrasia help` shows the help.
 var rootCmd = &cobra.Command{
 	Use:   "akrasia",
 	Short: i18n.T("commands.commands.rootCmdShort"),
 	Long:  i18n.T("commands.commands.rootCmdLong"),
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// pipes and scripts get the help instead of a TUI they can't drive
+		if !isInteractive() {
+			return cmd.Help()
+		}
+
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		return tui.Run(cmd.Context(), tkm)
+	},
+}
+
+// isInteractive reports whether both stdin and stdout are terminals. It is
+// a variable so tests can force either path.
+var isInteractive = func() bool {
+	return term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd()))
 }
 
 // Execute runs the root command and exits the process on fatal command errors.
@@ -82,18 +106,29 @@ var add = &cobra.Command{
 			return errors.New(i18n.T("commands.error.taskName"))
 		}
 
-		expiresAt, err := parseDate(date)
+		expiresAt, err := tasks.ParseDate(date)
 		if err != nil {
 			return err
 		}
 
 		isDaily, err := cmd.Flags().GetBool("daily")
-
-		err = tkm.AddTodo(taskName, taskDesc, priority, isDaily, expiresAt)
 		if err != nil {
 			return err
 		}
 
+		todo, err := tkm.AddTodo(cmd.Context(), tasks.NewTodo{
+			Name:        taskName,
+			Description: taskDesc,
+			Priority:    priority,
+			IsDaily:     isDaily,
+			ExpiresAt:   expiresAt,
+		})
+		if err != nil {
+			return err
+		}
+
+		color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.createdTask"), todo.Name))
+		printQuote()
 		return nil
 	},
 }
@@ -111,11 +146,13 @@ var getAll = &cobra.Command{
 			return err
 		}
 
-		err = tkm.GetTodos(filterPriority)
+		todos, err := tkm.ListTodos(cmd.Context(), filterPriority)
 		if err != nil {
 			return err
 		}
 
+		fmt.Println(i18n.T("tasks.tasks.allTasks"))
+		printTodos(todos)
 		return nil
 	},
 }
@@ -145,17 +182,16 @@ var today = &cobra.Command{
 			return err
 		}
 
-		err = tkm.GetTodayFocus(tasks.TodayOptions{
+		view, err := tkm.Today(cmd.Context(), tasks.TodayOptions{
 			Only:     todayOnly,
 			Limit:    todayLimit,
-			JSON:     todayJSON,
 			Priority: filterPriority,
 		})
 		if err != nil {
 			return err
 		}
 
-		return nil
+		return printTodayView(view, todayJSON)
 	},
 }
 
@@ -179,7 +215,13 @@ var focus = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return tkm.GetFocus(focusLimit, filterPriority)
+		todos, err := tkm.Focus(cmd.Context(), focusLimit, filterPriority)
+		if err != nil {
+			return err
+		}
+
+		printFocus(todos)
+		return nil
 	},
 }
 
@@ -205,11 +247,12 @@ var getTodoByName = &cobra.Command{
 			return err
 		}
 
-		err = tkm.GetTodoByName(taskName)
+		todo, err := tkm.FindTodo(cmd.Context(), taskName)
 		if err != nil {
 			return err
 		}
 
+		printFoundTodo(todo)
 		return nil
 	},
 }
@@ -233,11 +276,12 @@ var updateStatusToConcluded = &cobra.Command{
 			taskName = args[0]
 		}
 
-		err = tkm.UpdateToConcluded(taskName, notes)
-		if err != nil {
+		if _, err := tkm.Complete(cmd.Context(), taskName, notes); err != nil {
 			return err
 		}
 
+		fmt.Println(i18n.T("tasks.info.updatedSuccessfully"))
+		printQuote()
 		return nil
 	},
 }
@@ -254,11 +298,12 @@ var checkExpired = &cobra.Command{
 			return err
 		}
 
-		err = tkm.CheckExpired()
+		todos, err := tkm.Expired(cmd.Context())
 		if err != nil {
 			return err
 		}
 
+		printExpired(todos)
 		return nil
 	},
 }
@@ -275,11 +320,12 @@ var checkExpiring = &cobra.Command{
 			return err
 		}
 
-		err = tkm.CheckExpiring()
+		todos, err := tkm.Expiring(cmd.Context())
 		if err != nil {
 			return err
 		}
 
+		printExpiring(todos)
 		return nil
 	},
 }
@@ -288,13 +334,14 @@ var checkExpiring = &cobra.Command{
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: i18n.T("commands.commands.initCmdShort"),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		_, err := db.InitDB()
 		if err != nil {
-			log.Fatal(i18n.T("commands.error.openDatabase"), err)
+			return fmt.Errorf("%s%w", i18n.T("commands.error.openDatabase"), err)
 		}
 
 		fmt.Printf("%s", i18n.T("commands.info.initSuccessful"))
+		return nil
 	},
 }
 
@@ -320,11 +367,12 @@ var delByName = &cobra.Command{
 			taskName = args[0]
 		}
 
-		err = tkm.DeleteByName(taskName)
+		todo, err := tkm.DeleteByName(cmd.Context(), taskName)
 		if err != nil {
 			return err
 		}
 
+		color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.taskDeletedSuccessfully"), todo.Name))
 		return nil
 	},
 }
@@ -340,11 +388,12 @@ var getAllDaily = &cobra.Command{
 			return err
 		}
 
-		err = tkm.GetAllDailyTodos()
+		todos, err := tkm.DailyTodos(cmd.Context())
 		if err != nil {
 			return err
 		}
 
+		printTodos(todos)
 		return nil
 	},
 }
@@ -367,10 +416,12 @@ var getTodoCurrentStreak = &cobra.Command{
 			taskName = args[0]
 		}
 
-		err = tkm.GetCurrentStreak(taskName)
+		todo, streak, err := tkm.CurrentStreak(cmd.Context(), taskName)
 		if err != nil {
 			return err
 		}
+
+		fmt.Printf(i18n.T("tasks.info.currentStreak"), todo.Name, streak)
 		return nil
 	},
 }
@@ -392,11 +443,12 @@ var getTodoStreakHistory = &cobra.Command{
 			taskName = args[0]
 		}
 
-		err = tkm.GetStreakHistory(taskName)
+		_, periods, err := tkm.StreakHistory(cmd.Context(), taskName)
 		if err != nil {
 			return err
 		}
 
+		printStreakHistory(periods)
 		return nil
 	},
 }
@@ -422,7 +474,13 @@ var debugTask = &cobra.Command{
 			return errors.New(i18n.T("commands.error.emptyName"))
 		}
 
-		return tkm.DebugTask(taskName)
+		report, err := tkm.Debug(cmd.Context(), taskName)
+		if err != nil {
+			return err
+		}
+
+		printDebugReport(report)
+		return nil
 	},
 }
 
@@ -438,11 +496,12 @@ var backfillHistory = &cobra.Command{
 			return err
 		}
 
-		err = tkm.BackfillDailyHistory(daysBackfill, name)
+		report, err := tkm.BackfillDailyHistory(cmd.Context(), daysBackfill, name)
 		if err != nil {
 			return err
 		}
 
+		printBackfillReport(report, name)
 		return nil
 	},
 }
@@ -465,10 +524,37 @@ var dumpCmd = &cobra.Command{
 		}
 
 		if dumpName == "" {
-			return tkm.GetAllDump()
+			entries, err := tkm.Dumps(cmd.Context())
+			if err != nil {
+				return err
+			}
+
+			printDumps(entries)
+			return nil
 		}
 
-		return tkm.AddDump(dumpName)
+		entry, err := tkm.AddDump(cmd.Context(), dumpName)
+		if err != nil {
+			return err
+		}
+
+		color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.addedDump"), entry.Name))
+		return nil
+	},
+}
+
+// tuiCmd opens the interactive terminal interface.
+var tuiCmd = &cobra.Command{
+	Use:   "tui",
+	Short: i18n.T("commands.commands.tuiShort"),
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		return tui.Run(cmd.Context(), tkm)
 	},
 }
 
@@ -569,6 +655,44 @@ var configLanguage = &cobra.Command{
 	},
 }
 
+// configKeymap selects the TUI key layout.
+var configKeymap = &cobra.Command{
+	Use:     i18n.T("commands.commands.configKeymapUse"),
+	Short:   i18n.T("commands.commands.configKeymapShort"),
+	Aliases: []string{"k"},
+	Example: "akrasia config keymap vim\nakrasia config keymap list\nakrasia config keymap show",
+	Args:    cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+
+		switch action := args[0]; action {
+		case "list":
+			fmt.Println(i18n.T("commands.info.availableKeymaps"))
+			for _, keymap := range tui.Keymaps() {
+				fmt.Printf(" - %s\n", keymap)
+			}
+			return nil
+
+		case "show":
+			fmt.Printf(i18n.T("commands.info.currentKeymap"), tui.CurrentKeymap())
+			return nil
+
+		default:
+			if !slices.Contains(tui.Keymaps(), action) {
+				return fmt.Errorf(i18n.T("commands.error.unknownKeymap"), action, tui.Keymaps())
+			}
+
+			if err := tui.SetKeymap(action); err != nil {
+				return fmt.Errorf(i18n.T("commands.error.setKeymap"), err)
+			}
+			fmt.Printf(i18n.T("commands.info.keymapSet"), action)
+			return nil
+		}
+	},
+}
+
 // init wires subcommands, flags, and required arguments into the root command.
 func init() {
 	commands := map[string]*cobra.Command{
@@ -588,6 +712,7 @@ func init() {
 		"backfillHistory":         backfillHistory,
 		"debugTask":               debugTask,
 		"dumpCmd":                 dumpCmd,
+		"tuiCmd":                  tuiCmd,
 		"config":                  config,
 	}
 
@@ -599,7 +724,7 @@ func init() {
 	rootCmd.SetUsageFunc(UsageFunc)
 
 	// Add subcommands to config
-	config.AddCommand(configTheme, configLanguage)
+	config.AddCommand(configTheme, configLanguage, configKeymap)
 
 	// flags for commands - add; getTodoByName; delByName; updateStatusToConcluded
 	add.Flags().IntSliceVar(&date, "date", []int{}, i18n.T("commands.flags.addDate"))
