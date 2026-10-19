@@ -188,7 +188,7 @@ is a major version because two behaviors that scripts may rely on changed:
 
 See the [GitHub releases and tags](https://github.com/luis-octavius/akrasia/tags).
 
-[Unreleased]: https://github.com/luis-octavius/akrasia/compare/main...dev
-[2.1.0]: https://github.com/luis-octavius/akrasia/compare/v.2.0.0...main
+[Unreleased]: https://github.com/luis-octavius/akrasia/compare/v.2.1.0...dev
+[2.1.0]: https://github.com/luis-octavius/akrasia/compare/v.2.0.0...v.2.1.0
 [2.0.0]: https://github.com/luis-octavius/akrasia/compare/v.1.1.1...v.2.0.0
 [1.1.1]: https://github.com/luis-octavius/akrasia/releases/tag/v.1.1.1
