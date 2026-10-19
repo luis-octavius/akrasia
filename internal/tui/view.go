@@ -440,10 +440,12 @@ func (m Model) renderFooter(width int) string {
 		return bar + "\n" + lipgloss.NewStyle().MaxWidth(width).Render(hint)
 	}
 
+	// pad every line: the full help (?) spans several lines, and a leading
+	// space on the string alone would only shift the first one
 	h := m.help
 	h.Styles = helpStyles()
-	h.SetWidth(width)
-	return bar + "\n" + " " + h.View(m.keys)
+	h.SetWidth(width - 1)
+	return bar + "\n" + lipgloss.NewStyle().PaddingLeft(1).Render(h.View(m.keys))
 }
 
 // renderStatusBar is the full-width bar: mode pill and message on the left,

@@ -9,6 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/color"
 )
@@ -532,5 +533,19 @@ func TestModalFloatsOverList(t *testing.T) {
 	}
 	if got := lipgloss.Height(view); got != 24 {
 		t.Fatalf("screen should fill the terminal height, got %d lines", got)
+	}
+}
+
+// The full help spans several lines; all of them must share the same
+// one-column left margin, not just the first.
+func TestFullHelpLinesShareMargin(t *testing.T) {
+	m := send(t, start(t, &fakeService{}, KeymapDefault), tea.WindowSizeMsg{Width: 120, Height: 30}, runes("?"))
+
+	lines := strings.Split(ansi.Strip(m.View().Content), "\n")
+	help := lines[len(lines)-4:] // the full help has four rows
+	for i, l := range help {
+		if margin := len(l) - len(strings.TrimLeft(l, " ")); margin != 1 {
+			t.Fatalf("help row %d starts at column %d, want 1:\n%s", i, margin, strings.Join(help, "\n"))
+		}
 	}
 }
