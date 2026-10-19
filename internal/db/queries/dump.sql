@@ -14,3 +14,6 @@ SELECT * FROM dump
 WHERE id = ?; 
 
 
+-- name: DeleteDump :exec
+DELETE FROM dump
+WHERE id = ?;

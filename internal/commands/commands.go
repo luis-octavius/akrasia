@@ -30,6 +30,22 @@ var (
 	filterPriority string
 	deleteYes      bool
 	focusLimit     int
+
+	// edit flags; only the ones the user passes are applied
+	editName        string
+	editDescription string
+	editPriority    string
+	editDaily       bool
+	editDate        []int
+
+	notesLimit int
+
+	// dump flags
+	dumpDelete   int
+	dumpToTask   int
+	dumpPriority string
+	dumpDaily    bool
+	dumpDate     []int
 )
 
 // rootCmd is the CLI entrypoint that registers all Akrasia subcommands.
@@ -191,7 +207,12 @@ var today = &cobra.Command{
 			return err
 		}
 
-		return printTodayView(view, todayJSON)
+		progress, err := tkm.TodayProgress(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		return printTodayView(view, progress, todayJSON)
 	},
 }
 
@@ -220,7 +241,12 @@ var focus = &cobra.Command{
 			return err
 		}
 
-		printFocus(todos)
+		progress, err := tkm.TodayProgress(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		printFocus(todos, progress)
 		return nil
 	},
 }
@@ -506,11 +532,13 @@ var backfillHistory = &cobra.Command{
 	},
 }
 
-// dump stores a named entry in the dump table, or lists stored entries.
+// dump stores a named entry in the dump table, lists stored entries,
+// deletes one or turns one into a task.
 var dumpCmd = &cobra.Command{
 	Use:     i18n.T("commands.commands.dumpUse"),
 	Short:   i18n.T("commands.commands.dumpShort"),
 	Aliases: []string{"dp"},
+	Example: i18n.T("commands.commands.dumpExample"),
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -523,12 +551,53 @@ var dumpCmd = &cobra.Command{
 			dumpName = args[0]
 		}
 
-		if dumpName == "" {
+		flags := cmd.Flags()
+		deleting, promoting := flags.Changed("delete"), flags.Changed("to-task")
+		taskFlags := flags.Changed("priority") || flags.Changed("daily") || flags.Changed("date")
+
+		switch {
+		case (deleting && promoting) || ((deleting || promoting) && dumpName != ""):
+			return errors.New(i18n.T("commands.error.dumpFlags"))
+		case taskFlags && !promoting:
+			return errors.New(i18n.T("commands.error.dumpTaskFlags"))
+
+		case deleting:
+			entry, err := tkm.DumpAt(cmd.Context(), dumpDelete)
+			if err != nil {
+				return err
+			}
+			if err := tkm.DeleteDump(cmd.Context(), entry.ID); err != nil {
+				return err
+			}
+			color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.deletedDump"), entry.Name))
+			return nil
+
+		case promoting:
+			entry, err := tkm.DumpAt(cmd.Context(), dumpToTask)
+			if err != nil {
+				return err
+			}
+			expiresAt, err := tasks.ParseDate(dumpDate)
+			if err != nil {
+				return err
+			}
+			todo, err := tkm.PromoteDump(cmd.Context(), entry.ID, tasks.NewTodo{
+				Name:      entry.Name,
+				Priority:  dumpPriority,
+				IsDaily:   dumpDaily,
+				ExpiresAt: expiresAt,
+			})
+			if err != nil {
+				return err
+			}
+			color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.promotedDump"), todo.Name))
+			return nil
+
+		case dumpName == "":
 			entries, err := tkm.Dumps(cmd.Context())
 			if err != nil {
 				return err
 			}
-
 			printDumps(entries)
 			return nil
 		}
@@ -539,6 +608,117 @@ var dumpCmd = &cobra.Command{
 		}
 
 		color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.addedDump"), entry.Name))
+		return nil
+	},
+}
+
+// editCmd changes the fields of an existing task.
+var editCmd = &cobra.Command{
+	Use:     i18n.T("commands.commands.editUse"),
+	Short:   i18n.T("commands.commands.editShort"),
+	Aliases: []string{"e"},
+	Example: i18n.T("commands.commands.editExample"),
+	Args:    cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		patch, err := editPatch(cmd)
+		if err != nil {
+			return err
+		}
+		if patch.Empty() {
+			return errors.New(i18n.T("commands.error.nothingToEdit"))
+		}
+
+		todo, err := tkm.EditTodo(cmd.Context(), args[0], patch)
+		if err != nil {
+			return err
+		}
+
+		color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.updatedTask"), todo.Name))
+		return nil
+	},
+}
+
+// editPatch builds the patch from the flags that were actually passed, so
+// `--desc ""` clears the description while leaving it out keeps it.
+func editPatch(cmd *cobra.Command) (tasks.TodoPatch, error) {
+	var patch tasks.TodoPatch
+	flags := cmd.Flags()
+
+	if flags.Changed("name") {
+		patch.Name = &editName
+	}
+	if flags.Changed("desc") {
+		patch.Description = &editDescription
+	}
+	if flags.Changed("priority") {
+		patch.Priority = &editPriority
+	}
+	if flags.Changed("daily") {
+		patch.IsDaily = &editDaily
+	}
+	if flags.Changed("date") {
+		expiresAt, err := tasks.ParseDate(editDate)
+		if err != nil {
+			return patch, err
+		}
+		patch.ExpiresAt = &expiresAt
+	}
+	return patch, nil
+}
+
+// notesCmd shows what was written each day a task was completed.
+var notesCmd = &cobra.Command{
+	Use:     i18n.T("commands.commands.notesUse"),
+	Short:   i18n.T("commands.commands.notesShort"),
+	Aliases: []string{"nt"},
+	Example: i18n.T("commands.commands.notesExample"),
+	Args:    cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		todo, entries, err := tkm.Notes(cmd.Context(), args[0], notesLimit)
+		if err != nil {
+			return err
+		}
+
+		var streak int64
+		if todo.IsDaily {
+			if _, streak, err = tkm.CurrentStreak(cmd.Context(), todo.Name); err != nil {
+				return err
+			}
+		}
+
+		printNotes(todo, streak, entries)
+		return nil
+	},
+}
+
+// progressCmd shows how many of today's tasks are done.
+var progressCmd = &cobra.Command{
+	Use:     "progress",
+	Short:   i18n.T("commands.commands.progressShort"),
+	Aliases: []string{"pg"},
+	Args:    cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		progress, err := tkm.TodayProgress(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		printProgress(progress)
 		return nil
 	},
 }
@@ -713,6 +893,9 @@ func init() {
 		"debugTask":               debugTask,
 		"dumpCmd":                 dumpCmd,
 		"tuiCmd":                  tuiCmd,
+		"progressCmd":             progressCmd,
+		"editCmd":                 editCmd,
+		"notesCmd":                notesCmd,
 		"config":                  config,
 	}
 
@@ -747,6 +930,17 @@ func init() {
 	backfillHistory.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.backfillHistoryName"))
 	debugTask.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.debugName"))
 	dumpCmd.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.dumpName"))
+	dumpCmd.Flags().IntVar(&dumpDelete, "delete", 0, i18n.T("commands.flags.dumpDelete"))
+	dumpCmd.Flags().IntVar(&dumpToTask, "to-task", 0, i18n.T("commands.flags.dumpToTask"))
+	dumpCmd.Flags().StringVar(&dumpPriority, "priority", "", i18n.T("commands.flags.dumpPriority"))
+	dumpCmd.Flags().BoolVar(&dumpDaily, "daily", false, i18n.T("commands.flags.dumpDaily"))
+	dumpCmd.Flags().IntSliceVar(&dumpDate, "date", nil, i18n.T("commands.flags.dumpDate"))
+	notesCmd.Flags().IntVar(&notesLimit, "limit", 30, i18n.T("commands.flags.notesLimit"))
+	editCmd.Flags().StringVar(&editName, "name", "", i18n.T("commands.flags.editName"))
+	editCmd.Flags().StringVar(&editDescription, "desc", "", i18n.T("commands.flags.editDescription"))
+	editCmd.Flags().StringVar(&editPriority, "priority", "", i18n.T("commands.flags.editPriority"))
+	editCmd.Flags().BoolVar(&editDaily, "daily", false, i18n.T("commands.flags.editDaily"))
+	editCmd.Flags().IntSliceVar(&editDate, "date", nil, i18n.T("commands.flags.editDate"))
 	today.Flags().StringVar(&todayOnly, "only", "", i18n.T("commands.flags.todayOnly"))
 	today.Flags().IntVar(&todayLimit, "limit", 0, i18n.T("commands.flags.todayLimit"))
 	today.Flags().BoolVar(&todayJSON, "json", false, i18n.T("commands.flags.todayJSON"))

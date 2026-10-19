@@ -17,6 +17,10 @@ type keyMap struct {
 	PrevTab  key.Binding
 	Complete key.Binding
 	Add      key.Binding
+	Edit     key.Binding
+	Notes    key.Binding
+	Quote    key.Binding
+	Convert  key.Binding
 	Delete   key.Binding
 	Search   key.Binding
 	Priority key.Binding
@@ -79,6 +83,22 @@ func newKeyMap(layout string) keyMap {
 			key.WithKeys("a"),
 			key.WithHelp("a", i18n.T("tui.help.add")),
 		),
+		Edit: key.NewBinding(
+			key.WithKeys("e"),
+			key.WithHelp("e", i18n.T("tui.help.edit")),
+		),
+		Notes: key.NewBinding(
+			key.WithKeys("n"),
+			key.WithHelp("n", i18n.T("tui.help.notes")),
+		),
+		Quote: key.NewBinding(
+			key.WithKeys("Q"),
+			key.WithHelp("Q", i18n.T("tui.help.quote")),
+		),
+		Convert: key.NewBinding(
+			key.WithKeys("c"),
+			key.WithHelp("c", i18n.T("tui.help.convert")),
+		),
 		Delete: key.NewBinding(
 			key.WithKeys("x", "delete"),
 			key.WithHelp("x", i18n.T("tui.help.delete")),
@@ -116,15 +136,18 @@ func newKeyMap(layout string) keyMap {
 
 // ShortHelp implements help.KeyMap.
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.NextTab, k.Complete, k.Add, k.Delete, k.Help, k.Quit}
+	return []key.Binding{k.Up, k.Down, k.NextTab, k.Complete, k.Add, k.Edit, k.Delete, k.Help, k.Quit}
 }
 
 // FullHelp implements help.KeyMap.
 func (k keyMap) FullHelp() [][]key.Binding {
+	// five columns of four keys, so every row of the full help starts at
+	// the left edge
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Top, k.Bottom},
 		{k.NextTab, k.PrevTab, k.Reload, k.Theme},
-		{k.Complete, k.Add, k.Delete, k.Details},
-		{k.Search, k.Priority, k.Help, k.Quit},
+		{k.Complete, k.Add, k.Edit, k.Delete},
+		{k.Convert, k.Details, k.Notes, k.Search},
+		{k.Priority, k.Quote, k.Help, k.Quit},
 	}
 }

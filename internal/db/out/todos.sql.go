@@ -355,6 +355,58 @@ func (q *Queries) ListTodosWithTodayStatus(ctx context.Context) ([]ListTodosWith
 	return items, nil
 }
 
+const updateTodo = `-- name: UpdateTodo :one
+UPDATE todos
+SET name = ?1,
+    description = ?2,
+    priority = ?3,
+    is_daily = ?4,
+    expires_at = ?5,
+    history_since = COALESCE(history_since, date('now', 'localtime')),
+    updated_at = ?6
+WHERE id = ?7
+RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since
+`
+
+type UpdateTodoParams struct {
+	Name        string
+	Description sql.NullString
+	Priority    string
+	IsDaily     bool
+	ExpiresAt   time.Time
+	UpdatedAt   time.Time
+	ID          interface{}
+}
+
+// Rewrites the editable fields of a task. history_since only gets a value
+// when it has none, so a one-off task turned daily starts its streak
+// window today and an existing window is never moved.
+func (q *Queries) UpdateTodo(ctx context.Context, arg UpdateTodoParams) (Todo, error) {
+	row := q.db.QueryRowContext(ctx, updateTodo,
+		arg.Name,
+		arg.Description,
+		arg.Priority,
+		arg.IsDaily,
+		arg.ExpiresAt,
+		arg.UpdatedAt,
+		arg.ID,
+	)
+	var i Todo
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Concluded,
+		&i.ExpiresAt,
+		&i.Priority,
+		&i.IsDaily,
+		&i.HistorySince,
+	)
+	return i, err
+}
+
 const updateTodoStatusById = `-- name: UpdateTodoStatusById :one
 UPDATE todos 
 SET concluded = 1, updated_at = datetime('now', 'localtime')

@@ -50,6 +50,21 @@ SET concluded = 1, updated_at = datetime('now', 'localtime')
 WHERE id = ?
 RETURNING *;
 
+-- name: UpdateTodo :one
+-- Rewrites the editable fields of a task. history_since only gets a value
+-- when it has none, so a one-off task turned daily starts its streak
+-- window today and an existing window is never moved.
+UPDATE todos
+SET name = sqlc.arg(name),
+    description = sqlc.arg(description),
+    priority = sqlc.arg(priority),
+    is_daily = sqlc.arg(is_daily),
+    expires_at = sqlc.arg(expires_at),
+    history_since = COALESCE(history_since, date('now', 'localtime')),
+    updated_at = sqlc.arg(updated_at)
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
 -- name: DeleteTodoByName :exec 
 DELETE FROM todos 
 WHERE name = ?;

@@ -60,9 +60,28 @@ func renderTodo(todo tasks.TodoView) string {
 	return b.String()
 }
 
-func printTodayView(view tasks.TodayView, asJSON bool) error {
+// progressBarWidth is the width of the CLI progress bar, percentage included.
+const progressBarWidth = 30
+
+// progressLine is "Today 3/5  ▌▌▌▌▌░░░  60%" in the theme's colors.
+func progressLine(p tasks.Progress) string {
+	label := fmt.Sprintf(i18n.T("tasks.tasks.progress"), p.Done, p.Total)
+	if p.Total == 0 {
+		label = i18n.T("tasks.tasks.progressClear")
+	}
+	return color.Title().Render(label) + "  " + color.ProgressBar(p.Ratio(), progressBarWidth)
+}
+
+func printProgress(p tasks.Progress) {
+	lipgloss.Println(progressLine(p))
+}
+
+func printTodayView(view tasks.TodayView, progress tasks.Progress, asJSON bool) error {
 	if asJSON {
-		payload, err := json.MarshalIndent(view, "", "  ")
+		payload, err := json.MarshalIndent(struct {
+			tasks.TodayView
+			Progress tasks.Progress
+		}{view, progress}, "", "  ")
 		if err != nil {
 			return fmt.Errorf(i18n.T("tasks.error.encodeTodayJSON"), err)
 		}
@@ -70,6 +89,9 @@ func printTodayView(view tasks.TodayView, asJSON bool) error {
 		fmt.Println(string(payload))
 		return nil
 	}
+
+	printProgress(progress)
+	fmt.Println()
 
 	if view.Empty() {
 		color.MsgSuccess(i18n.T("tasks.info.noPendingTasks"))
@@ -96,7 +118,10 @@ func printTodaySection(title string, todos []tasks.TodoView) {
 	printTodos(todos)
 }
 
-func printFocus(todos []tasks.TodoView) {
+func printFocus(todos []tasks.TodoView, progress tasks.Progress) {
+	printProgress(progress)
+	fmt.Println()
+
 	if len(todos) == 0 {
 		color.MsgSuccess(i18n.T("tasks.info.noFocusTasks"))
 		return
@@ -183,18 +208,46 @@ func printBackfillReport(r tasks.BackfillReport, taskName string) {
 	}
 }
 
+// printNotes lists a task's completed days, newest first, with what was
+// written on each. streak is shown only for daily tasks.
+func printNotes(todo tasks.TodoView, streak int64, entries []tasks.NoteEntry) {
+	title := fmt.Sprintf(i18n.T("tasks.tasks.notesTitle"), todo.Name)
+	if todo.IsDaily {
+		title += color.Muted().Render(" (" + fmt.Sprintf(i18n.T("tasks.tasks.notesStreak"), streak) + ")")
+	}
+	lipgloss.Println(color.Title().Render(title))
+
+	if len(entries) == 0 {
+		color.MsgMuted(i18n.T("tasks.tasks.noNotesYet"))
+		return
+	}
+
+	for _, e := range entries {
+		text := e.Notes
+		switch {
+		case e.Backfilled:
+			text = color.Muted().Render(i18n.T("tasks.tasks.backfilled"))
+		case text == "":
+			text = color.Muted().Render(i18n.T("tasks.tasks.noNotes"))
+		}
+		lipgloss.Println(color.Accent().UnsetBold().Render(e.Date) + "  " + text)
+	}
+}
+
 func printDumps(entries []tasks.DumpEntry) {
 	if len(entries) == 0 {
 		fmt.Println(i18n.T("tasks.info.noDump"))
 		return
 	}
 
-	for _, d := range entries {
+	// the numbers are what --delete and --to-task take
+	for i, d := range entries {
 		createdAt := ""
 		if !d.CreatedAt.IsZero() {
-			createdAt = d.CreatedAt.Format(time.RFC822)
+			// stored in local time, so no zone is shown
+			createdAt = d.CreatedAt.Format("02 Jan 06 15:04")
 		}
-		fmt.Printf(i18n.T("tasks.dump.row"), d.Name, createdAt)
+		fmt.Printf("%d. "+i18n.T("tasks.dump.row"), i+1, d.Name, createdAt)
 	}
 }
 

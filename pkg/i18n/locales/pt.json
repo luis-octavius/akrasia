@@ -3,7 +3,6 @@
 		"commands": {
 			"rootCmdShort": "Um aplicativo que ajuda a combater a Akrasia",
 			"rootCmdLong": "Akrasia é um termo grego que significa \"Incontinência\", a qual significa a perda do auto-controle.\nEsse aplicativo foi construído simplesmente para ajudar a combater a akrasia rapidamente no terminal,\nadicionando coisas a fazer e monitorando essas coisas para você.\n\nRode `akrasia` sozinho para abrir a interface interativa, ou `akrasia help` para ver todos os comandos.",
-			"updateDailyTodoShort": "reconfigurar tarefas diárias para mais um dia e registrar o histórico de conclusões (roda pelo cron)",
 			"addShort": "cria uma nova tarefa com descrição opcional, prioridade e data de expiração",
 			"addUse": "add [<nome> [<descrição>]]",
 			"addExample": "akrasia add \"Corrida matinal\" --daily --priority high --date 31,12\nakrasia add \"Corrida matinal\" \"Fazer 5km no parque\" --priority medium\nakrasia add --name \"Corrida matinal\" --daily --priority low",
@@ -12,7 +11,7 @@
 			"focusShort": "mostrar os top 1-3 itens para focar agora",
 			"getTodoByNameShort": "pesquisar por uma tarefa pelo nome (pesquisa aproximada, não diferencia maiúsculas/minúsculas)",
 			"getTodoByNameUse": "get-by-name <nome>",
-			"updateStatusShort": "marcar uma tarefa como feita e registrar no histórico com notas opcionais",
+			"updateStatusShort": "marcar uma tarefa como concluída e registrar no histórico com notas opcionais (rode de novo no mesmo dia para substituir as notas)",
 			"updateStatusUse": "update-status <nome>",
 			"updateStatusExample": "akrasia update-status --name \"Corrida matinal\" --notes \"Feita depois do almoço\"",
 			"deleteConcludedShort": "deletar todas as tarefas concluídas",
@@ -29,19 +28,27 @@
 			"backfillHistoryShort": "retropreencher tarefas diárias ausentes no histórico",
 			"debugShort": "inspecionar o histórico armazenado e o cálculo da ofensiva de uma tarefa (diagnóstico)",
 			"debugUse": "debug <nome>",
-			"dumpShort": "armazenar uma entrada nomeada, ou listar as armazenadas",
-			"dumpUse": "dump [<nome>]",
-			"configShort": "gerenciar configurações da aplicação (temas, preferências)",
+			"dumpShort": "guardar um item no dump, listar, apagar um ou transformar um em tarefa",
+			"dumpUse": "dump [<item>]",
+			"configShort": "gerenciar configurações (tema, idioma, teclas da TUI)",
 			"configThemeShort": "gerenciar temas de cor",
 			"configThemeUse": "theme [list|show|<nome-do-tema>]",
 			"configLanguageShort": "gerenciar linguagens",
 			"configLanguageUse": "language [list|show|<código-da-linguagem>]",
 			"tuiShort": "abrir a interface interativa no terminal",
 			"configKeymapShort": "gerenciar o layout de teclas da TUI",
-			"configKeymapUse": "keymap [list|show|default|vim]"
+			"configKeymapUse": "keymap [list|show|default|vim]",
+			"progressShort": "mostrar o progresso de hoje (tarefas feitas sobre as de hoje)",
+			"editUse": "edit <nome>",
+			"editShort": "alterar nome, descrição, prioridade, modo diário ou data de uma tarefa",
+			"editExample": "akrasia edit \"Corrida\" --name \"Caminhada\"\nakrasia edit stendhal --priority low --date 30,11\nakrasia edit \"Ler\" --daily=false --desc \"\"",
+			"notesUse": "notes <nome>",
+			"notesShort": "mostrar as notas escritas em cada dia em que a tarefa foi concluída",
+			"notesExample": "akrasia notes \"Estudar Rust\"\nakrasia notes rust --limit 7",
+			"dumpExample": "akrasia dump \"estudar índices em sql\"\nakrasia dump                      # lista numerada\nakrasia dump --delete 2\nakrasia dump --to-task 1 --priority high --date 30,11"
 		},
 		"flags": {
-			"addDate": "adicionar data para a tarefa (dd,mm)",
+			"addDate": "prazo: dd, dd,mm ou dd,mm,aaaa (padrão: amanhã)",
 			"addName": "nome da tarefa",
 			"addPriority": "prioridade da tarefa (high|medium|low)",
 			"addDaily": "tarefa diária",
@@ -52,9 +59,9 @@
 			"focusPriority": "filtrar tarefas por prioridade: high|medium|low",
 			"getTodoByNameName": "nome da tarefa",
 			"delByNameName": "nome da tarefa",
-			"delByNameDeleteYes": "confirmar remoção destrutiva de tarefas concluídas",
+			"delByNameDeleteYes": "confirmar a exclusão da tarefa",
 			"updateStatusToConcludedName": "nome da tarefa",
-			"updateStatusToConcludedNotes": "notas diárias",
+			"updateStatusToConcludedNotes": "notas de hoje; concluir a tarefa de novo no mesmo dia as substitui",
 			"deleteConcludedDeleteYes": "confirmar remoção destrutiva de tarefas concluídas",
 			"getTodoCurrentStreakName": "nome da tarefa",
 			"getTodoStreakHistoryName": "histórico de ofensivas da tarefa",
@@ -64,7 +71,18 @@
 			"dumpName": "nome da entrada a armazenar",
 			"todayOnly": "mostrar apenas uma seção: overdue|today|daily|soon",
 			"todayLimit": "limitar itens por seção (0 = sem limite)",
-			"todayJSON": "exibir a saída do today em JSON"
+			"todayJSON": "exibir a saída do today em JSON",
+			"editName": "novo nome da tarefa",
+			"editDescription": "nova descrição (\"\" apaga)",
+			"editPriority": "nova prioridade (high|medium|low, \"\" apaga)",
+			"editDaily": "tornar a tarefa diária (true) ou única (false)",
+			"editDate": "novo prazo: dd, dd,mm ou dd,mm,aaaa",
+			"notesLimit": "quantos dias mostrar (0 = todos)",
+			"dumpDelete": "apagar o item do dump com este número",
+			"dumpToTask": "transformar o item do dump com este número em tarefa (com --priority, --daily, --date)",
+			"dumpPriority": "prioridade da tarefa criada com --to-task",
+			"dumpDaily": "tornar diária a tarefa criada com --to-task",
+			"dumpDate": "prazo da tarefa criada com --to-task: dd, dd,mm ou dd,mm,aaaa"
 		},
 		"cobra": {
 			"usage": "Uso:",
@@ -107,11 +125,15 @@
 			"setLanguage": "falha ao definir a linguagem: %w",
 			"tkmNotFound": "gerenciador de tarefas não foi encontrado",
 			"error": "Erro: %v",
-			"dateBeforeNow": "Data %v está antes da atual - coloque uma data válida",
-			"dateNotEnoughArguments": "Argumentos insuficientes na data",
+			"dateBeforeNow": "%s já passou; use hoje ou uma data futura",
+			"dateNotEnoughArguments": "uma data é dd, dd,mm ou dd,mm,aaaa",
 			"invalidMonthNumber": "Número do mês não está entre 1 e 12",
 			"unknownKeymap": "keymap desconhecido: %q (disponíveis: %v)",
-			"setKeymap": "falha ao definir o keymap: %w"
+			"setKeymap": "falha ao definir o keymap: %w",
+			"nothingToEdit": "nada para alterar: use ao menos um de --name, --desc, --priority, --daily ou --date",
+			"invalidDay": "o dia %d não existe em %02d/%d",
+			"dumpFlags": "use apenas um de --delete e --to-task, sem um item novo",
+			"dumpTaskFlags": "--priority, --daily e --date só valem com --to-task"
 		}
 	},
 	"db": {
@@ -133,7 +155,14 @@
 			"expiring": "Expirando...",
 			"getStreakHistory": "\n%d. Data de Início: %v | Data de Término: %v | Dias Totais: %d\n",
 			"done": "Concluído",
-			"notDone": "Não concluído"
+			"notDone": "Não concluído",
+			"progress": "Hoje %d/%d",
+			"progressClear": "Hoje: nada pendente",
+			"notesTitle": "Notas · %s",
+			"notesStreak": "ofensiva %d",
+			"noNotes": "(sem notas)",
+			"backfilled": "preenchido (backfill)",
+			"noNotesYet": "Nenhum dia concluído ainda."
 		},
 		"debug": {
 			"title": "DEBUG: %s\n",
@@ -165,7 +194,10 @@
 			"backfilledTask": "Retropreenchidas %d entradas no histórico para a tarefa '%s'",
 			"backfilledDailyTask": "Retropreenchidas %d entradas no histórico para %d tarefa(s) diária(s)",
 			"addedDump": "Dump '%s' adicionado\n",
-			"noDump": "Nenhuma entrada de dump armazenada"
+			"noDump": "Nenhuma entrada de dump armazenada",
+			"updatedTask": "Tarefa %s atualizada",
+			"deletedDump": "Dump '%s' apagado",
+			"promotedDump": "Dump '%s' agora é uma tarefa"
 		},
 		"error": {
 			"createTask": "erro ao criar a tarefa: %w",
@@ -191,7 +223,14 @@
 			"getDaily": "erro ao obter as tarefas diárias: %w",
 			"extendHistorySince": "erro ao estender a janela de histórico da tarefa",
 			"addDump": "erro ao adicionar dump",
-			"getDump": "erro ao obter as entradas de dump"
+			"getDump": "erro ao obter as entradas de dump",
+			"nameTaken": "já existe uma tarefa chamada '%s'",
+			"invalidPriority": "a prioridade deve ser high, medium, low ou vazia (recebido '%s')",
+			"emptyName": "o nome da tarefa não pode ser vazio",
+			"updateTask": "erro ao atualizar a tarefa: %w",
+			"getNotes": "erro ao obter as notas da tarefa",
+			"dumpNotFound": "não existe o item %d no dump (há %d; veja `akrasia dump`)",
+			"deleteDump": "erro ao apagar o item do dump"
 		}
 	},
 	"quotes": {
@@ -235,7 +274,13 @@
 			"confirm": "confirmar",
 			"cancel": "cancelar",
 			"nextField": "próximo campo",
-			"theme": "próximo tema"
+			"theme": "próximo tema",
+			"edit": "editar",
+			"notes": "notas",
+			"scroll": "rolar",
+			"close": "fechar",
+			"quote": "citação",
+			"convert": "dump → tarefa"
 		},
 		"loading": "Carregando...",
 		"empty": "Nada por aqui ainda.",
@@ -245,7 +290,11 @@
 			"search": "Buscar:",
 			"dumpName": "Novo dump:",
 			"alreadyDone": "%q já foi concluída hoje",
-			"noSelection": "Nada selecionado"
+			"noSelection": "Nada selecionado",
+			"replaceNote": "Substituir a nota de hoje de %q:",
+			"replaceHint": "Salvar substitui a nota que você escreveu hoje.",
+			"deleteDump": "Apagar o dump %q? (s/n)",
+			"notTask": "Selecione uma tarefa (na aba Dump: x apaga, c vira tarefa)"
 		},
 		"form": {
 			"title": "Nova tarefa",
@@ -256,11 +305,13 @@
 			"nameRequired": "o nome é obrigatório",
 			"invalidPriority": "a prioridade deve ser high, medium, low ou vazia",
 			"invalidDaily": "diária deve ser s ou n",
-			"invalidDate": "a data deve ser dd ou dd/mm",
+			"invalidDate": "a data deve ser dd, dd/mm ou dd/mm/aaaa",
 			"desc": "Descrição",
 			"priorityHint": "high / medium / low",
 			"dailyHint": "s / n",
-			"dateHint": "dd ou dd/mm, vazio = amanhã"
+			"dateHint": "dd, dd/mm ou dd/mm/aaaa; vazio = amanhã",
+			"editTitle": "Editar tarefa",
+			"fromDumpTitle": "Nova tarefa a partir do dump"
 		},
 		"status": {
 			"completed": "✔ %s concluída",
@@ -269,7 +320,11 @@
 			"dumpAdded": "Dump %q adicionado",
 			"filter": "filtro",
 			"priority": "prioridade",
-			"theme": "tema: %s"
+			"theme": "tema: %s",
+			"updated": "✔ %s atualizada",
+			"noteUpdated": "✔ nota de %s atualizada",
+			"promoted": "✔ %s agora é uma tarefa",
+			"dumpDeleted": "dump %s apagado"
 		},
 		"details": {
 			"expires": "Expira",
@@ -282,7 +337,8 @@
 			"no": "não",
 			"desc": "Descrição",
 			"history": "Histórico de ofensivas",
-			"period": "%s → %s · %d dia(s)"
+			"period": "%s → %s · %d dia(s)",
+			"notes": "Notas recentes"
 		},
 		"mode": {
 			"normal": "NORMAL",
@@ -290,7 +346,9 @@
 			"notes": "NOTAS",
 			"delete": "DELETAR",
 			"dump": "DUMP",
-			"add": "NOVA"
+			"add": "NOVA",
+			"edit": "EDITAR",
+			"quote": "CITAÇÃO"
 		}
 	}
 }

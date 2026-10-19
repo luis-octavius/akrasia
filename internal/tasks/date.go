@@ -8,45 +8,62 @@ import (
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
-func isDateBefore(date time.Time) (bool, error) {
-	isBefore := date.Before(time.Now())
-	if isBefore == true {
-		return isBefore, fmt.Errorf(i18n.T("commands.error.dateBeforeNow"), date)
-	}
-
-	return isBefore, nil
+// ParseDate turns the CLI date parts into a due date at local midnight:
+//   - no parts: tomorrow (the current time, one day ahead)
+//   - dd: that day of the current month
+//   - dd,mm: that day of the current year
+//   - dd,mm,yyyy: that exact day (a two-digit year means 20yy)
+//
+// Days before today are rejected; today itself is accepted.
+func ParseDate(parts []int) (time.Time, error) {
+	return ParseDateAt(parts, time.Now())
 }
 
-// ParseDate turns the CLI date parts (day, or day and month of the current
-// year) into a due date. No parts means tomorrow; dates in the past are
-// rejected.
-func ParseDate(expireDate []int) (time.Time, error) {
-	lenDate := len(expireDate)
-	if lenDate > 2 {
+// ParseDateAt is ParseDate with "now" given, for tests.
+func ParseDateAt(parts []int, now time.Time) (time.Time, error) {
+	if len(parts) == 0 {
+		return now.AddDate(0, 0, 1), nil
+	}
+	if len(parts) > 3 {
 		return time.Time{}, errors.New(i18n.T("commands.error.dateNotEnoughArguments"))
 	}
 
-	year, month, _ := time.Now().Date()
-	var date time.Time
+	day := parts[0]
+	year, month, _ := now.Date()
 
-	switch lenDate {
-	case 0:
-		date = time.Now().AddDate(0, 0, 1)
-	case 1:
-		date = time.Date(year, month, expireDate[0], 0, 0, 0, 0, time.UTC)
-	case 2:
-		m, err := getMonthByNum(expireDate[1])
+	if len(parts) >= 2 {
+		m, err := getMonthByNum(parts[1])
 		if err != nil {
 			return time.Time{}, err
 		}
-		date = time.Date(year, m, expireDate[0], 0, 0, 0, 0, time.UTC)
+		month = m
+	}
+	if len(parts) == 3 {
+		year = parts[2]
+		if year < 100 {
+			year += 2000
+		}
 	}
 
-	if _, err := isDateBefore(date); err != nil {
+	date := time.Date(year, month, day, 0, 0, 0, 0, now.Location())
+	// time.Date normalizes overflow (31/02 becomes 03/03); reject it instead
+	if day < 1 || date.Day() != day || date.Month() != month {
+		return time.Time{}, fmt.Errorf(i18n.T("commands.error.invalidDay"), day, int(month), year)
+	}
+
+	if _, err := isDateBefore(date, now); err != nil {
 		return time.Time{}, err
 	}
-
 	return date, nil
+}
+
+// isDateBefore reports whether date falls on a day before now's day.
+func isDateBefore(date, now time.Time) (bool, error) {
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	if date.Before(today) {
+		return true, fmt.Errorf(i18n.T("commands.error.dateBeforeNow"), date.Format("02/01/2006"))
+	}
+	return false, nil
 }
 
 func getMonthByNum(num int) (time.Month, error) {

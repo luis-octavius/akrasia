@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
@@ -44,6 +45,15 @@ func (m Model) handleNormalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.startDelete()
 	case key.Matches(msg, m.keys.Add):
 		return m.startAdd()
+	case key.Matches(msg, m.keys.Edit):
+		return m.startEdit()
+	case key.Matches(msg, m.keys.Notes):
+		return m.startNotesView()
+	case key.Matches(msg, m.keys.Convert):
+		return m.startConvert()
+	case key.Matches(msg, m.keys.Quote):
+		m.openQuote("")
+		return m, nil
 
 	case key.Matches(msg, m.keys.Search):
 		m.mode = modeSearch
@@ -71,7 +81,7 @@ func (m Model) handleNormalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.clampCursor(m.active)
 	}
 
-	cmd := m.loadStreak()
+	cmd := m.loadDetails()
 	return m, cmd
 }
 
@@ -92,28 +102,64 @@ func (m Model) startComplete() (tea.Model, tea.Cmd) {
 		m.setStatus(i18n.T("tui.prompt.noSelection"), nil)
 		return m, nil
 	}
+	// done today: completing again replaces today's note, so offer that
+	if r.todo.DoneToday {
+		m.mode, m.target, m.replacingNote = modeNotes, *r.todo, true
+		m.status = ""
+		m.openInput("")
+		return m, tea.Batch(textinput.Blink, m.todayNoteCmd(r.todo.Name))
+	}
 	if r.todo.Done() {
 		m.setStatus(fmt.Sprintf(i18n.T("tui.prompt.alreadyDone"), r.todo.Name), nil)
 		return m, nil
 	}
 
-	m.mode, m.target = modeNotes, *r.todo
+	m.mode, m.target, m.replacingNote = modeNotes, *r.todo, false
 	m.status = ""
 	m.openInput("")
 	return m, textinput.Blink
 }
 
+// todayNoteCmd fetches the note written today, if any, to prefill the
+// prompt that replaces it.
+func (m Model) todayNoteCmd(name string) tea.Cmd {
+	ctx, svc := m.ctx, m.svc
+	return func() tea.Msg {
+		_, entries, err := svc.Notes(ctx, name, 1)
+		if err != nil || len(entries) == 0 || entries[0].Date != time.Now().Format(time.DateOnly) {
+			return nil
+		}
+		return notePrefillMsg{name: name, text: entries[0].Notes}
+	}
+}
+
 // startDelete asks for confirmation before deleting the selected task.
 func (m Model) startDelete() (tea.Model, tea.Cmd) {
 	r, ok := m.selected()
-	if !ok || r.todo == nil {
+	switch {
+	case ok && r.dump != nil:
+		entry := *r.dump
+		m.mode, m.targetDump = modeConfirmDelete, &entry
+	case ok && r.todo != nil:
+		m.mode, m.target, m.targetDump = modeConfirmDelete, *r.todo, nil
+	default:
 		m.setStatus(i18n.T("tui.prompt.noSelection"), nil)
 		return m, nil
 	}
-
-	m.mode, m.target = modeConfirmDelete, *r.todo
 	m.status = ""
 	return m, nil
+}
+
+// startConvert opens the new-task form for the selected dump entry.
+func (m Model) startConvert() (tea.Model, tea.Cmd) {
+	r, ok := m.selected()
+	if !ok || r.dump == nil {
+		return m, nil
+	}
+
+	m.mode, m.status = modeAddTodo, ""
+	m.form = newDumpForm(modalWidth(m.width), *r.dump)
+	return m, textinput.Blink
 }
 
 // startAdd opens the dump prompt on the Dump tab and the task form
@@ -129,6 +175,20 @@ func (m Model) startAdd() (tea.Model, tea.Cmd) {
 	m.mode = modeAddTodo
 	m.status = ""
 	m.form = newTodoForm(modalWidth(m.width))
+	return m, textinput.Blink
+}
+
+// startEdit opens the form prefilled with the selected task.
+func (m Model) startEdit() (tea.Model, tea.Cmd) {
+	r, ok := m.selected()
+	if !ok || r.todo == nil {
+		m.setStatus(i18n.T("tui.prompt.noSelection"), nil)
+		return m, nil
+	}
+
+	m.mode = modeAddTodo
+	m.status = ""
+	m.form = newEditForm(modalWidth(m.width), *r.todo)
 	return m, textinput.Blink
 }
 
@@ -161,7 +221,7 @@ func (m Model) handlePromptKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 		switch current {
 		case modeNotes:
-			return m, m.completeCmd(m.target.Name, value)
+			return m, m.completeCmd(m.target.Name, value, m.replacingNote)
 		case modeAddDump:
 			if value == "" {
 				return m, nil
@@ -186,6 +246,9 @@ func (m Model) handleConfirmKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "y", "Y", "s", "S":
 		m.mode = modeNormal
+		if m.targetDump != nil {
+			return m, m.deleteDumpCmd(*m.targetDump)
+		}
 		return m, m.deleteCmd(m.target.Name)
 	case "n", "N", "esc":
 		m.mode = modeNormal
@@ -204,12 +267,18 @@ func (m Model) handleFormKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.form.next()
 			return m, nil
 		}
+		if m.form.editing != nil {
+			return m.submitEdit()
+		}
 		in, err := m.form.value()
 		if err != nil {
 			m.form.err = err
 			return m, nil
 		}
 		m.mode = modeNormal
+		if m.form.fromDump != nil {
+			return m, m.promoteCmd(*m.form.fromDump, in)
+		}
 		return m, m.addTodoCmd(in)
 
 	case "tab", "down":
@@ -226,11 +295,39 @@ func (m Model) handleFormKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) completeCmd(name, notes string) tea.Cmd {
+// submitEdit saves only the fields that changed; with no change it just
+// closes the form.
+func (m Model) submitEdit() (tea.Model, tea.Cmd) {
+	patch, err := m.form.patch()
+	if err != nil {
+		m.form.err = err
+		return m, nil
+	}
+	m.mode = modeNormal
+	if patch.Empty() {
+		return m, nil
+	}
+	return m, m.editCmd(m.form.editing.Name, patch)
+}
+
+func (m Model) editCmd(name string, patch tasks.TodoPatch) tea.Cmd {
+	ctx, svc := m.ctx, m.svc
+	return func() tea.Msg {
+		todo, err := svc.EditTodo(ctx, name, patch)
+		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.updated"), todo.Name), err: err}
+	}
+}
+
+// completeCmd completes the task with notes. When replacing today's note
+// it only reports the update; a real completion celebrates with a quote.
+func (m Model) completeCmd(name, notes string, replacing bool) tea.Cmd {
 	ctx, svc := m.ctx, m.svc
 	return func() tea.Msg {
 		todo, err := svc.Complete(ctx, name, notes)
-		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.completed"), todo.Name), err: err}
+		if replacing {
+			return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.noteUpdated"), todo.Name), err: err}
+		}
+		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.completed"), todo.Name), completed: true, err: err}
 	}
 }
 
@@ -239,6 +336,22 @@ func (m Model) deleteCmd(name string) tea.Cmd {
 	return func() tea.Msg {
 		todo, err := svc.DeleteByName(ctx, name)
 		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.deleted"), todo.Name), err: err}
+	}
+}
+
+func (m Model) deleteDumpCmd(entry tasks.DumpEntry) tea.Cmd {
+	ctx, svc := m.ctx, m.svc
+	return func() tea.Msg {
+		err := svc.DeleteDump(ctx, entry.ID)
+		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.dumpDeleted"), entry.Name), err: err}
+	}
+}
+
+func (m Model) promoteCmd(entry tasks.DumpEntry, in tasks.NewTodo) tea.Cmd {
+	ctx, svc := m.ctx, m.svc
+	return func() tea.Msg {
+		todo, err := svc.PromoteDump(ctx, entry.ID, in)
+		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.promoted"), todo.Name), err: err}
 	}
 }
 

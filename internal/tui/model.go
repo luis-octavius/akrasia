@@ -6,7 +6,10 @@ import (
 
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/google/uuid"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
@@ -20,11 +23,16 @@ type Service interface {
 	DailyTodos(ctx context.Context) ([]tasks.TodoView, error)
 	Dumps(ctx context.Context) ([]tasks.DumpEntry, error)
 	AddTodo(ctx context.Context, in tasks.NewTodo) (tasks.TodoView, error)
+	EditTodo(ctx context.Context, name string, patch tasks.TodoPatch) (tasks.TodoView, error)
 	Complete(ctx context.Context, name, notes string) (tasks.TodoView, error)
 	DeleteByName(ctx context.Context, name string) (tasks.TodoView, error)
 	AddDump(ctx context.Context, name string) (tasks.DumpEntry, error)
+	DeleteDump(ctx context.Context, id uuid.UUID) error
+	PromoteDump(ctx context.Context, id uuid.UUID, in tasks.NewTodo) (tasks.TodoView, error)
 	CurrentStreak(ctx context.Context, name string) (tasks.TodoView, int64, error)
+	TodayProgress(ctx context.Context) (tasks.Progress, error)
 	StreakHistory(ctx context.Context, name string) (tasks.TodoView, []tasks.StreakPeriod, error)
+	Notes(ctx context.Context, name string, limit int) (tasks.TodoView, []tasks.NoteEntry, error)
 }
 
 type tab int
@@ -61,6 +69,8 @@ const (
 	modeSearch
 	modeAddDump
 	modeAddTodo
+	modeNotesView
+	modeQuote
 )
 
 // row is one line of a tab: either a section header or an item.
@@ -90,8 +100,15 @@ type loadedMsg struct {
 
 // actionMsg is the result of a write; on success every tab is reloaded.
 type actionMsg struct {
-	status string
-	err    error
+	status    string
+	completed bool // a task was completed: celebrate with a quote
+	err       error
+}
+
+// progressMsg carries today's progress, refreshed with every load.
+type progressMsg struct {
+	progress tasks.Progress
+	err      error
 }
 
 // streakMsg answers the streak lookup made when details open.
@@ -99,6 +116,22 @@ type streakMsg struct {
 	name    string
 	days    int64
 	periods []tasks.StreakPeriod
+	err     error
+}
+
+// notePrefillMsg carries today's note of a task, to prefill the prompt
+// that replaces it.
+type notePrefillMsg struct {
+	name string
+	text string
+}
+
+// notesMsg carries a task's notes: the last few for the details panel, or
+// all of them (full) for the notes window.
+type notesMsg struct {
+	name    string
+	entries []tasks.NoteEntry
+	full    bool
 	err     error
 }
 
@@ -117,15 +150,36 @@ type Model struct {
 	input  textinput.Model // notes, search and dump name prompts
 	form   todoForm
 	target tasks.TodoView // task the current prompt acts on
+	// targetDump is the dump entry the delete confirmation acts on; when
+	// set, x on the Dump tab deletes it instead of a task
+	targetDump *tasks.DumpEntry
+	// replacingNote: the notes prompt rewrites today's note of a task that
+	// is already done today
+	replacingNote bool
 
 	search   string
 	priority string
 
+	progress      tasks.Progress
+	progressKnown bool
+
+	// details is the panel opened with enter; detailsName is the task its
+	// extra data (streak, notes) was loaded for
 	details       bool
-	streakName    string
+	detailsName   string
 	streakDays    int64
 	streakHistory []tasks.StreakPeriod
 	streakKnown   bool
+	detailNotes   []tasks.NoteEntry
+	notesKnown    bool
+
+	// notesView is the scrollable window opened with n
+	notesView viewport.Model
+
+	// quote is shown in a pop-up after completing a task (quoteTitle says
+	// which) or on demand with Q (no title)
+	quote      string
+	quoteTitle string
 
 	// saveTheme persists the theme chosen with `t`; tests swap it so they
 	// never write the real config.
@@ -169,6 +223,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.help.SetWidth(msg.Width)
 		m.input.SetWidth(modalWidth(msg.Width) - 7)
 		m.form.setWidth(modalWidth(msg.Width))
+		if m.mode == modeNotesView {
+			m.notesView.SetWidth(m.notesWidth())
+			m.notesView.SetHeight(m.notesHeight(lipgloss.Height(m.notesView.GetContent())))
+		}
 		return m, nil
 
 	case loadedMsg:
@@ -179,7 +237,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		st.err = msg.err
 		st.rows = msg.rows
 		m.clampCursor(msg.tab)
-		cmd := m.loadStreak()
+		cmd := m.loadDetails()
 		return m, cmd
 
 	case actionMsg:
@@ -190,10 +248,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for t := range m.tabs {
 			m.tabs[t].stale = true
 		}
+		m.detailsName = "" // the write may have changed the streak or notes
+		if msg.completed {
+			m.openQuote(msg.status)
+		}
 		return m.reload(m.active)
 
+	case notePrefillMsg:
+		if m.mode == modeNotes && m.replacingNote && msg.name == m.target.Name && m.input.Value() == "" {
+			m.input.SetValue(msg.text)
+			m.input.CursorEnd()
+		}
+		return m, nil
+
+	case notesMsg:
+		switch {
+		case msg.full && m.mode == modeNotesView && msg.name == m.target.Name:
+			m.setNotesContent(msg.entries, msg.err)
+		case !msg.full && msg.err == nil && msg.name == m.detailsName:
+			m.detailNotes, m.notesKnown = msg.entries, true
+		}
+		return m, nil
+
+	case progressMsg:
+		if msg.err == nil {
+			m.progress, m.progressKnown = msg.progress, true
+		}
+		return m, nil
+
 	case streakMsg:
-		if msg.err == nil && msg.name == m.streakName {
+		if msg.err == nil && msg.name == m.detailsName {
 			m.streakDays, m.streakHistory, m.streakKnown = msg.days, msg.periods, true
 		}
 		return m, nil
@@ -209,6 +293,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleFormKey(msg)
 		case modeConfirmDelete:
 			return m.handleConfirmKey(msg)
+		case modeNotesView:
+			return m.handleNotesViewKey(msg)
+		case modeQuote:
+			return m.handleQuoteKey(msg)
 		default:
 			return m.handlePromptKey(msg)
 		}
@@ -217,7 +305,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// anything else (cursor blink) belongs to whichever input is open
 	var cmd tea.Cmd
 	switch m.mode {
-	case modeNormal, modeConfirmDelete:
+	case modeNormal, modeConfirmDelete, modeQuote:
+	case modeNotesView:
+		m.notesView, cmd = m.notesView.Update(msg)
 	case modeAddTodo:
 		cmd = m.form.update(msg)
 	default:
@@ -240,7 +330,7 @@ func (m Model) switchTab(t tab) (tea.Model, tea.Cmd) {
 	m.clampCursor(t)
 	st := m.tabs[t]
 	if st.loading || (st.loaded && !st.stale) {
-		cmd := m.loadStreak()
+		cmd := m.loadDetails()
 		return m, cmd
 	}
 	return m.reload(t)
@@ -251,12 +341,20 @@ func (m Model) reload(t tab) (tea.Model, tea.Cmd) {
 	return m, m.load(t)
 }
 
+// load fetches tab t and, alongside it, today's progress, so the bar
+// follows every load, reload and write.
 func (m Model) load(t tab) tea.Cmd {
 	ctx, svc := m.ctx, m.svc
-	return func() tea.Msg {
-		rows, err := fetchRows(ctx, svc, t)
-		return loadedMsg{tab: t, rows: rows, err: err}
-	}
+	return tea.Batch(
+		func() tea.Msg {
+			rows, err := fetchRows(ctx, svc, t)
+			return loadedMsg{tab: t, rows: rows, err: err}
+		},
+		func() tea.Msg {
+			progress, err := svc.TodayProgress(ctx)
+			return progressMsg{progress: progress, err: err}
+		},
+	)
 }
 
 func fetchRows(ctx context.Context, svc Service, t tab) ([]row, error) {
@@ -389,26 +487,38 @@ func (m *Model) clampCursor(t tab) {
 	m.tabs[t].cursor = cursor
 }
 
-// loadStreak fetches the streak for the selected daily task while the
-// details pane is open.
-func (m *Model) loadStreak() tea.Cmd {
+// detailsNotesLimit is how many notes the details panel shows.
+const detailsNotesLimit = 3
+
+// loadDetails fetches the extra data of the details panel for the selected
+// task: its last notes, plus the streak and streak history when it is
+// daily. It does nothing while the panel is closed or already loaded.
+func (m *Model) loadDetails() tea.Cmd {
 	r, ok := m.selected()
-	if !m.details || !ok || r.todo == nil || !r.todo.IsDaily {
-		m.streakName, m.streakKnown = "", false
+	if !m.details || !ok || r.todo == nil {
+		m.detailsName, m.streakKnown, m.notesKnown = "", false, false
 		return nil
 	}
-	if r.todo.Name == m.streakName {
+	if r.todo.Name == m.detailsName {
 		return nil
 	}
 
-	m.streakName, m.streakKnown = r.todo.Name, false
+	m.detailsName, m.streakKnown, m.notesKnown = r.todo.Name, false, false
 	ctx, svc, name := m.ctx, m.svc, r.todo.Name
-	return func() tea.Msg {
-		_, days, err := svc.CurrentStreak(ctx, name)
-		if err != nil {
-			return streakMsg{name: name, err: err}
-		}
-		_, periods, err := svc.StreakHistory(ctx, name)
-		return streakMsg{name: name, days: days, periods: periods, err: err}
+
+	cmds := []tea.Cmd{func() tea.Msg {
+		_, entries, err := svc.Notes(ctx, name, detailsNotesLimit)
+		return notesMsg{name: name, entries: entries, err: err}
+	}}
+	if r.todo.IsDaily {
+		cmds = append(cmds, func() tea.Msg {
+			_, days, err := svc.CurrentStreak(ctx, name)
+			if err != nil {
+				return streakMsg{name: name, err: err}
+			}
+			_, periods, err := svc.StreakHistory(ctx, name)
+			return streakMsg{name: name, days: days, periods: periods, err: err}
+		})
 	}
+	return tea.Batch(cmds...)
 }
