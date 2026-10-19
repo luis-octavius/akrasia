@@ -39,7 +39,7 @@ func TestDailyTodosReflectsDoneToday(t *testing.T) {
 	addTestTodo(t, tkm, "run", "medium", true)
 	addTestTodo(t, tkm, "taxes", "high", false)
 
-	if err := tkm.UpdateToConcluded(context.Background(), "read", ""); err != nil {
+	if _, err := tkm.Complete(context.Background(), "read", ""); err != nil {
 		t.Fatalf("UpdateToConcluded() error = %v", err)
 	}
 
@@ -68,7 +68,7 @@ func TestListTodosFiltersAndKeepsConcluded(t *testing.T) {
 	addTestTodo(t, tkm, "taxes", "high", false)
 	addTestTodo(t, tkm, "groceries", "low", false)
 
-	if err := tkm.UpdateToConcluded(context.Background(), "taxes", ""); err != nil {
+	if _, err := tkm.Complete(context.Background(), "taxes", ""); err != nil {
 		t.Fatalf("UpdateToConcluded() error = %v", err)
 	}
 

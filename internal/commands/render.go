@@ -1,0 +1,255 @@
+package commands
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/luis-octavius/akrasia/internal/tasks"
+	"github.com/luis-octavius/akrasia/pkg/color"
+	"github.com/luis-octavius/akrasia/pkg/i18n"
+	"golang.org/x/term"
+)
+
+// printTodo prints one task in the standard list format.
+func printTodo(todo tasks.TodoView) {
+	fmt.Println(renderTodo(todo))
+}
+
+func printTodos(todos []tasks.TodoView) {
+	for _, todo := range todos {
+		printTodo(todo)
+	}
+}
+
+// renderTodo mounts the string to beautifully output the task
+func renderTodo(todo tasks.TodoView) string {
+	icon, status := "○", i18n.T("tasks.tasks.notDone")
+
+	if todo.Done() {
+		icon, status = "✔", i18n.T("tasks.tasks.done")
+	}
+
+	state := color.Muted()
+	switch {
+	case todo.Done():
+		state = color.Success()
+	case tasks.IsExpiringSoon(todo.ExpiresAt):
+		state = color.Warning()
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s %s\n", state.Render(icon), color.Title().Render(todo.Name))
+
+	if desc := todo.Description.String; desc != "" {
+		fmt.Fprintf(&b, "- %s\n", desc)
+	}
+
+	if !todo.IsDaily {
+		expires := fmt.Sprintf("%s · %s\n", todo.ExpiresAt.Format("02 Jan 06 15:04"), status)
+		fmt.Fprintf(&b, "  %s\n", color.Muted().Render(expires))
+	}
+
+	if priority := todo.Priority; priority != "" {
+		fmt.Fprintf(&b, "  %s\n", color.Muted().Render("Priority: "+todo.Priority))
+	}
+
+	return b.String()
+}
+
+func printTodayView(view tasks.TodayView, asJSON bool) error {
+	if asJSON {
+		payload, err := json.MarshalIndent(view, "", "  ")
+		if err != nil {
+			return fmt.Errorf(i18n.T("tasks.error.encodeTodayJSON"), err)
+		}
+
+		fmt.Println(string(payload))
+		return nil
+	}
+
+	if view.Empty() {
+		color.MsgSuccess(i18n.T("tasks.info.noPendingTasks"))
+		return nil
+	}
+
+	fmt.Println(i18n.T("tasks.tasks.todayFocus"))
+
+	printTodaySection(i18n.T("tasks.tasks.overdue"), view.Overdue)
+	printTodaySection(i18n.T("tasks.tasks.dueToday"), view.DueToday)
+	printTodaySection(i18n.T("tasks.tasks.dailyPending"), view.Daily)
+	printTodaySection(i18n.T("tasks.tasks.expiringSoon"), view.ExpiringSoon)
+
+	return nil
+}
+
+// printTodaySection renders one titled section from the today dashboard.
+func printTodaySection(title string, todos []tasks.TodoView) {
+	if len(todos) == 0 {
+		return
+	}
+
+	fmt.Printf("\n%s (%d)\n", title, len(todos))
+	printTodos(todos)
+}
+
+func printFocus(todos []tasks.TodoView) {
+	if len(todos) == 0 {
+		color.MsgSuccess(i18n.T("tasks.info.noFocusTasks"))
+		return
+	}
+
+	fmt.Printf(i18n.T("tasks.tasks.focus"), len(todos))
+	printTodos(todos)
+}
+
+func printFoundTodo(todo tasks.TodoView) {
+	s := fmt.Sprintf(i18n.T("tasks.tasks.getTaskByName"), todo.Name, todo.Description.String, todo.ExpiresAt.Format(time.RFC1123))
+	color.MsgSuccess(s)
+}
+
+func printExpired(todos []tasks.TodoView) {
+	if len(todos) == 0 {
+		fmt.Println(i18n.T("tasks.info.NoExpiring"))
+		return
+	}
+
+	fmt.Println(i18n.T("tasks.tasks.expired"))
+	printTodos(todos)
+}
+
+func printExpiring(todos []tasks.TodoView) {
+	if len(todos) == 0 {
+		color.MsgError(i18n.T("tasks.info.NoExpiring"))
+		return
+	}
+
+	fmt.Println(i18n.T("tasks.tasks.expiring"))
+	printTodos(todos)
+}
+
+func printStreakHistory(periods []tasks.StreakPeriod) {
+	for i, p := range periods {
+		fmt.Printf(i18n.T("tasks.tasks.getStreakHistory"), i+1, p.StartDate, p.EndDate, p.Days)
+	}
+}
+
+func printDebugReport(r tasks.DebugReport) {
+	historySince := r.HistorySince
+	if historySince == "" {
+		historySince = i18n.T("tasks.debug.noWindow")
+	}
+
+	fmt.Printf(i18n.T("tasks.debug.title"), r.Todo.Name)
+	fmt.Printf(i18n.T("tasks.debug.meta"),
+		r.Todo.ID, r.Todo.IsDaily,
+		r.CreatedAt.Format(time.DateOnly), historySince)
+
+	fmt.Printf(i18n.T("tasks.debug.historyHeader"), len(r.History))
+	for _, h := range r.History {
+		fmt.Printf(i18n.T("tasks.debug.historyRow"), h.Date, h.Completed, h.Notes, h.InStreak)
+	}
+
+	fmt.Printf(i18n.T("tasks.debug.streak"), r.Streak, historySince)
+}
+
+func printBackfillReport(r tasks.BackfillReport, taskName string) {
+	if len(r.Tasks) == 0 {
+		color.MsgError(i18n.T("tasks.info.noDailyToBackfill"))
+		return
+	}
+
+	for _, t := range r.Tasks {
+		fmt.Printf("  %s: ", t.Name)
+
+		for _, f := range t.Failures {
+			fmt.Printf(i18n.T("tasks.info.cantBackfillTask"), t.Name, f.Date, f.Err)
+		}
+
+		if t.Inserted > 0 {
+			fmt.Printf(" %d days marked as completed\n", t.Inserted)
+		} else {
+			fmt.Println(" no days to backfill")
+		}
+	}
+
+	if taskName != "" {
+		color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.backfilledTask"), r.Total(), taskName))
+	} else {
+		color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.backfilledDailyTask"), r.Total(), len(r.Tasks)))
+	}
+}
+
+func printDumps(entries []tasks.DumpEntry) {
+	if len(entries) == 0 {
+		fmt.Println(i18n.T("tasks.info.noDump"))
+		return
+	}
+
+	for _, d := range entries {
+		createdAt := ""
+		if !d.CreatedAt.IsZero() {
+			createdAt = d.CreatedAt.Format(time.RFC822)
+		}
+		fmt.Printf(i18n.T("tasks.dump.row"), d.Name, createdAt)
+	}
+}
+
+// printQuote prints a random quote wrapped to the terminal width.
+func printQuote() {
+	wrapped := wrapText(tasks.RandomQuote(), getTerminalWidth())
+	color.MsgQuote(fmt.Sprintf("\n%s\n", wrapped))
+}
+
+// getTerminalWidth detects the current terminal width, with a safe minimum
+func getTerminalWidth() int {
+	if width, _, err := term.GetSize(int(os.Stdout.Fd())); err == nil && width > 0 {
+		return width
+	}
+	// Default fallback width
+	return 80
+}
+
+// wrapText wraps text to fit within terminal width with proper word boundaries
+func wrapText(text string, maxWidth int) string {
+	// Leave some margin for padding/formatting
+	effectiveWidth := maxWidth - 4
+	if effectiveWidth < 40 {
+		effectiveWidth = 40
+	}
+
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return text
+	}
+
+	var lines []string
+	var currentLine strings.Builder
+
+	for _, word := range words {
+		wordLen := len(word)
+		currentLen := currentLine.Len()
+
+		// If adding word would exceed width, start new line
+		if currentLen > 0 && currentLen+1+wordLen > effectiveWidth {
+			lines = append(lines, currentLine.String())
+			currentLine.Reset()
+		}
+
+		// Add space if not first word on line
+		if currentLine.Len() > 0 {
+			currentLine.WriteString(" ")
+		}
+
+		currentLine.WriteString(word)
+	}
+
+	// Add remaining line
+	if currentLine.Len() > 0 {
+		lines = append(lines, currentLine.String())
+	}
+
+	return strings.Join(lines, "\n")
+}

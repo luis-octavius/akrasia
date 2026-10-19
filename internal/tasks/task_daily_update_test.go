@@ -59,10 +59,10 @@ func TestMarkDailyDoneIsIdempotentPerDay(t *testing.T) {
 		t.Fatalf("AddTodo() error = %v", err)
 	}
 
-	if err := tkm.UpdateToConcluded(context.Background(), todo.Name, ""); err != nil {
+	if _, err := tkm.Complete(context.Background(), todo.Name, ""); err != nil {
 		t.Fatalf("UpdateToConcluded() first call error = %v", err)
 	}
-	if err := tkm.UpdateToConcluded(context.Background(), todo.Name, "again"); err != nil {
+	if _, err := tkm.Complete(context.Background(), todo.Name, "again"); err != nil {
 		t.Fatalf("UpdateToConcluded() second call error = %v", err)
 	}
 
@@ -74,11 +74,11 @@ func TestMarkDailyDoneIsIdempotentPerDay(t *testing.T) {
 		t.Fatalf("expected exactly 1 history row for today after two done calls, got %d", rowCount)
 	}
 
-	doneToday, err := tkm.doneTodaySet(context.Background())
+	found, err := tkm.FindTodo(context.Background(), todo.Name)
 	if err != nil {
-		t.Fatalf("doneTodaySet() error = %v", err)
+		t.Fatalf("FindTodo() error = %v", err)
 	}
-	if !doneToday[todoKey(todo.ID)] {
+	if !found.Done() {
 		t.Fatalf("expected task to be marked done today")
 	}
 }
@@ -106,7 +106,7 @@ func TestBackfillDoesNotInflateStreak(t *testing.T) {
 		t.Fatalf("AddTodo() error = %v", err)
 	}
 
-	if err := tkm.BackfillDailyHistory(context.Background(), 30, todo.Name); err != nil {
+	if _, err := tkm.BackfillDailyHistory(context.Background(), 30, todo.Name); err != nil {
 		t.Fatalf("BackfillDailyHistory() error = %v", err)
 	}
 
@@ -165,7 +165,7 @@ func TestGapBreaksStreakWithoutAMissedDayRow(t *testing.T) {
 		t.Fatalf("BackfillDailyDone() error = %v", err)
 	}
 
-	if err := tkm.UpdateToConcluded(context.Background(), todo.Name, ""); err != nil {
+	if _, err := tkm.Complete(context.Background(), todo.Name, ""); err != nil {
 		t.Fatalf("UpdateToConcluded() error = %v", err)
 	}
 
@@ -207,7 +207,7 @@ func TestBackfillRecordsBeforeCreationAndExtendsWindow(t *testing.T) {
 		t.Fatalf("AddTodo() error = %v", err)
 	}
 
-	if err := tkm.BackfillDailyHistory(context.Background(), 10, todo.Name); err != nil {
+	if _, err := tkm.BackfillDailyHistory(context.Background(), 10, todo.Name); err != nil {
 		t.Fatalf("BackfillDailyHistory() error = %v", err)
 	}
 

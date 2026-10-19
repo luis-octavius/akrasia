@@ -14,7 +14,7 @@ import (
 func TestGetTodoByNameNotFound(t *testing.T) {
 	tkm, _ := newTestTaskManager(t)
 
-	_, err := GetTodoByName(context.Background(), tkm, "does-not-exist")
+	_, err := findTodoByName(context.Background(), tkm, "does-not-exist")
 	if !errors.Is(err, ErrTodoNotFound) {
 		t.Fatalf("expected ErrTodoNotFound, got %v", err)
 	}
@@ -37,7 +37,7 @@ func TestBackfillNonDailyTask(t *testing.T) {
 		t.Fatalf("AddTodo() error = %v", err)
 	}
 
-	err = tkm.BackfillDailyHistory(context.Background(), 3, "one-off")
+	_, err = tkm.BackfillDailyHistory(context.Background(), 3, "one-off")
 	if !errors.Is(err, ErrNotDaily) {
 		t.Fatalf("expected ErrNotDaily, got %v", err)
 	}

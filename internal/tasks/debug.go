@@ -9,20 +9,20 @@ import (
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
-// DebugTask prints the exact data the streak queries operate on: the task's
+// Debug returns the exact data the streak queries operate on: the task's
 // streak window (history_since), every history row flagged by whether it
 // falls inside that window, and the resulting streak. It exists so that
 // "why is my streak N?" can be answered by looking at the database instead
 // of guessing.
-func (tkm *TaskManager) DebugTask(ctx context.Context, name string) error {
-	todo, err := GetTodoByName(ctx, tkm, name)
+func (tkm *TaskManager) Debug(ctx context.Context, name string) (DebugReport, error) {
+	todo, err := findTodoByName(ctx, tkm, name)
 	if err != nil {
-		return err
+		return DebugReport{}, err
 	}
 
 	rows, err := tkm.Queries.GetHistoryByTodo(ctx, todo.ID)
 	if err != nil {
-		return fmt.Errorf("%s: %w", i18n.T("tasks.error.getStreakHistory"), err)
+		return DebugReport{}, fmt.Errorf("%s: %w", i18n.T("tasks.error.getStreakHistory"), err)
 	}
 
 	streak, err := tkm.Queries.GetCurrentStreak(ctx, database.GetCurrentStreakParams{
@@ -30,26 +30,31 @@ func (tkm *TaskManager) DebugTask(ctx context.Context, name string) error {
 		ID:     todo.ID,
 	})
 	if err != nil {
-		return fmt.Errorf("%s: %w", i18n.T("tasks.error.getCurrentStreak"), err)
+		return DebugReport{}, fmt.Errorf("%s: %w", i18n.T("tasks.error.getCurrentStreak"), err)
 	}
 
-	historySince := i18n.T("tasks.debug.noWindow")
+	view, err := viewFromNameRow(todo)
+	if err != nil {
+		return DebugReport{}, err
+	}
+
+	report := DebugReport{
+		Todo:      view,
+		CreatedAt: todo.CreatedAt,
+		Streak:    streak,
+	}
 	if todo.HistorySince.Valid {
-		historySince = todo.HistorySince.Time.Format(time.DateOnly)
+		report.HistorySince = todo.HistorySince.Time.Format(time.DateOnly)
 	}
 
-	fmt.Printf(i18n.T("tasks.debug.title"), todo.Name)
-	fmt.Printf(i18n.T("tasks.debug.meta"),
-		todo.ID, todo.IsDaily,
-		todo.CreatedAt.Format(time.DateOnly), historySince)
-
-	fmt.Printf(i18n.T("tasks.debug.historyHeader"), len(rows))
 	for _, r := range rows {
-		inStreak := todo.HistorySince.Valid && r.Date >= historySince
-		notes := r.Notes.String
-		fmt.Printf(i18n.T("tasks.debug.historyRow"), r.Date, r.Completed.Bool, notes, inStreak)
+		report.History = append(report.History, HistoryEntry{
+			Date:      r.Date,
+			Completed: r.Completed.Bool,
+			Notes:     r.Notes.String,
+			InStreak:  report.HistorySince != "" && r.Date >= report.HistorySince,
+		})
 	}
 
-	fmt.Printf(i18n.T("tasks.debug.streak"), streak, historySince)
-	return nil
+	return report, nil
 }

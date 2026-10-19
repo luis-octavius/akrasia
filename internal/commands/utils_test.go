@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -54,6 +55,19 @@ func TestGetMonthByNumInvalid(t *testing.T) {
 	for _, num := range []int{0, 13, -1} {
 		if _, err := getMonthByNum(num); err == nil {
 			t.Errorf("expected error for month %d", num)
+		}
+	}
+}
+
+func TestWrapTextHasNoLeadingSpaces(t *testing.T) {
+	text := strings.Repeat("word ", 30)
+
+	for _, line := range strings.Split(wrapText(text, 44), "\n") {
+		if strings.HasPrefix(line, " ") {
+			t.Fatalf("line starts with a space: %q", line)
+		}
+		if len(line) > 40 {
+			t.Fatalf("line longer than 40 chars: %q", line)
 		}
 	}
 }

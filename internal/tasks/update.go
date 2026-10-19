@@ -11,19 +11,21 @@ import (
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
-// updateToConcluded marks a task as done and writes an entry to history.
-func (tkm *TaskManager) UpdateToConcluded(ctx context.Context, name, notes string) error {
-	todo, err := GetTodoByName(ctx, tkm, name)
+// Complete marks the task that best matches name as done, writes an entry
+// to history and returns the updated task.
+func (tkm *TaskManager) Complete(ctx context.Context, name, notes string) (TodoView, error) {
+	todo, err := findTodoByName(ctx, tkm, name)
 	if err != nil {
-		return fmt.Errorf(i18n.T("tasks.error.updateTaskStatus"), name, err)
+		return TodoView{}, fmt.Errorf(i18n.T("tasks.error.updateTaskStatus"), name, err)
 	}
 
 	// only updates status to concluded if is not a daily task
 	if !todo.IsDaily {
 		_, err = tkm.Queries.UpdateTodoStatusById(ctx, todo.ID)
 		if err != nil {
-			return fmt.Errorf(i18n.T("tasks.error.updateTaskStatus"), name, err)
+			return TodoView{}, fmt.Errorf(i18n.T("tasks.error.updateTaskStatus"), name, err)
 		}
+		todo.Concluded = true
 	}
 
 	_, err = tkm.Queries.AddTodoHistory(ctx, database.AddTodoHistoryParams{
@@ -34,10 +36,14 @@ func (tkm *TaskManager) UpdateToConcluded(ctx context.Context, name, notes strin
 		Notes:       sql.NullString{String: notes, Valid: true},
 	})
 	if err != nil {
-		return fmt.Errorf("%s: %w", i18n.T("tasks.error.createTaskHistory"), err)
+		return TodoView{}, fmt.Errorf("%s: %w", i18n.T("tasks.error.createTaskHistory"), err)
 	}
 
-	fmt.Println(i18n.T("tasks.info.updatedSuccessfully"))
-	generateRandomQuote()
-	return nil
+	view, err := viewFromNameRow(todo)
+	if err != nil {
+		return TodoView{}, err
+	}
+	view.DoneToday = true
+
+	return view, nil
 }
