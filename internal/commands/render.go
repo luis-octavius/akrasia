@@ -60,9 +60,28 @@ func renderTodo(todo tasks.TodoView) string {
 	return b.String()
 }
 
-func printTodayView(view tasks.TodayView, asJSON bool) error {
+// progressBarWidth is the width of the CLI progress bar, percentage included.
+const progressBarWidth = 30
+
+// progressLine is "Today 3/5  ▌▌▌▌▌░░░  60%" in the theme's colors.
+func progressLine(p tasks.Progress) string {
+	label := fmt.Sprintf(i18n.T("tasks.tasks.progress"), p.Done, p.Total)
+	if p.Total == 0 {
+		label = i18n.T("tasks.tasks.progressClear")
+	}
+	return color.Title().Render(label) + "  " + color.ProgressBar(p.Ratio(), progressBarWidth)
+}
+
+func printProgress(p tasks.Progress) {
+	lipgloss.Println(progressLine(p))
+}
+
+func printTodayView(view tasks.TodayView, progress tasks.Progress, asJSON bool) error {
 	if asJSON {
-		payload, err := json.MarshalIndent(view, "", "  ")
+		payload, err := json.MarshalIndent(struct {
+			tasks.TodayView
+			Progress tasks.Progress
+		}{view, progress}, "", "  ")
 		if err != nil {
 			return fmt.Errorf(i18n.T("tasks.error.encodeTodayJSON"), err)
 		}
@@ -70,6 +89,9 @@ func printTodayView(view tasks.TodayView, asJSON bool) error {
 		fmt.Println(string(payload))
 		return nil
 	}
+
+	printProgress(progress)
+	fmt.Println()
 
 	if view.Empty() {
 		color.MsgSuccess(i18n.T("tasks.info.noPendingTasks"))
@@ -96,7 +118,10 @@ func printTodaySection(title string, todos []tasks.TodoView) {
 	printTodos(todos)
 }
 
-func printFocus(todos []tasks.TodoView) {
+func printFocus(todos []tasks.TodoView, progress tasks.Progress) {
+	printProgress(progress)
+	fmt.Println()
+
 	if len(todos) == 0 {
 		color.MsgSuccess(i18n.T("tasks.info.noFocusTasks"))
 		return

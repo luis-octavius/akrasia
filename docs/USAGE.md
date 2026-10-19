@@ -76,7 +76,15 @@ Expires: Fri, 13 Nov 2026 00:00:00 UTC
 ### What needs attention now
 
 ```bash
+# today's progress: every daily task, plus one-off tasks that are overdue,
+# due today or completed today
+akrasia progress
+Today 1/2  ▌▌▌▌▌▌▌▌▌▌▌▌▌░░░░░░░░░░░░  50%
+
+# the same line opens `today` and `focus`
 akrasia today
+Today 1/2  ▌▌▌▌▌▌▌▌▌▌▌▌▌░░░░░░░░░░░░  50%
+
 TODAY FOCUS
 
 DAILY PENDING (1)
@@ -104,11 +112,14 @@ akrasia today --only daily --json
       "DoneToday": false
     }
   ],
-  "ExpiringSoon": null
+  "ExpiringSoon": null,
+  "Progress": { "Done": 1, "Total": 2 }
 }
 
 # the top items to work on, in order of urgency
 akrasia focus --limit 2
+Today 1/2  ▌▌▌▌▌▌▌▌▌▌▌▌▌░░░░░░░░░░░░  50%
+
 FOCUS (2)
 ○ Read 30min
 

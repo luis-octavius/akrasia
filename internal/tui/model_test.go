@@ -15,13 +15,14 @@ import (
 )
 
 type fakeService struct {
-	today   tasks.TodayView
-	all     []tasks.TodoView
-	daily   []tasks.TodoView
-	dumps   []tasks.DumpEntry
-	streak  int64
-	periods []tasks.StreakPeriod
-	err     error
+	today    tasks.TodayView
+	all      []tasks.TodoView
+	daily    []tasks.TodoView
+	dumps    []tasks.DumpEntry
+	streak   int64
+	periods  []tasks.StreakPeriod
+	progress tasks.Progress
+	err      error
 
 	calls     map[string]int
 	completed []string // "name|notes"
@@ -64,6 +65,7 @@ func (f *fakeService) AddTodo(_ context.Context, in tasks.NewTodo) (tasks.TodoVi
 
 func (f *fakeService) Complete(_ context.Context, name, notes string) (tasks.TodoView, error) {
 	f.completed = append(f.completed, name+"|"+notes)
+	f.progress.Done++
 	return tasks.TodoView{Name: name}, nil
 }
 
@@ -82,30 +84,49 @@ func (f *fakeService) CurrentStreak(_ context.Context, name string) (tasks.TodoV
 	return tasks.TodoView{Name: name}, f.streak, nil
 }
 
+func (f *fakeService) TodayProgress(context.Context) (tasks.Progress, error) {
+	f.called("progress")
+	return f.progress, f.err
+}
+
 func (f *fakeService) StreakHistory(_ context.Context, name string) (tasks.TodoView, []tasks.StreakPeriod, error) {
 	return tasks.TodoView{Name: name}, f.periods, nil
 }
 
-// send runs msg through Update and keeps feeding back the model's own
-// messages (loads, writes, streaks), the way the runtime would. Other
-// commands, like cursor blinks, are not run.
+// send runs each msg through Update and keeps feeding back the model's own
+// messages (loads, writes, streaks, progress), including the ones inside a
+// tea.Batch, the way the runtime would. Other commands, like cursor
+// blinks, are not run.
 func send(t *testing.T, m Model, msgs ...tea.Msg) Model {
 	t.Helper()
 	for _, msg := range msgs {
-		for i := 0; msg != nil && i < 5; i++ {
-			next, cmd := m.Update(msg)
+		queue := []tea.Msg{msg}
+		for steps := 0; len(queue) > 0 && steps < 20; steps++ {
+			next, cmd := m.Update(queue[0])
 			m = next.(Model)
-			msg = nil
-			if cmd == nil {
-				break
-			}
-			switch out := runQuick(cmd).(type) {
-			case loadedMsg, actionMsg, streakMsg:
-				msg = out
-			}
+			queue = append(queue[1:], ownMessages(cmd)...)
 		}
 	}
 	return m
+}
+
+// ownMessages runs cmd (and every command of a batch) and keeps only the
+// messages the model produces itself.
+func ownMessages(cmd tea.Cmd) []tea.Msg {
+	if cmd == nil {
+		return nil
+	}
+	switch out := runQuick(cmd).(type) {
+	case tea.BatchMsg:
+		var msgs []tea.Msg
+		for _, c := range out {
+			msgs = append(msgs, ownMessages(c)...)
+		}
+		return msgs
+	case loadedMsg, actionMsg, streakMsg, progressMsg:
+		return []tea.Msg{out}
+	}
+	return nil
 }
 
 // runQuick runs cmd but gives up on slow ones: cursor blinks sleep for
@@ -125,7 +146,7 @@ func start(t *testing.T, svc Service, layout string) Model {
 	t.Helper()
 	m := newModel(context.Background(), svc, layout)
 	m.saveTheme = func(name string) error { color.SetTheme(name); return nil }
-	return send(t, m, m.Init()())
+	return send(t, m, ownMessages(m.Init())...)
 }
 
 func runes(s string) tea.KeyPressMsg { return tea.KeyPressMsg{Code: []rune(s)[0], Text: s} }
@@ -547,5 +568,30 @@ func TestFullHelpLinesShareMargin(t *testing.T) {
 		if margin := len(l) - len(strings.TrimLeft(l, " ")); margin != 1 {
 			t.Fatalf("help row %d starts at column %d, want 1:\n%s", i, margin, strings.Join(help, "\n"))
 		}
+	}
+}
+
+func TestProgressLineFollowsCompletions(t *testing.T) {
+	svc := &fakeService{
+		all:      []tasks.TodoView{todo("taxes")},
+		progress: tasks.Progress{Done: 1, Total: 3},
+	}
+	m := send(t, start(t, svc, KeymapDefault), tea.WindowSizeMsg{Width: 100, Height: 24})
+
+	if view := ansi.Strip(m.View().Content); !strings.Contains(view, "Today 1/3") || !strings.Contains(view, "33%") {
+		t.Fatalf("expected the progress line with 1/3 and 33%%:\n%s", view)
+	}
+
+	m = send(t, m, keyTab, keySpace, keyEnter)
+	if view := ansi.Strip(m.View().Content); !strings.Contains(view, "Today 2/3") {
+		t.Fatalf("progress should refresh after completing a task:\n%s", view)
+	}
+}
+
+func TestProgressLineWithNothingDue(t *testing.T) {
+	m := send(t, start(t, &fakeService{}, KeymapDefault), tea.WindowSizeMsg{Width: 100, Height: 24})
+
+	if view := ansi.Strip(m.View().Content); !strings.Contains(view, "Today: nothing due") || !strings.Contains(view, "100%") {
+		t.Fatalf("an empty day should read as done:\n%s", view)
 	}
 }

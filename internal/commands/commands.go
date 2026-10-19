@@ -191,7 +191,12 @@ var today = &cobra.Command{
 			return err
 		}
 
-		return printTodayView(view, todayJSON)
+		progress, err := tkm.TodayProgress(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		return printTodayView(view, progress, todayJSON)
 	},
 }
 
@@ -220,7 +225,12 @@ var focus = &cobra.Command{
 			return err
 		}
 
-		printFocus(todos)
+		progress, err := tkm.TodayProgress(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		printFocus(todos, progress)
 		return nil
 	},
 }
@@ -543,6 +553,28 @@ var dumpCmd = &cobra.Command{
 	},
 }
 
+// progressCmd shows how many of today's tasks are done.
+var progressCmd = &cobra.Command{
+	Use:     "progress",
+	Short:   i18n.T("commands.commands.progressShort"),
+	Aliases: []string{"pg"},
+	Args:    cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		progress, err := tkm.TodayProgress(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		printProgress(progress)
+		return nil
+	},
+}
+
 // tuiCmd opens the interactive terminal interface.
 var tuiCmd = &cobra.Command{
 	Use:   "tui",
@@ -713,6 +745,7 @@ func init() {
 		"debugTask":               debugTask,
 		"dumpCmd":                 dumpCmd,
 		"tuiCmd":                  tuiCmd,
+		"progressCmd":             progressCmd,
 		"config":                  config,
 	}
 

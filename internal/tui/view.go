@@ -22,6 +22,10 @@ const (
 	maxModalWidth = 64
 	// historyLimit is how many streak periods the details pane lists.
 	historyLimit = 5
+	// progressMaxWidth and progressMinWidth bound the progress bar; below
+	// the minimum only the "Today 3/5" label is shown.
+	progressMaxWidth = 40
+	progressMinWidth = 12
 )
 
 // View renders the whole screen in the alternate screen buffer.
@@ -37,7 +41,7 @@ func (m Model) render() string {
 		width = defaultWidth
 	}
 
-	header := m.renderHeader(width)
+	header := m.renderHeader(width) + "\n" + m.renderProgress(width)
 	footer := m.renderFooter(width)
 
 	bodyHeight := 0
@@ -95,6 +99,26 @@ func (m Model) renderHeader(width int) string {
 		}
 	}
 	return row
+}
+
+// renderProgress is "Today 3/5  ▌▌▌▌▌░░░  60%" below the tabs; it stays
+// blank until the first count arrives so the layout doesn't jump.
+func (m Model) renderProgress(width int) string {
+	if !m.progressKnown {
+		return ""
+	}
+
+	label := fmt.Sprintf(i18n.T("tasks.tasks.progress"), m.progress.Done, m.progress.Total)
+	if m.progress.Total == 0 {
+		label = i18n.T("tasks.tasks.progressClear")
+	}
+	label = " " + color.Title().Render(label) + "  "
+
+	barWidth := min(progressMaxWidth, width-lipgloss.Width(label)-1)
+	if barWidth < progressMinWidth {
+		return label
+	}
+	return label + color.ProgressBar(m.progress.Ratio(), barWidth)
 }
 
 func (m Model) tabLabel(t tab) string {

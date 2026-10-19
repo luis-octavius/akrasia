@@ -4,6 +4,8 @@ Run `akrasia` with no arguments to open the TUI (`akrasia tui` does the same).
 When stdin or stdout is not a terminal, such as in a pipe or a script, it
 prints the help instead. Use `akrasia help` to see the help at any time.
 
+Below the tabs, a bar shows today's progress (see `akrasia progress`).
+
 | Key | Action |
 | --- | --- |
 | `↑` `↓` / `home` `end` | move / jump to top or bottom |
@@ -54,6 +56,7 @@ Available Commands:
      help             Help about any command
  sh  history          get the streak history of provided todo
      init             initialize akrasia app
+ pg  progress         show today's progress (tasks done out of today's tasks)
  cs  streak           get the current streak of provided todo
  td  today            show a daily focus dashboard (overdue, due today, daily pending, expiring soon)
      tui              open the interactive terminal interface

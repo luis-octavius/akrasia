@@ -24,6 +24,7 @@ type Service interface {
 	DeleteByName(ctx context.Context, name string) (tasks.TodoView, error)
 	AddDump(ctx context.Context, name string) (tasks.DumpEntry, error)
 	CurrentStreak(ctx context.Context, name string) (tasks.TodoView, int64, error)
+	TodayProgress(ctx context.Context) (tasks.Progress, error)
 	StreakHistory(ctx context.Context, name string) (tasks.TodoView, []tasks.StreakPeriod, error)
 }
 
@@ -94,6 +95,12 @@ type actionMsg struct {
 	err    error
 }
 
+// progressMsg carries today's progress, refreshed with every load.
+type progressMsg struct {
+	progress tasks.Progress
+	err      error
+}
+
 // streakMsg answers the streak lookup made when details open.
 type streakMsg struct {
 	name    string
@@ -120,6 +127,9 @@ type Model struct {
 
 	search   string
 	priority string
+
+	progress      tasks.Progress
+	progressKnown bool
 
 	details       bool
 	streakName    string
@@ -192,6 +202,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m.reload(m.active)
 
+	case progressMsg:
+		if msg.err == nil {
+			m.progress, m.progressKnown = msg.progress, true
+		}
+		return m, nil
+
 	case streakMsg:
 		if msg.err == nil && msg.name == m.streakName {
 			m.streakDays, m.streakHistory, m.streakKnown = msg.days, msg.periods, true
@@ -251,12 +267,20 @@ func (m Model) reload(t tab) (tea.Model, tea.Cmd) {
 	return m, m.load(t)
 }
 
+// load fetches tab t and, alongside it, today's progress, so the bar
+// follows every load, reload and write.
 func (m Model) load(t tab) tea.Cmd {
 	ctx, svc := m.ctx, m.svc
-	return func() tea.Msg {
-		rows, err := fetchRows(ctx, svc, t)
-		return loadedMsg{tab: t, rows: rows, err: err}
-	}
+	return tea.Batch(
+		func() tea.Msg {
+			rows, err := fetchRows(ctx, svc, t)
+			return loadedMsg{tab: t, rows: rows, err: err}
+		},
+		func() tea.Msg {
+			progress, err := svc.TodayProgress(ctx)
+			return progressMsg{progress: progress, err: err}
+		},
+	)
 }
 
 func fetchRows(ctx context.Context, svc Service, t tab) ([]row, error) {

@@ -38,7 +38,8 @@
 			"configLanguageUse": "language [list|show|<language-code>]",
 			"tuiShort": "open the interactive terminal interface",
 			"configKeymapShort": "manage the TUI key layout",
-			"configKeymapUse": "keymap [list|show|default|vim]"
+			"configKeymapUse": "keymap [list|show|default|vim]",
+			"progressShort": "show today's progress (tasks done out of today's tasks)"
 		},
 		"flags": {
 			"addDate": "add date to task (dd,mm)",
@@ -133,7 +134,9 @@
 			"expiring": "Expiring...",
 			"getStreakHistory": "\n%d. Started Date: %v | End Date: %v | Total Days: %d\n",
 			"done": "Done",
-			"notDone": "Not done"
+			"notDone": "Not done",
+			"progress": "Today %d/%d",
+			"progressClear": "Today: nothing due"
 		},
 		"debug": {
 			"title": "DEBUG: %s\n",

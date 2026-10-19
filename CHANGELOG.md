@@ -4,6 +4,18 @@ All notable changes to Akrasia are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Today's progress bar**, in the theme's gradient colors: done today out
+  of today's tasks (every daily task, plus one-off tasks that are overdue,
+  due today or completed today).
+  - It appears below the tabs in the TUI and refreshes after every change.
+  - It opens `akrasia today` and `akrasia focus`.
+  - New command: `akrasia progress` (alias `pg`).
+  - `today --json` gains a `Progress` field (`Done`, `Total`).
+
 ## [2.0.0] - unreleased
 
 The headline of this release is an interactive terminal interface (TUI). It
@@ -100,5 +112,6 @@ is a major version because two behaviors that scripts may rely on changed:
 
 See the [GitHub releases and tags](https://github.com/luis-octavius/akrasia/tags).
 
+[Unreleased]: https://github.com/luis-octavius/akrasia/compare/v.1.1.1...dev
 [2.0.0]: https://github.com/luis-octavius/akrasia/compare/v.1.1.1...dev
 [1.1.1]: https://github.com/luis-octavius/akrasia/releases/tag/v.1.1.1
