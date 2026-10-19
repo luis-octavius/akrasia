@@ -67,6 +67,7 @@ const (
 	modeAddDump
 	modeAddTodo
 	modeNotesView
+	modeQuote
 )
 
 // row is one line of a tab: either a section header or an item.
@@ -96,8 +97,9 @@ type loadedMsg struct {
 
 // actionMsg is the result of a write; on success every tab is reloaded.
 type actionMsg struct {
-	status string
-	err    error
+	status    string
+	completed bool // a task was completed: celebrate with a quote
+	err       error
 }
 
 // progressMsg carries today's progress, refreshed with every load.
@@ -157,6 +159,11 @@ type Model struct {
 
 	// notesView is the scrollable window opened with n
 	notesView viewport.Model
+
+	// quote is shown in a pop-up after completing a task (quoteTitle says
+	// which) or on demand with Q (no title)
+	quote      string
+	quoteTitle string
 
 	// saveTheme persists the theme chosen with `t`; tests swap it so they
 	// never write the real config.
@@ -226,6 +233,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.tabs[t].stale = true
 		}
 		m.detailsName = "" // the write may have changed the streak or notes
+		if msg.completed {
+			m.openQuote(msg.status)
+		}
 		return m.reload(m.active)
 
 	case notesMsg:
@@ -262,6 +272,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleConfirmKey(msg)
 		case modeNotesView:
 			return m.handleNotesViewKey(msg)
+		case modeQuote:
+			return m.handleQuoteKey(msg)
 		default:
 			return m.handlePromptKey(msg)
 		}
@@ -270,7 +282,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// anything else (cursor blink) belongs to whichever input is open
 	var cmd tea.Cmd
 	switch m.mode {
-	case modeNormal, modeConfirmDelete:
+	case modeNormal, modeConfirmDelete, modeQuote:
 	case modeNotesView:
 		m.notesView, cmd = m.notesView.Update(msg)
 	case modeAddTodo:

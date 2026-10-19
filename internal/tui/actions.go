@@ -48,6 +48,9 @@ func (m Model) handleNormalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.startEdit()
 	case key.Matches(msg, m.keys.Notes):
 		return m.startNotesView()
+	case key.Matches(msg, m.keys.Quote):
+		m.openQuote("")
+		return m, nil
 
 	case key.Matches(msg, m.keys.Search):
 		m.mode = modeSearch
@@ -274,7 +277,7 @@ func (m Model) completeCmd(name, notes string) tea.Cmd {
 	ctx, svc := m.ctx, m.svc
 	return func() tea.Msg {
 		todo, err := svc.Complete(ctx, name, notes)
-		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.completed"), todo.Name), err: err}
+		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.completed"), todo.Name), completed: true, err: err}
 	}
 }
 

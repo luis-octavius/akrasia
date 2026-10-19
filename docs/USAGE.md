@@ -10,8 +10,10 @@ akrasia        # or: akrasia tui
 ```
 
 Use the arrows (or `j`/`k` with `akrasia config keymap vim`) to move, `space`
-to complete, `a` to add, `x` to delete, `enter` for details, `t` to switch
-themes and `?` for every key. See [Commands](COMMANDS.md#interactive-interface).
+to complete, `a` to add, `e` to edit, `x` to delete, `enter` for details, `n`
+for notes, `t` to switch themes and `?` for every key. Completing a task shows
+a quote, just like the CLI does; `Q` shows one at any time. See
+[Commands](COMMANDS.md#interactive-interface).
 
 ### Adding tasks
 

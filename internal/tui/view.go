@@ -455,6 +455,9 @@ func (m Model) renderModal(width int) string {
 
 	case modeNotesView:
 		return m.renderNotesModal(box)
+
+	case modeQuote:
+		return m.renderQuoteModal(box, mw)
 	}
 	return ""
 }
@@ -534,6 +537,8 @@ func (m Model) modeLabel() string {
 		return i18n.T("tui.mode.dump")
 	case modeNotesView:
 		return i18n.T("tui.mode.notes")
+	case modeQuote:
+		return i18n.T("tui.mode.quote")
 	case modeAddTodo:
 		if m.form.editing != nil {
 			return i18n.T("tui.mode.edit")
@@ -551,6 +556,8 @@ func (m Model) promptHelp() string {
 		return "y " + i18n.T("tui.help.confirm") + " • n/esc " + i18n.T("tui.help.cancel")
 	case modeNotesView:
 		return "↑/↓ pgup/pgdn " + i18n.T("tui.help.scroll") + " • esc " + i18n.T("tui.help.close")
+	case modeQuote:
+		return "esc/enter " + i18n.T("tui.help.close")
 	case modeAddTodo:
 		return "tab/↓ " + i18n.T("tui.help.nextField") + " • enter " + i18n.T("tui.help.confirm") + " • esc " + i18n.T("tui.help.cancel")
 	default:

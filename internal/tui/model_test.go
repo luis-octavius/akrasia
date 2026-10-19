@@ -284,8 +284,8 @@ func TestCompleteAsksForNotes(t *testing.T) {
 	if len(svc.completed) != 1 || svc.completed[0] != "taxes|paid" {
 		t.Fatalf("expected taxes completed with notes, got %v", svc.completed)
 	}
-	if m.mode != modeNormal || !strings.Contains(m.status, "taxes") {
-		t.Fatalf("expected normal mode and a status, got mode %v status %q", m.mode, m.status)
+	if m.mode != modeQuote || !strings.Contains(m.status, "taxes") {
+		t.Fatalf("expected the quote pop-up and a status, got mode %v status %q", m.mode, m.status)
 	}
 	if svc.calls["all"] != 2 {
 		t.Fatalf("a write should reload the active tab, loaded %d times", svc.calls["all"])
@@ -533,6 +533,7 @@ func TestViewFitsEveryThemeAndWidth(t *testing.T) {
 				"form":    send(t, m, runes("a")),
 				"help":    send(t, m, runes("?")),
 				"notes":   send(t, m, runes("n")),
+				"quote":   send(t, m, runes("Q")),
 			}
 			for name, s := range screens {
 				for i, l := range strings.Split(s.View().Content, "\n") {
@@ -755,7 +756,7 @@ func TestDetailsNotesRefreshAfterCompleting(t *testing.T) {
 	m := send(t, start(t, svc, KeymapDefault), tea.WindowSizeMsg{Width: 110, Height: 30}, keyTab, keyEnter)
 
 	svc.notes = []tasks.NoteEntry{{Date: "2026-10-19", Notes: "ownership"}}
-	m = send(t, m, keySpace, runes("ownership"), keyEnter)
+	m = send(t, m, keySpace, runes("ownership"), keyEnter, keyEsc) // esc closes the quote
 
 	if view := ansi.Strip(m.View().Content); !strings.Contains(view, "ownership") {
 		t.Fatalf("the new note should show in the details right away:\n%s", view)
@@ -781,5 +782,55 @@ func TestTallDetailsKeepScreenHeight(t *testing.T) {
 	}
 	if !strings.Contains(ansi.Strip(view), "NORMAL") {
 		t.Fatalf("status bar should stay visible:\n%s", ansi.Strip(view))
+	}
+}
+
+func TestCompletingOpensQuote(t *testing.T) {
+	svc := &fakeService{all: []tasks.TodoView{todo("taxes")}}
+	m := send(t, start(t, svc, KeymapDefault), tea.WindowSizeMsg{Width: 100, Height: 24}, keyTab, keySpace, keyEnter)
+
+	if m.mode != modeQuote || m.quote == "" {
+		t.Fatalf("completing should open a quote, mode %v quote %q", m.mode, m.quote)
+	}
+	view := ansi.Strip(m.View().Content)
+	if !strings.Contains(view, "taxes completed") {
+		t.Fatalf("the pop-up should say what was completed:\n%s", view)
+	}
+	if got := lipgloss.Height(m.View().Content); got != 24 {
+		t.Fatalf("screen should keep the terminal height, got %d", got)
+	}
+
+	// other keys are ignored while it is open
+	m = send(t, m, runes("x"), keyDown)
+	if m.mode != modeQuote || len(svc.deleted) != 0 {
+		t.Fatalf("keys behind the pop-up should be ignored, mode %v deleted %v", m.mode, svc.deleted)
+	}
+
+	m = send(t, m, keyEsc)
+	if m.mode != modeNormal {
+		t.Fatalf("esc should close the quote, mode %v", m.mode)
+	}
+}
+
+func TestQuoteOnDemandAndOnlyForCompletions(t *testing.T) {
+	svc := &fakeService{all: []tasks.TodoView{todo("taxes"), todo("groceries")}}
+	m := send(t, start(t, svc, KeymapDefault), keyTab)
+
+	m = send(t, m, runes("Q"))
+	if m.mode != modeQuote || m.quoteTitle != "" {
+		t.Fatalf("Q should open an untitled quote, mode %v title %q", m.mode, m.quoteTitle)
+	}
+	m = send(t, m, runes("q"))
+	if m.mode != modeNormal {
+		t.Fatalf("q should close the quote, not quit; mode %v", m.mode)
+	}
+
+	m = send(t, m, runes("x"), runes("y"))
+	if m.mode == modeQuote {
+		t.Fatal("deleting should not open a quote")
+	}
+	m = send(t, m, runes("a"), runes("new"), keyEnter, keyEnter, keyEnter, keyEnter, keyEnter)
+	if m.mode == modeQuote {
+		t.Fatal("adding should not open a quote")
 	}
 }

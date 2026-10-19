@@ -266,7 +266,8 @@
 			"edit": "editar",
 			"notes": "notas",
 			"scroll": "rolar",
-			"close": "fechar"
+			"close": "fechar",
+			"quote": "citação"
 		},
 		"loading": "Carregando...",
 		"empty": "Nada por aqui ainda.",
@@ -325,7 +326,8 @@
 			"delete": "DELETAR",
 			"dump": "DUMP",
 			"add": "NOVA",
-			"edit": "EDITAR"
+			"edit": "EDITAR",
+			"quote": "CITAÇÃO"
 		}
 	}
 }

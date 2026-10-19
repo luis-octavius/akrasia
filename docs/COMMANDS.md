@@ -10,7 +10,7 @@ Below the tabs, a bar shows today's progress (see `akrasia progress`).
 | --- | --- |
 | `↑` `↓` / `home` `end` | move / jump to top or bottom |
 | `tab` `shift+tab` / `←` `→` | switch tabs (Today, All, Daily, Dump) |
-| `space` | complete the selected task (asks for optional notes) |
+| `space` | complete the selected task (asks for optional notes, then shows a quote; `esc` closes it) |
 | `a` | new task (on the Dump tab: new dump entry) |
 | `e` | edit the selected task (the form opens prefilled; only what you change is saved) |
 | `x` | delete the selected task (asks for confirmation) |
@@ -19,6 +19,7 @@ Below the tabs, a bar shows today's progress (see `akrasia progress`).
 | `/` | filter by name; `esc` clears it |
 | `p` | cycle the priority filter |
 | `t` | switch to the next theme and save it |
+| `Q` | show a random quote |
 | `r` | reload the tab |
 | `?` | show every key |
 | `q` | quit |

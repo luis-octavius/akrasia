@@ -266,7 +266,8 @@
 			"edit": "edit",
 			"notes": "notes",
 			"scroll": "scroll",
-			"close": "close"
+			"close": "close",
+			"quote": "quote"
 		},
 		"loading": "Loading...",
 		"empty": "Nothing here yet.",
@@ -325,7 +326,8 @@
 			"delete": "DELETE",
 			"dump": "DUMP",
 			"add": "NEW",
-			"edit": "EDIT"
+			"edit": "EDIT",
+			"quote": "QUOTE"
 		}
 	}
 }

@@ -33,6 +33,10 @@ All notable changes to Akrasia are documented here. The format follows
   - TUI: the details panel shows the last 3 notes, and `n` opens every note
     in a scrollable window (`esc` closes).
   - Backfilled days and days without notes are marked as such.
+- **Quotes in the TUI.** Completing a task opens a pop-up with
+  "✔ X completed" and a quote in the theme's quote style, the same moment
+  the CLI prints one. `esc`, `enter` or `q` close it; other keys are
+  ignored while it is open. `Q` shows a quote at any time.
 
 ### Fixed
 
