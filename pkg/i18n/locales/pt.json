@@ -36,7 +36,9 @@
 			"configThemeUse": "theme [list|show|<nome-do-tema>]",
 			"configLanguageShort": "gerenciar linguagens",
 			"configLanguageUse": "language [list|show|<código-da-linguagem>]",
-			"tuiShort": "abrir a interface interativa no terminal"
+			"tuiShort": "abrir a interface interativa no terminal",
+			"configKeymapShort": "gerenciar o layout de teclas da TUI",
+			"configKeymapUse": "keymap [list|show|default|vim]"
 		},
 		"flags": {
 			"addDate": "adicionar data para a tarefa (dd,mm)",
@@ -45,15 +47,15 @@
 			"addDaily": "tarefa diária",
 			"addDescription": "descrição da tarefa",
 			"getAllPriority": "filtrar tarefas por prioridade: high|medium|low",
-			"todayPriority":  "filtrar tarefas por prioridade: high|medium|low",
+			"todayPriority": "filtrar tarefas por prioridade: high|medium|low",
 			"focusLimit": "número de itens de foco (1-3)",
-			"focusPriority":  "filtrar tarefas por prioridade: high|medium|low",
+			"focusPriority": "filtrar tarefas por prioridade: high|medium|low",
 			"getTodoByNameName": "nome da tarefa",
 			"delByNameName": "nome da tarefa",
 			"delByNameDeleteYes": "confirmar remoção destrutiva de tarefas concluídas",
 			"updateStatusToConcludedName": "nome da tarefa",
 			"updateStatusToConcludedNotes": "notas diárias",
-			"deleteConcludedDeleteYes":  "confirmar remoção destrutiva de tarefas concluídas",
+			"deleteConcludedDeleteYes": "confirmar remoção destrutiva de tarefas concluídas",
 			"getTodoCurrentStreakName": "nome da tarefa",
 			"getTodoStreakHistoryName": "histórico de ofensivas da tarefa",
 			"backfillHistoryDays": "número de dias para retropreencher",
@@ -84,7 +86,10 @@
 			"themeSet": "Tema definido para: %s\n",
 			"availableLanguages": "Linguagens disponíveis:",
 			"currentLanguage": "Linguagem atual: %s\n",
-			"languageSet": "Linguagem definida para: %s\n"
+			"languageSet": "Linguagem definida para: %s\n",
+			"availableKeymaps": "Keymaps disponíveis:",
+			"currentKeymap": "Keymap atual: %s\n",
+			"keymapSet": "Keymap definido para: %s\n"
 		},
 		"error": {
 			"taskName": "nome da tarefa é obrigatório (use o argumento posicional ou a opção --name)",
@@ -104,7 +109,9 @@
 			"error": "Erro: %v",
 			"dateBeforeNow": "Data %v está antes da atual - coloque uma data válida",
 			"dateNotEnoughArguments": "Argumentos insuficientes na data",
-			"invalidMonthNumber": "Número do mês não está entre 1 e 12"
+			"invalidMonthNumber": "Número do mês não está entre 1 e 12",
+			"unknownKeymap": "keymap desconhecido: %q (disponíveis: %v)",
+			"setKeymap": "falha ao definir o keymap: %w"
 		}
 	},
 	"db": {
@@ -165,7 +172,7 @@
 			"getTaskDatabase": "erro ao obter tarefas da base de dados: %w",
 			"encodeTodayJSON": "erro ao codificar a saída de hoje para json: %w",
 			"getTaskByName": "erro ao obter a tarefa do nome providenciado: %w",
-			"updateTaskStatus":"erro ao atualizar o estado da tarefa '%v': %w",
+			"updateTaskStatus": "erro ao atualizar o estado da tarefa '%v': %w",
 			"createTaskHistory": "erro ao criar o histórico de tarefas",
 			"deleteConcludedTasks": "erro ao deletar tarefas concluídas: %w",
 			"getAllDailyTodos": "erro em getAllDailyTodos: %w",
@@ -215,9 +222,63 @@
 			"nextTab": "próxima aba",
 			"prevTab": "aba anterior",
 			"reload": "recarregar",
-			"quit": "sair"
+			"quit": "sair",
+			"top": "topo",
+			"bottom": "fim",
+			"complete": "concluir",
+			"add": "adicionar",
+			"delete": "deletar",
+			"search": "buscar",
+			"priority": "filtro de prioridade",
+			"details": "detalhes",
+			"help": "mais teclas",
+			"confirm": "confirmar",
+			"cancel": "cancelar",
+			"nextField": "próximo campo"
 		},
 		"loading": "Carregando...",
-		"empty": "Nada por aqui ainda."
+		"empty": "Nada por aqui ainda.",
+		"prompt": {
+			"notes": "Notas para %q (opcional):",
+			"delete": "Deletar %q? (s/n)",
+			"search": "Buscar:",
+			"dumpName": "Novo dump:",
+			"alreadyDone": "%q já foi concluída hoje",
+			"noSelection": "Nada selecionado"
+		},
+		"form": {
+			"title": "Nova tarefa",
+			"name": "Nome",
+			"priority": "Prioridade",
+			"daily": "Diária",
+			"date": "Prazo",
+			"nameRequired": "o nome é obrigatório",
+			"invalidPriority": "a prioridade deve ser high, medium, low ou vazia",
+			"invalidDaily": "diária deve ser s ou n",
+			"invalidDate": "a data deve ser dd ou dd/mm",
+			"desc": "Descrição",
+			"priorityHint": "high / medium / low",
+			"dailyHint": "s / n",
+			"dateHint": "dd ou dd/mm, vazio = amanhã"
+		},
+		"status": {
+			"completed": "✔ %s concluída",
+			"deleted": "%s deletada",
+			"created": "%s criada",
+			"dumpAdded": "Dump %q adicionado",
+			"filter": "filtro",
+			"priority": "prioridade"
+		},
+		"details": {
+			"expires": "Expira",
+			"priority": "Prioridade",
+			"daily": "Diária",
+			"status": "Estado",
+			"streak": "Ofensiva atual",
+			"days": "%d dia(s)",
+			"yes": "sim",
+			"no": "não",
+			"desc": "Descrição"
+		}
 	}
 }

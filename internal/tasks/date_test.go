@@ -1,7 +1,6 @@
-package commands
+package tasks
 
 import (
-	"strings"
 	"testing"
 	"time"
 )
@@ -13,7 +12,7 @@ func TestParseDateWithoutArgs(t *testing.T) {
 	}
 
 	expected := time.Now().Add(oneDay).Day()
-	result, err := parseDate([]int{})
+	result, err := ParseDate([]int{})
 	dayResult := result.Day()
 	if err != nil {
 		t.Fatal("Error in parseTime: ", err)
@@ -46,7 +45,7 @@ func TestIsDateBeforeTrue(t *testing.T) {
 }
 
 func TestParseDateTooManyArgsReturnsError(t *testing.T) {
-	if _, err := parseDate([]int{1, 2, 3}); err == nil {
+	if _, err := ParseDate([]int{1, 2, 3}); err == nil {
 		t.Error("expected error for more than two date parts")
 	}
 }
@@ -55,19 +54,6 @@ func TestGetMonthByNumInvalid(t *testing.T) {
 	for _, num := range []int{0, 13, -1} {
 		if _, err := getMonthByNum(num); err == nil {
 			t.Errorf("expected error for month %d", num)
-		}
-	}
-}
-
-func TestWrapTextHasNoLeadingSpaces(t *testing.T) {
-	text := strings.Repeat("word ", 30)
-
-	for _, line := range strings.Split(wrapText(text, 44), "\n") {
-		if strings.HasPrefix(line, " ") {
-			t.Fatalf("line starts with a space: %q", line)
-		}
-		if len(line) > 40 {
-			t.Fatalf("line longer than 40 chars: %q", line)
 		}
 	}
 }

@@ -12,12 +12,18 @@ import (
 )
 
 type fakeService struct {
-	today tasks.TodayView
-	all   []tasks.TodoView
-	daily []tasks.TodoView
-	dumps []tasks.DumpEntry
-	err   error
-	calls map[string]int
+	today  tasks.TodayView
+	all    []tasks.TodoView
+	daily  []tasks.TodoView
+	dumps  []tasks.DumpEntry
+	streak int64
+	err    error
+
+	calls     map[string]int
+	completed []string // "name|notes"
+	deleted   []string
+	added     []tasks.NewTodo
+	dumped    []string
 }
 
 func (f *fakeService) called(name string) {
@@ -47,33 +53,81 @@ func (f *fakeService) Dumps(context.Context) ([]tasks.DumpEntry, error) {
 	return f.dumps, f.err
 }
 
-// send runs msg through Update and then any command it returns, the way
-// the Bubble Tea runtime would for a single step.
-func send(t *testing.T, m Model, msg tea.Msg) Model {
+func (f *fakeService) AddTodo(_ context.Context, in tasks.NewTodo) (tasks.TodoView, error) {
+	f.added = append(f.added, in)
+	return tasks.TodoView{Name: in.Name}, nil
+}
+
+func (f *fakeService) Complete(_ context.Context, name, notes string) (tasks.TodoView, error) {
+	f.completed = append(f.completed, name+"|"+notes)
+	return tasks.TodoView{Name: name}, nil
+}
+
+func (f *fakeService) DeleteByName(_ context.Context, name string) (tasks.TodoView, error) {
+	f.deleted = append(f.deleted, name)
+	return tasks.TodoView{Name: name}, nil
+}
+
+func (f *fakeService) AddDump(_ context.Context, name string) (tasks.DumpEntry, error) {
+	f.dumped = append(f.dumped, name)
+	return tasks.DumpEntry{Name: name}, nil
+}
+
+func (f *fakeService) CurrentStreak(_ context.Context, name string) (tasks.TodoView, int64, error) {
+	f.called("streak")
+	return tasks.TodoView{Name: name}, f.streak, nil
+}
+
+// send runs msg through Update and keeps feeding back the model's own
+// messages (loads, writes, streaks), the way the runtime would. Other
+// commands, like cursor blinks, are not run.
+func send(t *testing.T, m Model, msgs ...tea.Msg) Model {
 	t.Helper()
-	next, cmd := m.Update(msg)
-	m = next.(Model)
-	if cmd != nil {
-		if out := cmd(); out != nil {
-			if _, quit := out.(tea.QuitMsg); !quit {
-				next, _ = m.Update(out)
-				m = next.(Model)
+	for _, msg := range msgs {
+		for i := 0; msg != nil && i < 5; i++ {
+			next, cmd := m.Update(msg)
+			m = next.(Model)
+			msg = nil
+			if cmd == nil {
+				break
+			}
+			switch out := runQuick(cmd).(type) {
+			case loadedMsg, actionMsg, streakMsg:
+				msg = out
 			}
 		}
 	}
 	return m
 }
 
-func start(t *testing.T, svc Service) Model {
+// runQuick runs cmd but gives up on slow ones: cursor blinks sleep for
+// half a second and never produce a message the tests care about.
+func runQuick(cmd tea.Cmd) tea.Msg {
+	ch := make(chan tea.Msg, 1)
+	go func() { ch <- cmd() }()
+	select {
+	case msg := <-ch:
+		return msg
+	case <-time.After(50 * time.Millisecond):
+		return nil
+	}
+}
+
+func start(t *testing.T, svc Service, layout string) Model {
 	t.Helper()
-	m := New(context.Background(), svc)
+	m := newModel(context.Background(), svc, layout)
 	return send(t, m, m.Init()())
 }
 
+func runes(s string) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)} }
+
 var (
-	keyDown = tea.KeyMsg{Type: tea.KeyDown}
-	keyUp   = tea.KeyMsg{Type: tea.KeyUp}
-	keyTab  = tea.KeyMsg{Type: tea.KeyTab}
+	keyDown  = tea.KeyMsg{Type: tea.KeyDown}
+	keyUp    = tea.KeyMsg{Type: tea.KeyUp}
+	keyTab   = tea.KeyMsg{Type: tea.KeyTab}
+	keyEnter = tea.KeyMsg{Type: tea.KeyEnter}
+	keyEsc   = tea.KeyMsg{Type: tea.KeyEsc}
+	keySpace = tea.KeyMsg{Type: tea.KeySpace, Runes: []rune(" ")}
 )
 
 func todo(name string) tasks.TodoView {
@@ -86,15 +140,14 @@ func TestTodayTabLoadsSectionsAndSkipsHeaders(t *testing.T) {
 		ExpiringSoon: []tasks.TodoView{todo("soon")},
 	}}
 
-	m := start(t, svc)
-	st := m.tabs[tabToday]
+	m := start(t, svc, KeymapDefault)
 
 	// header, late, header, soon
-	if len(st.rows) != 4 {
-		t.Fatalf("expected 4 rows, got %d", len(st.rows))
+	if got := len(m.rows()); got != 4 {
+		t.Fatalf("expected 4 rows, got %d", got)
 	}
-	if st.cursor != 1 {
-		t.Fatalf("cursor should start on the first task, got %d", st.cursor)
+	if got := m.tabs[tabToday].cursor; got != 1 {
+		t.Fatalf("cursor should start on the first task, got %d", got)
 	}
 
 	m = send(t, m, keyDown)
@@ -120,49 +173,228 @@ func TestTodayTabLoadsSectionsAndSkipsHeaders(t *testing.T) {
 	}
 }
 
+func TestVimKeysOnlyInVimLayout(t *testing.T) {
+	svc := &fakeService{all: []tasks.TodoView{todo("a"), todo("b"), todo("c")}}
+
+	def := send(t, start(t, svc, KeymapDefault), keyTab, runes("j"))
+	if got := def.tabs[tabAll].cursor; got != 0 {
+		t.Fatalf("j should do nothing in the default layout, cursor %d", got)
+	}
+
+	vim := send(t, start(t, svc, KeymapVim), keyTab, runes("j"), runes("j"))
+	if got := vim.tabs[tabAll].cursor; got != 2 {
+		t.Fatalf("j should move down in the vim layout, cursor %d", got)
+	}
+
+	vim = send(t, vim, runes("g"))
+	if got := vim.tabs[tabAll].cursor; got != 0 {
+		t.Fatalf("g should jump to the top, cursor %d", got)
+	}
+
+	// arrows keep working with vim on
+	vim = send(t, vim, keyDown)
+	if got := vim.tabs[tabAll].cursor; got != 1 {
+		t.Fatalf("down arrow should still work, cursor %d", got)
+	}
+}
+
 func TestTabSwitchLoadsOnce(t *testing.T) {
 	svc := &fakeService{all: []tasks.TodoView{todo("a"), todo("b")}}
 
-	m := start(t, svc)
+	m := start(t, svc, KeymapDefault)
 	m = send(t, m, keyTab)
 
-	if m.active != tabAll {
-		t.Fatalf("expected All tab, got %v", m.active)
-	}
-	if len(m.tabs[tabAll].rows) != 2 {
-		t.Fatalf("expected All tab loaded with 2 rows, got %d", len(m.tabs[tabAll].rows))
+	if m.active != tabAll || len(m.rows()) != 2 {
+		t.Fatalf("expected All tab loaded with 2 rows, got tab %v with %d rows", m.active, len(m.rows()))
 	}
 
-	// back to Today and forward again: All is already loaded
-	m = send(t, m, tea.KeyMsg{Type: tea.KeyShiftTab})
-	m = send(t, m, keyTab)
+	m = send(t, m, tea.KeyMsg{Type: tea.KeyShiftTab}, keyTab)
 	if svc.calls["all"] != 1 {
 		t.Fatalf("All tab should load once, loaded %d times", svc.calls["all"])
 	}
 
-	m = send(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
+	send(t, m, runes("r"))
 	if svc.calls["all"] != 2 {
 		t.Fatalf("reload should fetch again, loaded %d times", svc.calls["all"])
 	}
 }
 
+func TestCompleteAsksForNotes(t *testing.T) {
+	svc := &fakeService{all: []tasks.TodoView{todo("taxes")}}
+	m := send(t, start(t, svc, KeymapDefault), keyTab)
+
+	m = send(t, m, keySpace)
+	if m.mode != modeNotes {
+		t.Fatalf("space should open the notes prompt, mode %v", m.mode)
+	}
+
+	m = send(t, m, runes("paid"), keyEnter)
+	if len(svc.completed) != 1 || svc.completed[0] != "taxes|paid" {
+		t.Fatalf("expected taxes completed with notes, got %v", svc.completed)
+	}
+	if m.mode != modeNormal || !strings.Contains(m.status, "taxes") {
+		t.Fatalf("expected normal mode and a status, got mode %v status %q", m.mode, m.status)
+	}
+	if svc.calls["all"] != 2 {
+		t.Fatalf("a write should reload the active tab, loaded %d times", svc.calls["all"])
+	}
+}
+
+func TestCompleteCanBeCancelled(t *testing.T) {
+	svc := &fakeService{all: []tasks.TodoView{todo("taxes")}}
+	m := send(t, start(t, svc, KeymapDefault), keyTab, keySpace, keyEsc)
+
+	if m.mode != modeNormal || len(svc.completed) != 0 {
+		t.Fatalf("esc should cancel, mode %v completed %v", m.mode, svc.completed)
+	}
+}
+
+func TestCompleteSkipsDoneTasks(t *testing.T) {
+	done := todo("taxes")
+	done.Concluded = true
+	svc := &fakeService{all: []tasks.TodoView{done}}
+
+	m := send(t, start(t, svc, KeymapDefault), keyTab, keySpace)
+	if m.mode != modeNormal || !strings.Contains(m.status, "taxes") {
+		t.Fatalf("done task should only show a status, mode %v status %q", m.mode, m.status)
+	}
+}
+
+func TestDeleteNeedsConfirmation(t *testing.T) {
+	svc := &fakeService{all: []tasks.TodoView{todo("taxes")}}
+	m := send(t, start(t, svc, KeymapDefault), keyTab)
+
+	m = send(t, m, runes("x"), runes("n"))
+	if len(svc.deleted) != 0 || m.mode != modeNormal {
+		t.Fatalf("n should cancel the delete, deleted %v", svc.deleted)
+	}
+
+	m = send(t, m, runes("x"))
+	if !strings.Contains(m.View(), "taxes") || m.mode != modeConfirmDelete {
+		t.Fatalf("x should ask for confirmation")
+	}
+
+	send(t, m, runes("y"))
+	if len(svc.deleted) != 1 || svc.deleted[0] != "taxes" {
+		t.Fatalf("y should delete taxes, deleted %v", svc.deleted)
+	}
+}
+
+func TestAddTodoForm(t *testing.T) {
+	svc := &fakeService{}
+	m := send(t, start(t, svc, KeymapDefault), runes("a"))
+	if m.mode != modeAddTodo {
+		t.Fatalf("a should open the form, mode %v", m.mode)
+	}
+
+	// name, description, priority (invalid), daily, date
+	m = send(t, m, runes("write"), keyEnter, keyEnter, runes("urgent"), keyEnter, runes("y"), keyEnter, keyEnter)
+	if m.form.err == nil || len(svc.added) != 0 {
+		t.Fatalf("invalid priority should keep the form open with an error")
+	}
+
+	// fix the priority: back up three fields, clear it, type a valid one
+	m = send(t, m, keyUp, keyUp)
+	for range "urgent" {
+		m = send(t, m, tea.KeyMsg{Type: tea.KeyBackspace})
+	}
+	m = send(t, m, runes("high"), keyDown, keyDown, keyEnter)
+
+	if len(svc.added) != 1 {
+		t.Fatalf("expected one task added, got %v (form err %v)", svc.added, m.form.err)
+	}
+	got := svc.added[0]
+	if got.Name != "write" || got.Priority != "high" || !got.IsDaily || got.ExpiresAt.Before(time.Now()) {
+		t.Fatalf("unexpected task: %+v", got)
+	}
+	if m.mode != modeNormal {
+		t.Fatalf("form should close after submit, mode %v", m.mode)
+	}
+}
+
+func TestAddDumpOnDumpTab(t *testing.T) {
+	svc := &fakeService{}
+	m := send(t, start(t, svc, KeymapDefault), tea.KeyMsg{Type: tea.KeyShiftTab})
+	if m.active != tabDump {
+		t.Fatalf("expected Dump tab, got %v", m.active)
+	}
+
+	send(t, m, runes("a"), runes("idea"), keyEnter)
+	if len(svc.dumped) != 1 || svc.dumped[0] != "idea" {
+		t.Fatalf("expected dump added, got %v", svc.dumped)
+	}
+}
+
+func TestSearchAndPriorityFilter(t *testing.T) {
+	high := todo("taxes")
+	high.Priority = "high"
+	low := todo("groceries")
+	low.Priority = "low"
+	svc := &fakeService{today: tasks.TodayView{
+		Overdue:      []tasks.TodoView{high},
+		ExpiringSoon: []tasks.TodoView{low},
+	}}
+	m := start(t, svc, KeymapDefault)
+
+	m = send(t, m, runes("/"), runes("groc"))
+	rows := m.rows()
+	if len(rows) != 2 || rows[1].todo.Name != "groceries" {
+		t.Fatalf("search should keep groceries and its header only, got %d rows", len(rows))
+	}
+	if got := m.tabs[tabToday].cursor; got != 1 {
+		t.Fatalf("cursor should move onto the match, got %d", got)
+	}
+
+	m = send(t, m, keyEnter, keyEsc)
+	if m.search != "" || len(m.rows()) != 4 {
+		t.Fatalf("esc should clear the search, search %q rows %d", m.search, len(m.rows()))
+	}
+
+	m = send(t, m, runes("p"))
+	if m.priority != "high" || len(m.rows()) != 2 || m.rows()[1].todo.Name != "taxes" {
+		t.Fatalf("p should filter by high priority, got %q with %d rows", m.priority, len(m.rows()))
+	}
+}
+
+func TestDetailsShowStreakForDaily(t *testing.T) {
+	daily := todo("read")
+	daily.IsDaily = true
+	svc := &fakeService{daily: []tasks.TodoView{daily}, streak: 7}
+
+	m := send(t, start(t, svc, KeymapDefault), keyTab, keyTab, keyEnter)
+	m.width = 100
+
+	if svc.calls["streak"] != 1 {
+		t.Fatalf("opening details should fetch the streak once, got %d", svc.calls["streak"])
+	}
+	if !strings.Contains(m.View(), "7") {
+		t.Fatalf("details should show the streak:\n%s", m.View())
+	}
+}
+
 func TestLoadErrorIsShown(t *testing.T) {
-	m := start(t, &fakeService{err: errors.New("database is locked")})
+	m := start(t, &fakeService{err: errors.New("database is locked")}, KeymapDefault)
 
 	if !strings.Contains(m.View(), "database is locked") {
 		t.Fatalf("expected error in view:\n%s", m.View())
 	}
 }
 
-func TestQuit(t *testing.T) {
-	m := start(t, &fakeService{})
+func TestQuitOnlyInNormalMode(t *testing.T) {
+	m := start(t, &fakeService{}, KeymapDefault)
 
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	_, cmd := m.Update(runes("q"))
 	if cmd == nil {
 		t.Fatal("q should return a command")
 	}
 	if _, ok := cmd().(tea.QuitMsg); !ok {
 		t.Fatal("q should quit")
+	}
+
+	// inside the search prompt q is just a letter
+	m = send(t, m, runes("/"), runes("q"))
+	if m.search != "q" {
+		t.Fatalf("q should be typed into the search, got %q", m.search)
 	}
 }
 
@@ -179,6 +411,27 @@ func TestVisibleRangeKeepsCursorOnScreen(t *testing.T) {
 		if start != c.start || end != c.end {
 			t.Errorf("visibleRange(%d, %d, %d) = %d,%d, want %d,%d",
 				c.total, c.cursor, c.height, start, end, c.start, c.end)
+		}
+	}
+}
+
+func TestDateParts(t *testing.T) {
+	cases := map[string][]int{"": nil, "5": {5}, "5/11": {5, 11}, " 7 / 12 ": {7, 12}}
+	for in, want := range cases {
+		got, err := dateParts(in)
+		if err != nil || len(got) != len(want) {
+			t.Fatalf("dateParts(%q) = %v, %v; want %v", in, got, err, want)
+		}
+		for i := range want {
+			if got[i] != want[i] {
+				t.Fatalf("dateParts(%q) = %v, want %v", in, got, want)
+			}
+		}
+	}
+
+	for _, bad := range []string{"x", "1/2/3", "5/"} {
+		if _, err := dateParts(bad); err == nil {
+			t.Errorf("dateParts(%q) should fail", bad)
 		}
 	}
 }

@@ -83,7 +83,7 @@ var add = &cobra.Command{
 			return errors.New(i18n.T("commands.error.taskName"))
 		}
 
-		expiresAt, err := parseDate(date)
+		expiresAt, err := tasks.ParseDate(date)
 		if err != nil {
 			return err
 		}
@@ -632,6 +632,44 @@ var configLanguage = &cobra.Command{
 	},
 }
 
+// configKeymap selects the TUI key layout.
+var configKeymap = &cobra.Command{
+	Use:     i18n.T("commands.commands.configKeymapUse"),
+	Short:   i18n.T("commands.commands.configKeymapShort"),
+	Aliases: []string{"k"},
+	Example: "akrasia config keymap vim\nakrasia config keymap list\nakrasia config keymap show",
+	Args:    cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+
+		switch action := args[0]; action {
+		case "list":
+			fmt.Println(i18n.T("commands.info.availableKeymaps"))
+			for _, keymap := range tui.Keymaps() {
+				fmt.Printf(" - %s\n", keymap)
+			}
+			return nil
+
+		case "show":
+			fmt.Printf(i18n.T("commands.info.currentKeymap"), tui.CurrentKeymap())
+			return nil
+
+		default:
+			if !slices.Contains(tui.Keymaps(), action) {
+				return fmt.Errorf(i18n.T("commands.error.unknownKeymap"), action, tui.Keymaps())
+			}
+
+			if err := tui.SetKeymap(action); err != nil {
+				return fmt.Errorf(i18n.T("commands.error.setKeymap"), err)
+			}
+			fmt.Printf(i18n.T("commands.info.keymapSet"), action)
+			return nil
+		}
+	},
+}
+
 // init wires subcommands, flags, and required arguments into the root command.
 func init() {
 	commands := map[string]*cobra.Command{
@@ -663,7 +701,7 @@ func init() {
 	rootCmd.SetUsageFunc(UsageFunc)
 
 	// Add subcommands to config
-	config.AddCommand(configTheme, configLanguage)
+	config.AddCommand(configTheme, configLanguage, configKeymap)
 
 	// flags for commands - add; getTodoByName; delByName; updateStatusToConcluded
 	add.Flags().IntSliceVar(&date, "date", []int{}, i18n.T("commands.flags.addDate"))

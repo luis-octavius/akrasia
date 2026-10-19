@@ -1,4 +1,4 @@
-package commands
+package tasks
 
 import (
 	"errors"
@@ -17,7 +17,10 @@ func isDateBefore(date time.Time) (bool, error) {
 	return isBefore, nil
 }
 
-func parseDate(expireDate []int) (time.Time, error) {
+// ParseDate turns the CLI date parts (day, or day and month of the current
+// year) into a due date. No parts means tomorrow; dates in the past are
+// rejected.
+func ParseDate(expireDate []int) (time.Time, error) {
 	lenDate := len(expireDate)
 	if lenDate > 2 {
 		return time.Time{}, errors.New(i18n.T("commands.error.dateNotEnoughArguments"))
