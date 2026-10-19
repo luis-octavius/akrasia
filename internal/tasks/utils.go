@@ -243,10 +243,10 @@ func printTodaySection(tkm *TaskManager, title string, todos []database.Todo) {
 	}
 }
 
-func GetTodoByName(tkm *TaskManager, name string) (database.GetTodoByNameRow, error) {
+func GetTodoByName(ctx context.Context, tkm *TaskManager, name string) (database.GetTodoByNameRow, error) {
 	loweredName := strings.ToLower(name)
 
-	todo, err := tkm.Queries.GetTodoByName(context.Background(), database.GetTodoByNameParams{
+	todo, err := tkm.Queries.GetTodoByName(ctx, database.GetTodoByNameParams{
 		Name:    loweredName,
 		Column2: sql.NullString{String: loweredName, Valid: true},
 		Column3: sql.NullString{String: loweredName, Valid: true},

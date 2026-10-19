@@ -16,8 +16,7 @@ import (
 // log. It excludes today — use `done` for that — and tags each row with
 // notes="backfilled" purely as a note to the user, not a semantic marker
 // the streak queries treat specially.
-func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) error {
-	ctx := context.Background()
+func (tkm *TaskManager) BackfillDailyHistory(ctx context.Context, daysBack int, taskName string) error {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	startDate := today.AddDate(0, 0, -daysBack)
@@ -27,7 +26,7 @@ func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) erro
 	var err error
 
 	if taskName != "" {
-		todo, err := GetTodoByName(tkm, taskName)
+		todo, err := GetTodoByName(ctx, tkm, taskName)
 		if err != nil {
 			return fmt.Errorf(i18n.T("tasks.error.findTask"), taskName, err)
 		}

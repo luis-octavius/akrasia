@@ -13,8 +13,8 @@ import (
 )
 
 // AddDump stores a named entry in the dump table and reports success.
-func (tkm *TaskManager) AddDump(name string) error {
-	_, err := tkm.Queries.AddDump(context.Background(), database.AddDumpParams{
+func (tkm *TaskManager) AddDump(ctx context.Context, name string) error {
+	_, err := tkm.Queries.AddDump(ctx, database.AddDumpParams{
 		ID:   uuid.New(),
 		Name: name,
 	})
@@ -27,8 +27,8 @@ func (tkm *TaskManager) AddDump(name string) error {
 }
 
 // GetAllDump prints every stored dump entry, oldest first.
-func (tkm *TaskManager) GetAllDump() error {
-	allDump, err := tkm.Queries.GetAllDump(context.Background())
+func (tkm *TaskManager) GetAllDump(ctx context.Context) error {
+	allDump, err := tkm.Queries.GetAllDump(ctx)
 	if err != nil {
 		return fmt.Errorf("%s: %w", i18n.T("tasks.error.getDump"), err)
 	}

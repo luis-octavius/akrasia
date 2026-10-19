@@ -89,7 +89,7 @@ var add = &cobra.Command{
 
 		isDaily, err := cmd.Flags().GetBool("daily")
 
-		err = tkm.AddTodo(taskName, taskDesc, priority, isDaily, expiresAt)
+		err = tkm.AddTodo(cmd.Context(), taskName, taskDesc, priority, isDaily, expiresAt)
 		if err != nil {
 			return err
 		}
@@ -111,7 +111,7 @@ var getAll = &cobra.Command{
 			return err
 		}
 
-		err = tkm.GetTodos(filterPriority)
+		err = tkm.GetTodos(cmd.Context(), filterPriority)
 		if err != nil {
 			return err
 		}
@@ -145,7 +145,7 @@ var today = &cobra.Command{
 			return err
 		}
 
-		err = tkm.GetTodayFocus(tasks.TodayOptions{
+		err = tkm.GetTodayFocus(cmd.Context(), tasks.TodayOptions{
 			Only:     todayOnly,
 			Limit:    todayLimit,
 			JSON:     todayJSON,
@@ -179,7 +179,7 @@ var focus = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return tkm.GetFocus(focusLimit, filterPriority)
+		return tkm.GetFocus(cmd.Context(), focusLimit, filterPriority)
 	},
 }
 
@@ -205,7 +205,7 @@ var getTodoByName = &cobra.Command{
 			return err
 		}
 
-		err = tkm.GetTodoByName(taskName)
+		err = tkm.GetTodoByName(cmd.Context(), taskName)
 		if err != nil {
 			return err
 		}
@@ -233,7 +233,7 @@ var updateStatusToConcluded = &cobra.Command{
 			taskName = args[0]
 		}
 
-		err = tkm.UpdateToConcluded(taskName, notes)
+		err = tkm.UpdateToConcluded(cmd.Context(), taskName, notes)
 		if err != nil {
 			return err
 		}
@@ -254,7 +254,7 @@ var checkExpired = &cobra.Command{
 			return err
 		}
 
-		err = tkm.CheckExpired()
+		err = tkm.CheckExpired(cmd.Context())
 		if err != nil {
 			return err
 		}
@@ -275,7 +275,7 @@ var checkExpiring = &cobra.Command{
 			return err
 		}
 
-		err = tkm.CheckExpiring()
+		err = tkm.CheckExpiring(cmd.Context())
 		if err != nil {
 			return err
 		}
@@ -341,7 +341,7 @@ var getAllDaily = &cobra.Command{
 			return err
 		}
 
-		err = tkm.GetAllDailyTodos()
+		err = tkm.GetAllDailyTodos(cmd.Context())
 		if err != nil {
 			return err
 		}
@@ -368,7 +368,7 @@ var getTodoCurrentStreak = &cobra.Command{
 			taskName = args[0]
 		}
 
-		err = tkm.GetCurrentStreak(taskName)
+		err = tkm.GetCurrentStreak(cmd.Context(), taskName)
 		if err != nil {
 			return err
 		}
@@ -393,7 +393,7 @@ var getTodoStreakHistory = &cobra.Command{
 			taskName = args[0]
 		}
 
-		err = tkm.GetStreakHistory(taskName)
+		err = tkm.GetStreakHistory(cmd.Context(), taskName)
 		if err != nil {
 			return err
 		}
@@ -423,7 +423,7 @@ var debugTask = &cobra.Command{
 			return errors.New(i18n.T("commands.error.emptyName"))
 		}
 
-		return tkm.DebugTask(taskName)
+		return tkm.DebugTask(cmd.Context(), taskName)
 	},
 }
 
@@ -439,7 +439,7 @@ var backfillHistory = &cobra.Command{
 			return err
 		}
 
-		err = tkm.BackfillDailyHistory(daysBackfill, name)
+		err = tkm.BackfillDailyHistory(cmd.Context(), daysBackfill, name)
 		if err != nil {
 			return err
 		}
@@ -466,10 +466,10 @@ var dumpCmd = &cobra.Command{
 		}
 
 		if dumpName == "" {
-			return tkm.GetAllDump()
+			return tkm.GetAllDump(cmd.Context())
 		}
 
-		return tkm.AddDump(dumpName)
+		return tkm.AddDump(cmd.Context(), dumpName)
 	},
 }
 

@@ -9,13 +9,13 @@ import (
 )
 
 // getCurrentStreak prints the current streak count for a named task.
-func (tkm *TaskManager) GetCurrentStreak(name string) error {
-	todo, err := GetTodoByName(tkm, name)
+func (tkm *TaskManager) GetCurrentStreak(ctx context.Context, name string) error {
+	todo, err := GetTodoByName(ctx, tkm, name)
 	if err != nil {
 		return err
 	}
 
-	streak, err := tkm.Queries.GetCurrentStreak(context.Background(), database.GetCurrentStreakParams{
+	streak, err := tkm.Queries.GetCurrentStreak(ctx, database.GetCurrentStreakParams{
 		TodoID: todo.ID,
 		ID:     todo.ID,
 	})
@@ -28,13 +28,13 @@ func (tkm *TaskManager) GetCurrentStreak(name string) error {
 }
 
 // getStreakHistory prints historical streak intervals for a named task.
-func (tkm *TaskManager) GetStreakHistory(name string) error {
-	todo, err := GetTodoByName(tkm, name)
+func (tkm *TaskManager) GetStreakHistory(ctx context.Context, name string) error {
+	todo, err := GetTodoByName(ctx, tkm, name)
 	if err != nil {
 		return err
 	}
 
-	streak_history, err := tkm.Queries.GetStreakHistory(context.Background(), database.GetStreakHistoryParams{
+	streak_history, err := tkm.Queries.GetStreakHistory(ctx, database.GetStreakHistoryParams{
 		TodoID: todo.ID,
 		ID:     todo.ID,
 	})

@@ -12,21 +12,21 @@ import (
 )
 
 // updateToConcluded marks a task as done and writes an entry to history.
-func (tkm *TaskManager) UpdateToConcluded(name, notes string) error {
-	todo, err := GetTodoByName(tkm, name)
+func (tkm *TaskManager) UpdateToConcluded(ctx context.Context, name, notes string) error {
+	todo, err := GetTodoByName(ctx, tkm, name)
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.updateTaskStatus"), name, err)
 	}
 
 	// only updates status to concluded if is not a daily task
 	if !todo.IsDaily {
-		_, err = tkm.Queries.UpdateTodoStatusById(context.Background(), todo.ID)
+		_, err = tkm.Queries.UpdateTodoStatusById(ctx, todo.ID)
 		if err != nil {
 			return fmt.Errorf(i18n.T("tasks.error.updateTaskStatus"), name, err)
 		}
 	}
 
-	_, err = tkm.Queries.AddTodoHistory(context.Background(), database.AddTodoHistoryParams{
+	_, err = tkm.Queries.AddTodoHistory(ctx, database.AddTodoHistoryParams{
 		ID:          uuid.New(),
 		TodoID:      todo.ID,
 		Completed:   sql.NullBool{Bool: true, Valid: true},

@@ -14,10 +14,8 @@ import (
 // falls inside that window, and the resulting streak. It exists so that
 // "why is my streak N?" can be answered by looking at the database instead
 // of guessing.
-func (tkm *TaskManager) DebugTask(name string) error {
-	ctx := context.Background()
-
-	todo, err := GetTodoByName(tkm, name)
+func (tkm *TaskManager) DebugTask(ctx context.Context, name string) error {
+	todo, err := GetTodoByName(ctx, tkm, name)
 	if err != nil {
 		return err
 	}

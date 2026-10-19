@@ -9,8 +9,8 @@ import (
 )
 
 // checkExpired prints expired non-daily tasks.
-func (tkm *TaskManager) CheckExpired() error {
-	todos, err := tkm.Queries.CheckExpired(context.Background())
+func (tkm *TaskManager) CheckExpired(ctx context.Context) error {
+	todos, err := tkm.Queries.CheckExpired(ctx)
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.checkExpiredTasks"), err)
 	}
@@ -29,8 +29,8 @@ func (tkm *TaskManager) CheckExpired() error {
 }
 
 // checkExpiring prints tasks that expire within the configured warning window.
-func (tkm *TaskManager) CheckExpiring() error {
-	todos, err := tkm.Queries.GetTodos(context.Background())
+func (tkm *TaskManager) CheckExpiring(ctx context.Context) error {
+	todos, err := tkm.Queries.GetTodos(ctx)
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.checkExpiringTasks"), err)
 	}
@@ -53,8 +53,8 @@ func (tkm *TaskManager) CheckExpiring() error {
 	return nil
 }
 
-func (tkm *TaskManager) CheckIfTodoIsDoneToday(id interface{}) (bool, error) {
-	isDoneToday, err := tkm.Queries.IsDoneToday(context.Background(), id)
+func (tkm *TaskManager) CheckIfTodoIsDoneToday(ctx context.Context, id interface{}) (bool, error) {
+	isDoneToday, err := tkm.Queries.IsDoneToday(ctx, id)
 	if err != nil {
 		return false, fmt.Errorf(i18n.T("tasks.error.findTask"), id, err)
 	}

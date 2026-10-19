@@ -12,14 +12,14 @@ import (
 )
 
 // getTodayFocus builds and prints the daily dashboard, or JSON when requested.
-func (tkm *TaskManager) GetTodayFocus(opts TodayOptions) error {
-	todos, err := tkm.Queries.GetTodos(context.Background())
+func (tkm *TaskManager) GetTodayFocus(ctx context.Context, opts TodayOptions) error {
+	todos, err := tkm.Queries.GetTodos(ctx)
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.getTaskDatabase"), err)
 	}
 
 	todos = filterTodosByPriority(todos, opts.Priority)
-	doneToday, err := tkm.doneTodaySet()
+	doneToday, err := tkm.doneTodaySet(ctx)
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.getTaskDatabase"), err)
 	}
@@ -52,14 +52,14 @@ func (tkm *TaskManager) GetTodayFocus(opts TodayOptions) error {
 }
 
 // getFocus returns the top actionable items across today sections.
-func (tkm *TaskManager) GetFocus(limit int, priorityFilter string) error {
-	todos, err := tkm.Queries.GetTodos(context.Background())
+func (tkm *TaskManager) GetFocus(ctx context.Context, limit int, priorityFilter string) error {
+	todos, err := tkm.Queries.GetTodos(ctx)
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.getTaskDatabase"), err)
 	}
 
 	todos = filterTodosByPriority(todos, priorityFilter)
-	doneToday, err := tkm.doneTodaySet()
+	doneToday, err := tkm.doneTodaySet(ctx)
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.getTaskDatabase"), err)
 	}

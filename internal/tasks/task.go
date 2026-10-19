@@ -22,8 +22,8 @@ var (
 // completed today, daily or not. This replaces reading todos.concluded for
 // daily tasks, since that flag is no longer reset by anything — the only
 // source of truth for "did I do this today" is todos_history itself.
-func (tkm *TaskManager) doneTodaySet() (map[string]bool, error) {
-	ids, err := tkm.Queries.GetDoneTodayIDs(context.Background())
+func (tkm *TaskManager) doneTodaySet(ctx context.Context) (map[string]bool, error) {
+	ids, err := tkm.Queries.GetDoneTodayIDs(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -37,11 +37,11 @@ func (tkm *TaskManager) doneTodaySet() (map[string]bool, error) {
 }
 
 // addTodo persists a new task record and prints success feedback.
-func (tkm *TaskManager) AddTodo(name, description, priority string, isDaily bool, expiresAt time.Time) error {
+func (tkm *TaskManager) AddTodo(ctx context.Context, name, description, priority string, isDaily bool, expiresAt time.Time) error {
 	descriptionField := validateDescription(description)
 	now := time.Now()
 
-	_, err := tkm.Queries.AddTodo(context.Background(), database.AddTodoParams{
+	_, err := tkm.Queries.AddTodo(ctx, database.AddTodoParams{
 		ID:           uuid.New(),
 		Name:         name,
 		Description:  descriptionField,
@@ -63,8 +63,8 @@ func (tkm *TaskManager) AddTodo(name, description, priority string, isDaily bool
 }
 
 // getTodos lists all tasks, optionally filtered by priority.
-func (tkm *TaskManager) GetTodos(priorityFilter string) error {
-	todos, err := tkm.ListTodos(context.Background(), priorityFilter)
+func (tkm *TaskManager) GetTodos(ctx context.Context, priorityFilter string) error {
+	todos, err := tkm.ListTodos(ctx, priorityFilter)
 	if err != nil {
 		return err
 	}
@@ -109,8 +109,8 @@ func (tkm *TaskManager) listTodoViews(ctx context.Context, keep func(TodoView) b
 }
 
 // getTodoByName retrieves and prints a single task by fuzzy name search.
-func (tkm *TaskManager) GetTodoByName(name string) error {
-	todo, err := GetTodoByName(tkm, name)	
+func (tkm *TaskManager) GetTodoByName(ctx context.Context, name string) error {
+	todo, err := GetTodoByName(ctx, tkm, name)	
 
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.getTaskByName"), err)
@@ -122,8 +122,8 @@ func (tkm *TaskManager) GetTodoByName(name string) error {
 }
 
 // getAllDailyTodos lists every task marked as daily, with today's status.
-func (tkm *TaskManager) GetAllDailyTodos() error {
-	todos, err := tkm.DailyTodos(context.Background())
+func (tkm *TaskManager) GetAllDailyTodos(ctx context.Context) error {
+	todos, err := tkm.DailyTodos(ctx)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (tkm *TaskManager) DailyTodos(ctx context.Context) ([]TodoView, error) {
 
 // deleteByName removes one task identified by name.
 func (tkm *TaskManager) DeleteByName(ctx context.Context, name string) error {
-	todo, err := GetTodoByName(tkm, name)
+	todo, err := GetTodoByName(ctx, tkm, name)
 	if err != nil {
 		return fmt.Errorf(i18n.T("tasks.error.getTodoByName"), err)
 	}
