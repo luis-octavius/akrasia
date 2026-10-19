@@ -48,7 +48,7 @@
 			"notesExample": "akrasia notes \"Estudar Rust\"\nakrasia notes rust --limit 7"
 		},
 		"flags": {
-			"addDate": "add date to task (dd,mm)",
+			"addDate": "due date: dd, dd,mm or dd,mm,yyyy (default: tomorrow)",
 			"addName": "task name",
 			"addPriority": "task priority (high|medium|low)",
 			"addDaily": "daily task",
@@ -76,7 +76,7 @@
 			"editDescription": "new description (\"\" clears it)",
 			"editPriority": "new priority (high|medium|low, \"\" clears it)",
 			"editDaily": "make the task daily (true) or one-off (false)",
-			"editDate": "new due date (dd or dd,mm)",
+			"editDate": "new due date: dd, dd,mm or dd,mm,yyyy",
 			"notesLimit": "how many days to show (0 = all)"
 		},
 		"cobra": {
@@ -120,12 +120,13 @@
 			"setLanguage": "failed to set language: %w",
 			"tkmNotFound": "task manager not found",
 			"error": "Error: %v",
-			"dateBeforeNow": "date %v is before right now - put a valid date",
-			"dateNotEnoughArguments": "Not enough arguments in date",
+			"dateBeforeNow": "%s is in the past; use today or a later date",
+			"dateNotEnoughArguments": "a date is dd, dd,mm or dd,mm,yyyy",
 			"invalidMonthNumber": "month number is not between 1 and 12",
 			"unknownKeymap": "unknown keymap: %q (available: %v)",
 			"setKeymap": "failed to set keymap: %w",
-			"nothingToEdit": "nothing to change: pass at least one of --name, --desc, --priority, --daily or --date"
+			"nothingToEdit": "nothing to change: pass at least one of --name, --desc, --priority, --daily or --date",
+			"invalidDay": "day %d does not exist in %02d/%d"
 		}
 	},
 	"db": {
@@ -288,11 +289,11 @@
 			"nameRequired": "name is required",
 			"invalidPriority": "priority must be high, medium, low or empty",
 			"invalidDaily": "daily must be y or n",
-			"invalidDate": "date must be dd or dd/mm",
+			"invalidDate": "date must be dd, dd/mm or dd/mm/yyyy",
 			"desc": "Description",
 			"priorityHint": "high / medium / low",
 			"dailyHint": "y / n",
-			"dateHint": "dd or dd/mm, empty = tomorrow",
+			"dateHint": "dd, dd/mm or dd/mm/yyyy; empty = tomorrow",
 			"editTitle": "Edit task"
 		},
 		"status": {

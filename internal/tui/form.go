@@ -57,7 +57,7 @@ func newEditForm(width int, todo tasks.TodoView) todoForm {
 	f := newTodoForm(width)
 	f.editing = &todo
 
-	daily, date := "n", todo.ExpiresAt.Format("02/01")
+	daily, date := "n", todo.ExpiresAt.Format("02/01/2006")
 	if todo.IsDaily {
 		daily, date = "y", ""
 	}
@@ -212,7 +212,8 @@ func parseDueDate(s string) (time.Time, error) {
 	return tasks.ParseDate(parts)
 }
 
-// dateParts turns "dd" or "dd/mm" into the parts tasks.ParseDate expects.
+// dateParts turns "dd", "dd/mm" or "dd/mm/yyyy" into the parts
+// tasks.ParseDate expects.
 func dateParts(s string) ([]int, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -220,7 +221,7 @@ func dateParts(s string) ([]int, error) {
 	}
 
 	fields := strings.Split(s, "/")
-	if len(fields) > 2 {
+	if len(fields) > 3 {
 		return nil, errors.New(i18n.T("tui.form.invalidDate"))
 	}
 

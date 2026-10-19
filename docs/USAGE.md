@@ -33,10 +33,14 @@ Task Morning run created successfully!
 akrasia add --name "Read 30min" --daily
 Task Read 30min created successfully!
 
-# --date takes the day (this month) or day,month (this year); without it the
-# task is due tomorrow
+# --date takes the day (this month), day,month (this year) or
+# day,month,year; without it the task is due tomorrow. Today is allowed,
+# past days are not.
 akrasia add "Pay electricity bill" --priority medium --date 21,10
 Task Pay electricity bill created successfully!
+
+akrasia add "Trip to Lisbon" --date 5,1,2027
+Task Trip to Lisbon created successfully!
 ```
 
 ### Completing tasks

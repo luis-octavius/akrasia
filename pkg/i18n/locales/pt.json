@@ -48,7 +48,7 @@
 			"notesExample": "akrasia notes \"Estudar Rust\"\nakrasia notes rust --limit 7"
 		},
 		"flags": {
-			"addDate": "adicionar data para a tarefa (dd,mm)",
+			"addDate": "prazo: dd, dd,mm ou dd,mm,aaaa (padrão: amanhã)",
 			"addName": "nome da tarefa",
 			"addPriority": "prioridade da tarefa (high|medium|low)",
 			"addDaily": "tarefa diária",
@@ -76,7 +76,7 @@
 			"editDescription": "nova descrição (\"\" apaga)",
 			"editPriority": "nova prioridade (high|medium|low, \"\" apaga)",
 			"editDaily": "tornar a tarefa diária (true) ou única (false)",
-			"editDate": "novo prazo (dd ou dd,mm)",
+			"editDate": "novo prazo: dd, dd,mm ou dd,mm,aaaa",
 			"notesLimit": "quantos dias mostrar (0 = todos)"
 		},
 		"cobra": {
@@ -120,12 +120,13 @@
 			"setLanguage": "falha ao definir a linguagem: %w",
 			"tkmNotFound": "gerenciador de tarefas não foi encontrado",
 			"error": "Erro: %v",
-			"dateBeforeNow": "Data %v está antes da atual - coloque uma data válida",
-			"dateNotEnoughArguments": "Argumentos insuficientes na data",
+			"dateBeforeNow": "%s já passou; use hoje ou uma data futura",
+			"dateNotEnoughArguments": "uma data é dd, dd,mm ou dd,mm,aaaa",
 			"invalidMonthNumber": "Número do mês não está entre 1 e 12",
 			"unknownKeymap": "keymap desconhecido: %q (disponíveis: %v)",
 			"setKeymap": "falha ao definir o keymap: %w",
-			"nothingToEdit": "nada para alterar: use ao menos um de --name, --desc, --priority, --daily ou --date"
+			"nothingToEdit": "nada para alterar: use ao menos um de --name, --desc, --priority, --daily ou --date",
+			"invalidDay": "o dia %d não existe em %02d/%d"
 		}
 	},
 	"db": {
@@ -288,11 +289,11 @@
 			"nameRequired": "o nome é obrigatório",
 			"invalidPriority": "a prioridade deve ser high, medium, low ou vazia",
 			"invalidDaily": "diária deve ser s ou n",
-			"invalidDate": "a data deve ser dd ou dd/mm",
+			"invalidDate": "a data deve ser dd, dd/mm ou dd/mm/aaaa",
 			"desc": "Descrição",
 			"priorityHint": "high / medium / low",
 			"dailyHint": "s / n",
-			"dateHint": "dd ou dd/mm, vazio = amanhã",
+			"dateHint": "dd, dd/mm ou dd/mm/aaaa; vazio = amanhã",
 			"editTitle": "Editar tarefa"
 		},
 		"status": {

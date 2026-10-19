@@ -80,8 +80,8 @@ Available Commands:
 
 | Command | Flags |
 | --- | --- |
-| `add` | `--desc`, `--priority high\|medium\|low`, `--daily`, `--date dd` or `--date dd,mm` (default: tomorrow), `--name` (instead of the positional name) |
-| `edit` | `--name`, `--desc` (`""` clears it), `--priority` (`""` clears it), `--daily=true\|false`, `--date dd` or `--date dd,mm`; only the flags you pass are changed |
+| `add` | `--desc`, `--priority high\|medium\|low`, `--daily`, `--date dd`, `--date dd,mm` or `--date dd,mm,yyyy` (default: tomorrow), `--name` (instead of the positional name) |
+| `edit` | `--name`, `--desc` (`""` clears it), `--priority` (`""` clears it), `--daily=true\|false`, `--date dd`, `dd,mm` or `dd,mm,yyyy`; only the flags you pass are changed |
 | `today` | `--only overdue\|today\|daily\|soon`, `--limit N`, `--priority`, `--json` |
 | `focus` | `--limit 1-3` (default 3), `--priority` |
 | `get-all` | `--priority` |

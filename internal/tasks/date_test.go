@@ -5,48 +5,59 @@ import (
 	"time"
 )
 
-func TestParseDateWithoutArgs(t *testing.T) {
-	oneDay, err := time.ParseDuration("24h")
+// now is a fixed "today" in a non-UTC zone, to catch dates built in UTC.
+var dateTestNow = time.Date(2026, time.December, 10, 15, 30, 0, 0, time.FixedZone("BRT", -3*60*60))
+
+func TestParseDateAt(t *testing.T) {
+	loc := dateTestNow.Location()
+	cases := []struct {
+		parts []int
+		want  time.Time
+	}{
+		{[]int{20}, time.Date(2026, time.December, 20, 0, 0, 0, 0, loc)},
+		{[]int{10}, time.Date(2026, time.December, 10, 0, 0, 0, 0, loc)}, // today is allowed
+		{[]int{31, 12}, time.Date(2026, time.December, 31, 0, 0, 0, 0, loc)},
+		{[]int{5, 1, 2027}, time.Date(2027, time.January, 5, 0, 0, 0, 0, loc)},
+		{[]int{5, 1, 27}, time.Date(2027, time.January, 5, 0, 0, 0, 0, loc)}, // two-digit year
+		{[]int{29, 2, 2028}, time.Date(2028, time.February, 29, 0, 0, 0, 0, loc)},
+	}
+	for _, c := range cases {
+		got, err := ParseDateAt(c.parts, dateTestNow)
+		if err != nil {
+			t.Errorf("ParseDateAt(%v) error = %v", c.parts, err)
+			continue
+		}
+		if !got.Equal(c.want) || got.Location() != loc {
+			t.Errorf("ParseDateAt(%v) = %v, want %v (local midnight)", c.parts, got, c.want)
+		}
+	}
+}
+
+func TestParseDateAtRejects(t *testing.T) {
+	cases := map[string][]int{
+		"past day":         {9},
+		"past month":       {5, 1},
+		"past year":        {5, 1, 2026},
+		"non-existent day": {31, 2, 2027},
+		"not a leap year":  {29, 2, 2027},
+		"day zero":         {0, 12},
+		"bad month":        {1, 13},
+		"too many parts":   {1, 2, 2027, 4},
+	}
+	for name, parts := range cases {
+		if _, err := ParseDateAt(parts, dateTestNow); err == nil {
+			t.Errorf("%s: ParseDateAt(%v) should fail", name, parts)
+		}
+	}
+}
+
+func TestParseDateWithoutPartsIsTomorrow(t *testing.T) {
+	got, err := ParseDateAt(nil, dateTestNow)
 	if err != nil {
-		t.Fatal("Error parsing duration: ", err)
+		t.Fatalf("ParseDateAt(nil) error = %v", err)
 	}
-
-	expected := time.Now().Add(oneDay).Day()
-	result, err := ParseDate([]int{})
-	dayResult := result.Day()
-	if err != nil {
-		t.Fatal("Error in parseTime: ", err)
-	}
-
-	if expected != dayResult {
-		t.Errorf("expected %v, got %v", expected, dayResult)
-	}
-}
-
-func TestIsDateBeforeFalse(t *testing.T) {
-	date := time.Now().AddDate(0, 0, 7)
-
-	isBefore, _ := isDateBefore(date)
-
-	if isBefore {
-		t.Errorf("expected %v to be %v", date, false)
-	}
-}
-
-func TestIsDateBeforeTrue(t *testing.T) {
-	date := time.Date(2025, time.September, 03, 0, 0, 0, 0, time.UTC)
-
-	isBefore, _ := isDateBefore(date)
-
-	if !isBefore {
-		t.Errorf("expected %v to be %v", date, true)
-	}
-
-}
-
-func TestParseDateTooManyArgsReturnsError(t *testing.T) {
-	if _, err := ParseDate([]int{1, 2, 3}); err == nil {
-		t.Error("expected error for more than two date parts")
+	if !got.Equal(dateTestNow.AddDate(0, 0, 1)) {
+		t.Errorf("no date should mean tomorrow, got %v", got)
 	}
 }
 

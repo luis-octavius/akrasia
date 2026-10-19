@@ -38,8 +38,19 @@ All notable changes to Akrasia are documented here. The format follows
   the CLI prints one. `esc`, `enter` or `q` close it; other keys are
   ignored while it is open. `Q` shows a quote at any time.
 
+- **Years in due dates.** `--date dd,mm,yyyy` in `add` and `edit`, and
+  `dd/mm/yyyy` in the TUI form (a two-digit year means 20yy). The edit form
+  prefills the full date.
+
 ### Fixed
 
+- Due dates are set at local midnight instead of UTC midnight. Before, a
+  task due on the 21st showed up as due on the 20th in timezones behind
+  UTC (like São Paulo).
+- A due date of today is accepted; before, it was rejected as "in the
+  past".
+- Days that don't exist (31/02, 29/02 outside leap years) are rejected
+  instead of silently becoming a day in the next month.
 - TUI: a details panel taller than the screen is cut instead of pushing
   the status bar and help out of view.
 

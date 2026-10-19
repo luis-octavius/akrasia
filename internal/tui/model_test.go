@@ -468,7 +468,7 @@ func TestVisibleRangeKeepsCursorOnScreen(t *testing.T) {
 }
 
 func TestDateParts(t *testing.T) {
-	cases := map[string][]int{"": nil, "5": {5}, "5/11": {5, 11}, " 7 / 12 ": {7, 12}}
+	cases := map[string][]int{"": nil, "5": {5}, "5/11": {5, 11}, " 7 / 12 ": {7, 12}, "5/1/2027": {5, 1, 2027}}
 	for in, want := range cases {
 		got, err := dateParts(in)
 		if err != nil || len(got) != len(want) {
@@ -481,7 +481,7 @@ func TestDateParts(t *testing.T) {
 		}
 	}
 
-	for _, bad := range []string{"x", "1/2/3", "5/"} {
+	for _, bad := range []string{"x", "1/2/3/4", "5/"} {
 		if _, err := dateParts(bad); err == nil {
 			t.Errorf("dateParts(%q) should fail", bad)
 		}
