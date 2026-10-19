@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 )
 
@@ -119,15 +119,15 @@ func start(t *testing.T, svc Service, layout string) Model {
 	return send(t, m, m.Init()())
 }
 
-func runes(s string) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)} }
+func runes(s string) tea.KeyPressMsg { return tea.KeyPressMsg{Code: []rune(s)[0], Text: s} }
 
 var (
-	keyDown  = tea.KeyMsg{Type: tea.KeyDown}
-	keyUp    = tea.KeyMsg{Type: tea.KeyUp}
-	keyTab   = tea.KeyMsg{Type: tea.KeyTab}
-	keyEnter = tea.KeyMsg{Type: tea.KeyEnter}
-	keyEsc   = tea.KeyMsg{Type: tea.KeyEsc}
-	keySpace = tea.KeyMsg{Type: tea.KeySpace, Runes: []rune(" ")}
+	keyDown  = tea.KeyPressMsg{Code: tea.KeyDown}
+	keyUp    = tea.KeyPressMsg{Code: tea.KeyUp}
+	keyTab   = tea.KeyPressMsg{Code: tea.KeyTab}
+	keyEnter = tea.KeyPressMsg{Code: tea.KeyEnter}
+	keyEsc   = tea.KeyPressMsg{Code: tea.KeyEscape}
+	keySpace = tea.KeyPressMsg{Code: tea.KeySpace, Text: " "}
 )
 
 func todo(name string) tasks.TodoView {
@@ -165,7 +165,7 @@ func TestTodayTabLoadsSectionsAndSkipsHeaders(t *testing.T) {
 		t.Fatalf("up should skip the header back to 1, got %d", got)
 	}
 
-	view := m.View()
+	view := m.View().Content
 	for _, want := range []string{"late", "soon"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("view missing %q:\n%s", want, view)
@@ -208,7 +208,7 @@ func TestTabSwitchLoadsOnce(t *testing.T) {
 		t.Fatalf("expected All tab loaded with 2 rows, got tab %v with %d rows", m.active, len(m.rows()))
 	}
 
-	m = send(t, m, tea.KeyMsg{Type: tea.KeyShiftTab}, keyTab)
+	m = send(t, m, tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift}, keyTab)
 	if svc.calls["all"] != 1 {
 		t.Fatalf("All tab should load once, loaded %d times", svc.calls["all"])
 	}
@@ -270,7 +270,7 @@ func TestDeleteNeedsConfirmation(t *testing.T) {
 	}
 
 	m = send(t, m, runes("x"))
-	if !strings.Contains(m.View(), "taxes") || m.mode != modeConfirmDelete {
+	if !strings.Contains(m.View().Content, "taxes") || m.mode != modeConfirmDelete {
 		t.Fatalf("x should ask for confirmation")
 	}
 
@@ -296,7 +296,7 @@ func TestAddTodoForm(t *testing.T) {
 	// fix the priority: back up three fields, clear it, type a valid one
 	m = send(t, m, keyUp, keyUp)
 	for range "urgent" {
-		m = send(t, m, tea.KeyMsg{Type: tea.KeyBackspace})
+		m = send(t, m, tea.KeyPressMsg{Code: tea.KeyBackspace})
 	}
 	m = send(t, m, runes("high"), keyDown, keyDown, keyEnter)
 
@@ -314,7 +314,7 @@ func TestAddTodoForm(t *testing.T) {
 
 func TestAddDumpOnDumpTab(t *testing.T) {
 	svc := &fakeService{}
-	m := send(t, start(t, svc, KeymapDefault), tea.KeyMsg{Type: tea.KeyShiftTab})
+	m := send(t, start(t, svc, KeymapDefault), tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
 	if m.active != tabDump {
 		t.Fatalf("expected Dump tab, got %v", m.active)
 	}
@@ -367,16 +367,16 @@ func TestDetailsShowStreakForDaily(t *testing.T) {
 	if svc.calls["streak"] != 1 {
 		t.Fatalf("opening details should fetch the streak once, got %d", svc.calls["streak"])
 	}
-	if !strings.Contains(m.View(), "7") {
-		t.Fatalf("details should show the streak:\n%s", m.View())
+	if !strings.Contains(m.View().Content, "7") {
+		t.Fatalf("details should show the streak:\n%s", m.View().Content)
 	}
 }
 
 func TestLoadErrorIsShown(t *testing.T) {
 	m := start(t, &fakeService{err: errors.New("database is locked")}, KeymapDefault)
 
-	if !strings.Contains(m.View(), "database is locked") {
-		t.Fatalf("expected error in view:\n%s", m.View())
+	if !strings.Contains(m.View().Content, "database is locked") {
+		t.Fatalf("expected error in view:\n%s", m.View().Content)
 	}
 }
 

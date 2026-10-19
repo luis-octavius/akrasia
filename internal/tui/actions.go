@@ -3,9 +3,9 @@ package tui
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
@@ -13,7 +13,7 @@ import (
 // priorityCycle is the order the priority filter steps through.
 var priorityCycle = []string{"", "high", "medium", "low"}
 
-func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleNormalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	st := &m.tabs[m.active]
 	rows := m.rows()
 
@@ -60,7 +60,7 @@ func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keys.Help):
 		m.help.ShowAll = !m.help.ShowAll
 
-	case msg.Type == tea.KeyEsc:
+	case msg.String() == "esc":
 		m.search, m.priority, m.details, m.status = "", "", false, ""
 		m.clampCursor(m.active)
 	}
@@ -139,9 +139,9 @@ func (m *Model) closePrompt() {
 }
 
 // handlePromptKey drives the one-line prompts: notes, search and dump.
-func (m Model) handlePromptKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEsc:
+func (m Model) handlePromptKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
 		if m.mode == modeSearch {
 			m.search = ""
 			m.clampCursor(m.active)
@@ -149,7 +149,7 @@ func (m Model) handlePromptKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.closePrompt()
 		return m, nil
 
-	case tea.KeyEnter:
+	case "enter":
 		value, current := m.input.Value(), m.mode
 		m.closePrompt()
 
@@ -176,7 +176,7 @@ func (m Model) handlePromptKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // handleConfirmKey answers the delete confirmation. "s" is accepted too,
 // for "sim".
-func (m Model) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleConfirmKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "y", "Y", "s", "S":
 		m.mode = modeNormal
@@ -187,13 +187,13 @@ func (m Model) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleFormKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEsc:
+func (m Model) handleFormKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
 		m.mode = modeNormal
 		return m, nil
 
-	case tea.KeyEnter:
+	case "enter":
 		if !m.form.onLastField() {
 			m.form.next()
 			return m, nil
@@ -206,11 +206,11 @@ func (m Model) handleFormKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.mode = modeNormal
 		return m, m.addTodoCmd(in)
 
-	case tea.KeyTab, tea.KeyDown:
+	case "tab", "down":
 		m.form.next()
 		return m, nil
 
-	case tea.KeyShiftTab, tea.KeyUp:
+	case "shift+tab", "up":
 		m.form.prev()
 		return m, nil
 	}

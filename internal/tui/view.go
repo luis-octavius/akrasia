@@ -5,7 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
@@ -15,7 +16,14 @@ import (
 // list; below it they go under the list.
 const detailsMinWidth = 80
 
-func (m Model) View() string {
+// View renders the whole screen in the alternate screen buffer.
+func (m Model) View() tea.View {
+	v := tea.NewView(m.render())
+	v.AltScreen = true
+	return v
+}
+
+func (m Model) render() string {
 	header := m.renderTabs() + "\n"
 	footer := m.renderFooter()
 

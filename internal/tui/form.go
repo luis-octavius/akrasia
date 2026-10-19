@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
@@ -70,7 +70,7 @@ func labelWidth() int {
 
 func (f *todoForm) setWidth(width int) {
 	for i := range f.fields {
-		f.fields[i].Width = max(width-labelWidth()-8, 10)
+		f.fields[i].SetWidth(max(width-labelWidth()-8, 10))
 	}
 }
 

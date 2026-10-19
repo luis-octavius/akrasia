@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"github.com/charmbracelet/bubbles/key"
+	"charm.land/bubbles/v2/key"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
@@ -71,7 +71,7 @@ func newKeyMap(layout string) keyMap {
 			key.WithHelp(label("shift+tab/←", "h"), i18n.T("tui.help.prevTab")),
 		),
 		Complete: key.NewBinding(
-			key.WithKeys(" "),
+			key.WithKeys("space"),
 			key.WithHelp("space", i18n.T("tui.help.complete")),
 		),
 		Add: key.NewBinding(

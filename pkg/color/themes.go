@@ -2,12 +2,13 @@ package color
 
 import (
 	"encoding/json"
+	"image/color"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // Theme defines the color configuration for the application
@@ -70,7 +71,7 @@ var ansiCodes = map[string]string{
 	HiBlue: "12", HiMagenta: "13", HiCyan: "14", HiWhite: "15",
 }
 
-func colorValue(name string) (lipgloss.Color, bool) {
+func colorValue(name string) (color.Color, bool) {
 	if c, ok := ansiCodes[name]; ok {
 		return lipgloss.Color(c), true
 	}
@@ -79,18 +80,18 @@ func colorValue(name string) (lipgloss.Color, bool) {
 		return lipgloss.Color(name), true
 	}
 
-	return "", false
+	return nil, false
 }
 
-// styleFrom creates a lipgloss Style based on 
+// styleFrom creates a lipgloss Style based on
 // a ColorStyle struct
 func styleFrom(s ColorStyle) lipgloss.Style {
 	st := lipgloss.NewStyle()
 	if c, ok := colorValue(s.Fg); ok {
-		st = st.Foreground(lipgloss.Color(c))
+		st = st.Foreground(c)
 	}
 	if c, ok := colorValue(s.Bg); ok {
-		st = st.Background(lipgloss.Color(c))
+		st = st.Background(c)
 	}
 
 	for _, a := range s.Attributes {
@@ -226,6 +227,7 @@ func getPurpleTheme() *Theme {
 		},
 	}
 }
+
 // GetAvailableThemes returns a list of all available themes
 func GetAvailableThemes() []string {
 	return []string{"default", "high-contrast", "purple"}

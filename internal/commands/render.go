@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"charm.land/lipgloss/v2"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
@@ -15,7 +16,7 @@ import (
 
 // printTodo prints one task in the standard list format.
 func printTodo(todo tasks.TodoView) {
-	fmt.Println(renderTodo(todo))
+	lipgloss.Println(renderTodo(todo))
 }
 
 func printTodos(todos []tasks.TodoView) {

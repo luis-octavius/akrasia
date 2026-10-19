@@ -6,7 +6,7 @@ package tui
 import (
 	"context"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // Run starts the TUI in the alternate screen and blocks until the user
@@ -15,7 +15,7 @@ func Run(ctx context.Context, svc Service) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	p := tea.NewProgram(New(ctx, svc), tea.WithAltScreen(), tea.WithContext(ctx))
+	p := tea.NewProgram(New(ctx, svc), tea.WithContext(ctx))
 	_, err := p.Run()
 	return err
 }
