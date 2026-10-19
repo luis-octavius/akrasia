@@ -43,6 +43,19 @@ is a major version because two behaviors that scripts may rely on changed:
   bar, priority badges and gradient borders.
 - `docs/COMMANDS.md` documents the TUI keys, keymaps and themes.
 
+### Documentation
+
+- The README, quick start, usage, commands and contributing guides were
+  rewritten to match the current app:
+  - Go 1.27.1;
+  - no separate SQLite or Goose install (both are built in);
+  - `create-cron` and `delete-concluded` removed from the docs;
+  - real command output;
+  - Docker instructions;
+  - the service/render/TUI architecture for contributors.
+- The Portuguese docs (`docs/pt`) were removed; the app itself is still
+  translated to Portuguese.
+
 ### Changed
 
 - **`akrasia` with no arguments opens the TUI** instead of printing the help.
