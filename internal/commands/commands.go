@@ -37,6 +37,8 @@ var (
 	editPriority    string
 	editDaily       bool
 	editDate        []int
+
+	notesLimit int
 )
 
 // rootCmd is the CLI entrypoint that registers all Akrasia subcommands.
@@ -619,6 +621,36 @@ func editPatch(cmd *cobra.Command) (tasks.TodoPatch, error) {
 	return patch, nil
 }
 
+// notesCmd shows what was written each day a task was completed.
+var notesCmd = &cobra.Command{
+	Use:     i18n.T("commands.commands.notesUse"),
+	Short:   i18n.T("commands.commands.notesShort"),
+	Aliases: []string{"nt"},
+	Example: i18n.T("commands.commands.notesExample"),
+	Args:    cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		todo, entries, err := tkm.Notes(cmd.Context(), args[0], notesLimit)
+		if err != nil {
+			return err
+		}
+
+		var streak int64
+		if todo.IsDaily {
+			if _, streak, err = tkm.CurrentStreak(cmd.Context(), todo.Name); err != nil {
+				return err
+			}
+		}
+
+		printNotes(todo, streak, entries)
+		return nil
+	},
+}
+
 // progressCmd shows how many of today's tasks are done.
 var progressCmd = &cobra.Command{
 	Use:     "progress",
@@ -813,6 +845,7 @@ func init() {
 		"tuiCmd":                  tuiCmd,
 		"progressCmd":             progressCmd,
 		"editCmd":                 editCmd,
+		"notesCmd":                notesCmd,
 		"config":                  config,
 	}
 
@@ -847,6 +880,7 @@ func init() {
 	backfillHistory.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.backfillHistoryName"))
 	debugTask.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.debugName"))
 	dumpCmd.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.dumpName"))
+	notesCmd.Flags().IntVar(&notesLimit, "limit", 30, i18n.T("commands.flags.notesLimit"))
 	editCmd.Flags().StringVar(&editName, "name", "", i18n.T("commands.flags.editName"))
 	editCmd.Flags().StringVar(&editDescription, "desc", "", i18n.T("commands.flags.editDescription"))
 	editCmd.Flags().StringVar(&editPriority, "priority", "", i18n.T("commands.flags.editPriority"))

@@ -20,6 +20,9 @@ const (
 	defaultWidth = 80
 	// maxModalWidth caps prompts and the form on wide terminals.
 	maxModalWidth = 64
+	// detailsTextWidth wraps notes in the details pane; the pane itself
+	// clips anything wider.
+	detailsTextWidth = 40
 	// historyLimit is how many streak periods the details pane lists.
 	historyLimit = 5
 	// progressMaxWidth and progressMinWidth bound the progress bar; below
@@ -176,9 +179,22 @@ func (m Model) renderBody(width, height int) string {
 func panel(content string, focused bool, width, height int) string {
 	st := panelStyle(focused).Width(width)
 	if height > 0 {
+		// Height only pads; content taller than the box would push the
+		// rest of the screen down, so cut it to the inner height
 		st = st.Height(height)
+		content = clipLines(content, height-2)
 	}
 	return st.Render(content)
+}
+
+// clipLines keeps the first n lines of s, ending with "…" when it cut.
+func clipLines(s string, n int) string {
+	lines := strings.Split(s, "\n")
+	if n <= 0 || len(lines) <= n {
+		return s
+	}
+	lines = append(lines[:n-1], color.Muted().Render("…"))
+	return strings.Join(lines, "\n")
 }
 
 func (m Model) renderListPanel(width, height int) string {
@@ -266,7 +282,7 @@ func (m Model) renderDetails(r row) string {
 		field(i18n.T("tui.details.status"), status),
 	)
 
-	if todo.IsDaily && m.streakKnown && m.streakName == todo.Name {
+	if todo.IsDaily && m.streakKnown && m.detailsName == todo.Name {
 		days := color.Accent().Render(fmt.Sprintf(i18n.T("tui.details.days"), m.streakDays))
 		lines = append(lines, field(i18n.T("tui.details.streak"), days))
 
@@ -276,6 +292,10 @@ func (m Model) renderDetails(r row) string {
 				lines = append(lines, color.Muted().Render("• ")+fmt.Sprintf(i18n.T("tui.details.period"), p.StartDate, p.EndDate, p.Days))
 			}
 		}
+	}
+	if m.notesKnown && m.detailsName == todo.Name && len(m.detailNotes) > 0 {
+		lines = append(lines, "", color.Title().Render(i18n.T("tui.details.notes")))
+		lines = append(lines, noteLines(m.detailNotes, detailsTextWidth)...)
 	}
 	return strings.Join(lines, "\n")
 }
@@ -432,6 +452,9 @@ func (m Model) renderModal(width int) string {
 
 	case modeAddTodo:
 		return box.Render(m.renderForm())
+
+	case modeNotesView:
+		return m.renderNotesModal(box)
 	}
 	return ""
 }
@@ -509,6 +532,8 @@ func (m Model) modeLabel() string {
 		return i18n.T("tui.mode.delete")
 	case modeAddDump:
 		return i18n.T("tui.mode.dump")
+	case modeNotesView:
+		return i18n.T("tui.mode.notes")
 	case modeAddTodo:
 		if m.form.editing != nil {
 			return i18n.T("tui.mode.edit")
@@ -524,6 +549,8 @@ func (m Model) promptHelp() string {
 	switch m.mode {
 	case modeConfirmDelete:
 		return "y " + i18n.T("tui.help.confirm") + " • n/esc " + i18n.T("tui.help.cancel")
+	case modeNotesView:
+		return "↑/↓ pgup/pgdn " + i18n.T("tui.help.scroll") + " • esc " + i18n.T("tui.help.close")
 	case modeAddTodo:
 		return "tab/↓ " + i18n.T("tui.help.nextField") + " • enter " + i18n.T("tui.help.confirm") + " • esc " + i18n.T("tui.help.cancel")
 	default:

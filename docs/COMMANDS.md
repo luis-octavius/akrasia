@@ -14,7 +14,8 @@ Below the tabs, a bar shows today's progress (see `akrasia progress`).
 | `a` | new task (on the Dump tab: new dump entry) |
 | `e` | edit the selected task (the form opens prefilled; only what you change is saved) |
 | `x` | delete the selected task (asks for confirmation) |
-| `enter` | toggle the details panel (streak and streak history for daily tasks) |
+| `enter` | toggle the details panel (last notes, plus streak and streak history for daily tasks) |
+| `n` | open every note of the selected task in a scrollable window (`esc` closes) |
 | `/` | filter by name; `esc` clears it |
 | `p` | cycle the priority filter |
 | `t` | switch to the next theme and save it |
@@ -58,6 +59,7 @@ Available Commands:
      help             Help about any command
  sh  history          get the streak history of provided todo
      init             initialize akrasia app
+ nt  notes            show the notes written each day a task was completed
  pg  progress         show today's progress (tasks done out of today's tasks)
  cs  streak           get the current streak of provided todo
  td  today            show a daily focus dashboard (overdue, due today, daily pending, expiring soon)
@@ -82,7 +84,8 @@ Available Commands:
 | `today` | `--only overdue\|today\|daily\|soon`, `--limit N`, `--priority`, `--json` |
 | `focus` | `--limit 1-3` (default 3), `--priority` |
 | `get-all` | `--priority` |
-| `update-status` | `--notes "text"` (saved in the task's history for today) |
+| `update-status` | `--notes "text"` (saved in the task's history for today; completing again the same day replaces it) |
+| `notes` | `--limit N` days (default 30, `0` = all) |
 | `delete-by-name` | `--yes` (required) |
 | `backfill-history` | `--days N` (default 30), `--task <name>` (default: every daily task) |
 

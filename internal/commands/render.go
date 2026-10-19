@@ -208,6 +208,32 @@ func printBackfillReport(r tasks.BackfillReport, taskName string) {
 	}
 }
 
+// printNotes lists a task's completed days, newest first, with what was
+// written on each. streak is shown only for daily tasks.
+func printNotes(todo tasks.TodoView, streak int64, entries []tasks.NoteEntry) {
+	title := fmt.Sprintf(i18n.T("tasks.tasks.notesTitle"), todo.Name)
+	if todo.IsDaily {
+		title += color.Muted().Render(" (" + fmt.Sprintf(i18n.T("tasks.tasks.notesStreak"), streak) + ")")
+	}
+	lipgloss.Println(color.Title().Render(title))
+
+	if len(entries) == 0 {
+		color.MsgMuted(i18n.T("tasks.tasks.noNotesYet"))
+		return
+	}
+
+	for _, e := range entries {
+		text := e.Notes
+		switch {
+		case e.Backfilled:
+			text = color.Muted().Render(i18n.T("tasks.tasks.backfilled"))
+		case text == "":
+			text = color.Muted().Render(i18n.T("tasks.tasks.noNotes"))
+		}
+		lipgloss.Println(color.Accent().UnsetBold().Render(e.Date) + "  " + text)
+	}
+}
+
 func printDumps(entries []tasks.DumpEntry) {
 	if len(entries) == 0 {
 		fmt.Println(i18n.T("tasks.info.noDump"))

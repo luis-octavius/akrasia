@@ -48,6 +48,26 @@ Updated successfully
 Daily tasks count as done only for the day you complete them. One-off tasks stay
 done.
 
+### Notes
+
+Every completion can carry a note. `notes` turns them into a journal of the
+streak, newest first:
+
+```bash
+akrasia notes rust
+Notes · Estudar Rust (streak 4)
+2026-10-19  aprendi sobre funções e modos de retorno
+2026-10-18  backfilled
+2026-10-17  backfilled
+2026-10-16  backfilled
+
+akrasia notes rust --limit 2   # only the last 2 days
+```
+
+Days recorded by `backfill-history` show as "backfilled"; days completed
+without a note show "(no notes)". In the TUI, the details panel (`enter`)
+shows the last 3 notes and `n` opens all of them.
+
 ### Editing tasks
 
 ```bash

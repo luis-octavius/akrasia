@@ -46,6 +46,8 @@ func (m Model) handleNormalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.startAdd()
 	case key.Matches(msg, m.keys.Edit):
 		return m.startEdit()
+	case key.Matches(msg, m.keys.Notes):
+		return m.startNotesView()
 
 	case key.Matches(msg, m.keys.Search):
 		m.mode = modeSearch
@@ -73,7 +75,7 @@ func (m Model) handleNormalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.clampCursor(m.active)
 	}
 
-	cmd := m.loadStreak()
+	cmd := m.loadDetails()
 	return m, cmd
 }
 

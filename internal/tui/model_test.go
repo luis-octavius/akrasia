@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -22,6 +23,7 @@ type fakeService struct {
 	streak   int64
 	periods  []tasks.StreakPeriod
 	progress tasks.Progress
+	notes    []tasks.NoteEntry
 	err      error
 
 	calls     map[string]int
@@ -95,6 +97,15 @@ func (f *fakeService) TodayProgress(context.Context) (tasks.Progress, error) {
 	return f.progress, f.err
 }
 
+func (f *fakeService) Notes(_ context.Context, name string, limit int) (tasks.TodoView, []tasks.NoteEntry, error) {
+	f.called("notes")
+	entries := f.notes
+	if limit > 0 && len(entries) > limit {
+		entries = entries[:limit]
+	}
+	return tasks.TodoView{Name: name}, entries, nil
+}
+
 func (f *fakeService) StreakHistory(_ context.Context, name string) (tasks.TodoView, []tasks.StreakPeriod, error) {
 	return tasks.TodoView{Name: name}, f.periods, nil
 }
@@ -134,7 +145,7 @@ func ownMessages(cmd tea.Cmd) []tea.Msg {
 			msgs = append(msgs, ownMessages(c)...)
 		}
 		return msgs
-	case loadedMsg, actionMsg, streakMsg, progressMsg:
+	case loadedMsg, actionMsg, streakMsg, progressMsg, notesMsg:
 		return []tea.Msg{out}
 	}
 	return nil
@@ -521,6 +532,7 @@ func TestViewFitsEveryThemeAndWidth(t *testing.T) {
 				"delete":  send(t, m, runes("x")),
 				"form":    send(t, m, runes("a")),
 				"help":    send(t, m, runes("?")),
+				"notes":   send(t, m, runes("n")),
 			}
 			for name, s := range screens {
 				for i, l := range strings.Split(s.View().Content, "\n") {
@@ -679,5 +691,95 @@ func TestEditDailyToggle(t *testing.T) {
 
 	if len(svc.edited) != 1 || svc.edited[0].patch.IsDaily == nil || *svc.edited[0].patch.IsDaily {
 		t.Fatalf("expected daily=false, got %+v (form err %v)", svc.edited, m.form.err)
+	}
+}
+
+func rustNotes(n int) []tasks.NoteEntry {
+	entries := make([]tasks.NoteEntry, n)
+	for i := range entries {
+		entries[i] = tasks.NoteEntry{Date: fmt.Sprintf("2026-10-%02d", 30-i), Notes: fmt.Sprintf("lesson %d", n-i)}
+	}
+	entries[n-1] = tasks.NoteEntry{Date: entries[n-1].Date, Backfilled: true}
+	return entries
+}
+
+func TestDetailsShowRecentNotes(t *testing.T) {
+	rust := todo("rust")
+	rust.IsDaily = true
+	svc := &fakeService{daily: []tasks.TodoView{rust}, notes: rustNotes(6)}
+
+	m := send(t, start(t, svc, KeymapDefault), tea.WindowSizeMsg{Width: 110, Height: 30}, keyTab, keyTab, keyEnter)
+
+	view := ansi.Strip(m.View().Content)
+	if !strings.Contains(view, "Recent notes") || !strings.Contains(view, "lesson 6") || !strings.Contains(view, "lesson 4") {
+		t.Fatalf("details should list the last notes:\n%s", view)
+	}
+	if strings.Contains(view, "lesson 3") {
+		t.Fatalf("details should stop at %d notes:\n%s", detailsNotesLimit, view)
+	}
+}
+
+func TestNotesWindowOpensScrollsAndCloses(t *testing.T) {
+	rust := todo("rust")
+	svc := &fakeService{all: []tasks.TodoView{rust}, notes: rustNotes(30)}
+
+	m := send(t, start(t, svc, KeymapDefault), tea.WindowSizeMsg{Width: 100, Height: 20}, keyTab, runes("n"))
+	if m.mode != modeNotesView {
+		t.Fatalf("n should open the notes window, mode %v", m.mode)
+	}
+
+	view := ansi.Strip(m.View().Content)
+	if !strings.Contains(view, "Notes · rust") || !strings.Contains(view, "lesson 30") || strings.Contains(view, "backfilled") {
+		t.Fatalf("window should show the newest notes first and fit the screen:\n%s", view)
+	}
+	if got := lipgloss.Height(m.View().Content); got != 20 {
+		t.Fatalf("screen should keep the terminal height, got %d", got)
+	}
+
+	for range 40 {
+		m = send(t, m, keyDown)
+	}
+	if view := ansi.Strip(m.View().Content); !strings.Contains(view, "backfilled") {
+		t.Fatalf("scrolling down should reach the oldest (backfilled) day:\n%s", view)
+	}
+
+	m = send(t, m, keyEsc)
+	if m.mode != modeNormal {
+		t.Fatalf("esc should close the window, mode %v", m.mode)
+	}
+}
+
+func TestDetailsNotesRefreshAfterCompleting(t *testing.T) {
+	rust := todo("rust")
+	svc := &fakeService{all: []tasks.TodoView{rust}}
+	m := send(t, start(t, svc, KeymapDefault), tea.WindowSizeMsg{Width: 110, Height: 30}, keyTab, keyEnter)
+
+	svc.notes = []tasks.NoteEntry{{Date: "2026-10-19", Notes: "ownership"}}
+	m = send(t, m, keySpace, runes("ownership"), keyEnter)
+
+	if view := ansi.Strip(m.View().Content); !strings.Contains(view, "ownership") {
+		t.Fatalf("the new note should show in the details right away:\n%s", view)
+	}
+}
+
+// A details panel with more lines than fit must be cut, not push the
+// status bar and help off the screen.
+func TestTallDetailsKeepScreenHeight(t *testing.T) {
+	rust := todo("rust")
+	rust.IsDaily = true
+	periods := make([]tasks.StreakPeriod, 5)
+	for i := range periods {
+		periods[i] = tasks.StreakPeriod{StartDate: "2026-09-01", EndDate: "2026-09-09", Days: 9}
+	}
+	svc := &fakeService{daily: []tasks.TodoView{rust}, notes: rustNotes(3), streak: 9, periods: periods}
+
+	m := send(t, start(t, svc, KeymapDefault), tea.WindowSizeMsg{Width: 110, Height: 16}, keyTab, keyTab, keyEnter)
+
+	view := m.View().Content
+	if got := lipgloss.Height(view); got != 16 {
+		t.Fatalf("screen should be exactly 16 lines, got %d:\n%s", got, ansi.Strip(view))
+	}
+	if !strings.Contains(ansi.Strip(view), "NORMAL") {
+		t.Fatalf("status bar should stay visible:\n%s", ansi.Strip(view))
 	}
 }

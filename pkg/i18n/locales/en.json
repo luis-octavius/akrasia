@@ -42,7 +42,10 @@
 			"progressShort": "show today's progress (tasks done out of today's tasks)",
 			"editUse": "edit <name>",
 			"editShort": "change the name, description, priority, daily mode or date of a task",
-			"editExample": "akrasia edit \"Morning run\" --name \"Morning walk\"\nakrasia edit stendhal --priority low --date 30,11\nakrasia edit \"Read\" --daily=false --desc \"\""
+			"editExample": "akrasia edit \"Morning run\" --name \"Morning walk\"\nakrasia edit stendhal --priority low --date 30,11\nakrasia edit \"Read\" --daily=false --desc \"\"",
+			"notesUse": "notes <name>",
+			"notesShort": "show the notes written each day a task was completed",
+			"notesExample": "akrasia notes \"Estudar Rust\"\nakrasia notes rust --limit 7"
 		},
 		"flags": {
 			"addDate": "add date to task (dd,mm)",
@@ -73,7 +76,8 @@
 			"editDescription": "new description (\"\" clears it)",
 			"editPriority": "new priority (high|medium|low, \"\" clears it)",
 			"editDaily": "make the task daily (true) or one-off (false)",
-			"editDate": "new due date (dd or dd,mm)"
+			"editDate": "new due date (dd or dd,mm)",
+			"notesLimit": "how many days to show (0 = all)"
 		},
 		"cobra": {
 			"usage": "Usage:",
@@ -145,7 +149,12 @@
 			"done": "Done",
 			"notDone": "Not done",
 			"progress": "Today %d/%d",
-			"progressClear": "Today: nothing due"
+			"progressClear": "Today: nothing due",
+			"notesTitle": "Notes · %s",
+			"notesStreak": "streak %d",
+			"noNotes": "(no notes)",
+			"backfilled": "backfilled",
+			"noNotesYet": "No completed days yet."
 		},
 		"debug": {
 			"title": "DEBUG: %s\n",
@@ -208,7 +217,8 @@
 			"nameTaken": "there is already a task called '%s'",
 			"invalidPriority": "priority must be high, medium, low or empty (got '%s')",
 			"emptyName": "the task name can't be empty",
-			"updateTask": "error updating task: %w"
+			"updateTask": "error updating task: %w",
+			"getNotes": "error getting the notes of the task"
 		}
 	},
 	"quotes": {
@@ -253,7 +263,10 @@
 			"cancel": "cancel",
 			"nextField": "next field",
 			"theme": "next theme",
-			"edit": "edit"
+			"edit": "edit",
+			"notes": "notes",
+			"scroll": "scroll",
+			"close": "close"
 		},
 		"loading": "Loading...",
 		"empty": "Nothing here yet.",
@@ -302,7 +315,8 @@
 			"no": "no",
 			"desc": "Description",
 			"history": "Streak history",
-			"period": "%s → %s · %d day(s)"
+			"period": "%s → %s · %d day(s)",
+			"notes": "Recent notes"
 		},
 		"mode": {
 			"normal": "NORMAL",

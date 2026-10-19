@@ -18,6 +18,7 @@ type keyMap struct {
 	Complete key.Binding
 	Add      key.Binding
 	Edit     key.Binding
+	Notes    key.Binding
 	Delete   key.Binding
 	Search   key.Binding
 	Priority key.Binding
@@ -84,6 +85,10 @@ func newKeyMap(layout string) keyMap {
 			key.WithKeys("e"),
 			key.WithHelp("e", i18n.T("tui.help.edit")),
 		),
+		Notes: key.NewBinding(
+			key.WithKeys("n"),
+			key.WithHelp("n", i18n.T("tui.help.notes")),
+		),
 		Delete: key.NewBinding(
 			key.WithKeys("x", "delete"),
 			key.WithHelp("x", i18n.T("tui.help.delete")),
@@ -130,7 +135,7 @@ func (k keyMap) FullHelp() [][]key.Binding {
 		{k.Up, k.Down, k.Top, k.Bottom},
 		{k.NextTab, k.PrevTab, k.Reload},
 		{k.Complete, k.Add, k.Edit, k.Delete},
-		{k.Details, k.Search, k.Priority},
+		{k.Details, k.Notes, k.Search, k.Priority},
 		{k.Theme, k.Help, k.Quit},
 	}
 }

@@ -42,7 +42,10 @@
 			"progressShort": "mostrar o progresso de hoje (tarefas feitas sobre as de hoje)",
 			"editUse": "edit <nome>",
 			"editShort": "alterar nome, descrição, prioridade, modo diário ou data de uma tarefa",
-			"editExample": "akrasia edit \"Corrida\" --name \"Caminhada\"\nakrasia edit stendhal --priority low --date 30,11\nakrasia edit \"Ler\" --daily=false --desc \"\""
+			"editExample": "akrasia edit \"Corrida\" --name \"Caminhada\"\nakrasia edit stendhal --priority low --date 30,11\nakrasia edit \"Ler\" --daily=false --desc \"\"",
+			"notesUse": "notes <nome>",
+			"notesShort": "mostrar as notas escritas em cada dia em que a tarefa foi concluída",
+			"notesExample": "akrasia notes \"Estudar Rust\"\nakrasia notes rust --limit 7"
 		},
 		"flags": {
 			"addDate": "adicionar data para a tarefa (dd,mm)",
@@ -73,7 +76,8 @@
 			"editDescription": "nova descrição (\"\" apaga)",
 			"editPriority": "nova prioridade (high|medium|low, \"\" apaga)",
 			"editDaily": "tornar a tarefa diária (true) ou única (false)",
-			"editDate": "novo prazo (dd ou dd,mm)"
+			"editDate": "novo prazo (dd ou dd,mm)",
+			"notesLimit": "quantos dias mostrar (0 = todos)"
 		},
 		"cobra": {
 			"usage": "Uso:",
@@ -145,7 +149,12 @@
 			"done": "Concluído",
 			"notDone": "Não concluído",
 			"progress": "Hoje %d/%d",
-			"progressClear": "Hoje: nada pendente"
+			"progressClear": "Hoje: nada pendente",
+			"notesTitle": "Notas · %s",
+			"notesStreak": "ofensiva %d",
+			"noNotes": "(sem notas)",
+			"backfilled": "preenchido (backfill)",
+			"noNotesYet": "Nenhum dia concluído ainda."
 		},
 		"debug": {
 			"title": "DEBUG: %s\n",
@@ -208,7 +217,8 @@
 			"nameTaken": "já existe uma tarefa chamada '%s'",
 			"invalidPriority": "a prioridade deve ser high, medium, low ou vazia (recebido '%s')",
 			"emptyName": "o nome da tarefa não pode ser vazio",
-			"updateTask": "erro ao atualizar a tarefa: %w"
+			"updateTask": "erro ao atualizar a tarefa: %w",
+			"getNotes": "erro ao obter as notas da tarefa"
 		}
 	},
 	"quotes": {
@@ -253,7 +263,10 @@
 			"cancel": "cancelar",
 			"nextField": "próximo campo",
 			"theme": "próximo tema",
-			"edit": "editar"
+			"edit": "editar",
+			"notes": "notas",
+			"scroll": "rolar",
+			"close": "fechar"
 		},
 		"loading": "Carregando...",
 		"empty": "Nada por aqui ainda.",
@@ -302,7 +315,8 @@
 			"no": "não",
 			"desc": "Descrição",
 			"history": "Histórico de ofensivas",
-			"period": "%s → %s · %d dia(s)"
+			"period": "%s → %s · %d dia(s)",
+			"notes": "Notas recentes"
 		},
 		"mode": {
 			"normal": "NORMAL",

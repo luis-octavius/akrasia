@@ -26,6 +26,18 @@ All notable changes to Akrasia are documented here. The format follows
   - A one-off task turned daily starts its streak window that day.
   - Clear errors when the new name is already taken or the priority is
     invalid.
+- **Notes for a task.** See what was written on each completed day, newest
+  first; useful as a journal of a daily streak.
+  - CLI: `akrasia notes <name>` (alias `nt`, `--limit N`), with the current
+    streak for daily tasks.
+  - TUI: the details panel shows the last 3 notes, and `n` opens every note
+    in a scrollable window (`esc` closes).
+  - Backfilled days and days without notes are marked as such.
+
+### Fixed
+
+- TUI: a details panel taller than the screen is cut instead of pushing
+  the status bar and help out of view.
 
 ## [2.0.0] - unreleased
 
