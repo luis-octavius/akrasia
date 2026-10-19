@@ -35,7 +35,8 @@
 			"configThemeShort": "gerenciar temas de cor",
 			"configThemeUse": "theme [list|show|<nome-do-tema>]",
 			"configLanguageShort": "gerenciar linguagens",
-			"configLanguageUse": "language [list|show|<código-da-linguagem>]"
+			"configLanguageUse": "language [list|show|<código-da-linguagem>]",
+			"tuiShort": "abrir a interface interativa no terminal"
 		},
 		"flags": {
 			"addDate": "adicionar data para a tarefa (dd,mm)",
@@ -200,5 +201,23 @@
 		"quote11": "\"Vejo e aprovo o melhor, mas sigo o pior.\" - Ovídio, Metamorfoses",
 		"quote12": "\"O sábio é guiado pela razão, o tolo pela paixão, e o louco pelo impulso.\" - Zenão de Cítio",
 		"quote13": "\"Quanto tempo você vai esperar antes de exigir o melhor de si mesmo?\" - Epicteto, Discursos"
+	},
+	"tui": {
+		"tabs": {
+			"today": "Hoje",
+			"all": "Todas",
+			"daily": "Diárias",
+			"dump": "Dump"
+		},
+		"help": {
+			"up": "subir",
+			"down": "descer",
+			"nextTab": "próxima aba",
+			"prevTab": "aba anterior",
+			"reload": "recarregar",
+			"quit": "sair"
+		},
+		"loading": "Carregando...",
+		"empty": "Nada por aqui ainda."
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/luis-octavius/akrasia/internal/db"
 	"github.com/luis-octavius/akrasia/internal/tasks"
+	"github.com/luis-octavius/akrasia/internal/tui"
 	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 	"github.com/spf13/cobra"
@@ -519,6 +520,21 @@ var dumpCmd = &cobra.Command{
 	},
 }
 
+// tuiCmd opens the interactive terminal interface.
+var tuiCmd = &cobra.Command{
+	Use:   "tui",
+	Short: i18n.T("commands.commands.tuiShort"),
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tkm, err := taskManagerFromContext(cmd.Context())
+		if err != nil {
+			return err
+		}
+
+		return tui.Run(cmd.Context(), tkm)
+	},
+}
+
 // config manages application settings and themes.
 var config = &cobra.Command{
 	Use:     "config",
@@ -635,6 +651,7 @@ func init() {
 		"backfillHistory":         backfillHistory,
 		"debugTask":               debugTask,
 		"dumpCmd":                 dumpCmd,
+		"tuiCmd":                  tuiCmd,
 		"config":                  config,
 	}
 

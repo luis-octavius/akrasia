@@ -35,7 +35,8 @@
 			"configThemeShort": "manage color themes",
 			"configThemeUse": "theme [list|show|<theme-name>]",
 			"configLanguageShort": "manage languages",
-			"configLanguageUse": "language [list|show|<language-code>]"
+			"configLanguageUse": "language [list|show|<language-code>]",
+			"tuiShort": "open the interactive terminal interface"
 		},
 		"flags": {
 			"addDate": "add date to task (dd,mm)",
@@ -201,5 +202,23 @@
 		"quote11": "\"I see and approve the better course, but I follow the worse.\" - Ovid, Metamorphoses",
 		"quote12": "\"The wise man is commanded by reason, the fool by passion, and the madman by whim.\" - Zeno of Citium",
 		"quote13": "\"How long will you wait before you demand the best for yourself?\" - Epictetus, Discourses"
+	},
+	"tui": {
+		"tabs": {
+			"today": "Today",
+			"all": "All",
+			"daily": "Daily",
+			"dump": "Dump"
+		},
+		"help": {
+			"up": "up",
+			"down": "down",
+			"nextTab": "next tab",
+			"prevTab": "previous tab",
+			"reload": "reload",
+			"quit": "quit"
+		},
+		"loading": "Loading...",
+		"empty": "Nothing here yet."
 	}
 }
