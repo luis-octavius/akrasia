@@ -38,3 +38,12 @@ type TodoView struct {
 	IsDaily 		bool
 	DoneToday   bool
 }
+
+// Done reports whether the task counts as done right now: daily tasks are
+// judged by today's history, the rest by their concluded flag.
+func (v TodoView) Done() bool {
+	if v.IsDaily {
+		return v.DoneToday
+	}
+	return v.Concluded
+}

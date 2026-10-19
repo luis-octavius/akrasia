@@ -19,7 +19,7 @@ func (tkm *TaskManager) DebugTask(name string) error {
 
 	todo, err := GetTodoByName(tkm, name)
 	if err != nil {
-		return fmt.Errorf("%s", i18n.T("tasks.error.getTodoByNameStreak"))
+		return err
 	}
 
 	rows, err := tkm.Queries.GetHistoryByTodo(ctx, todo.ID)

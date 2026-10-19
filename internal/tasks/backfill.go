@@ -33,7 +33,10 @@ func (tkm *TaskManager) BackfillDailyHistory(daysBack int, taskName string) erro
 		}
 
 		if !todo.IsDaily {
-			return fmt.Errorf(i18n.T("tasks.error.taskNotDaily"), taskName)
+			return localizedError{
+				msg:      fmt.Sprintf(i18n.T("tasks.error.taskNotDaily"), taskName),
+				sentinel: ErrNotDaily,
+			}
 		}
 
 		dailyTasks = []database.Todo{

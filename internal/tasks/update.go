@@ -34,7 +34,7 @@ func (tkm *TaskManager) UpdateToConcluded(name, notes string) error {
 		Notes:       sql.NullString{String: notes, Valid: true},
 	})
 	if err != nil {
-		return fmt.Errorf("%s", i18n.T("tasks.error.createTaskHistory"))
+		return fmt.Errorf("%s: %w", i18n.T("tasks.error.createTaskHistory"), err)
 	}
 
 	fmt.Println(i18n.T("tasks.info.updatedSuccessfully"))

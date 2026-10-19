@@ -288,13 +288,14 @@ var checkExpiring = &cobra.Command{
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: i18n.T("commands.commands.initCmdShort"),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		_, err := db.InitDB()
 		if err != nil {
-			log.Fatal(i18n.T("commands.error.openDatabase"), err)
+			return fmt.Errorf("%s%w", i18n.T("commands.error.openDatabase"), err)
 		}
 
 		fmt.Printf("%s", i18n.T("commands.info.initSuccessful"))
+		return nil
 	},
 }
 
@@ -320,7 +321,7 @@ var delByName = &cobra.Command{
 			taskName = args[0]
 		}
 
-		err = tkm.DeleteByName(taskName)
+		err = tkm.DeleteByName(cmd.Context(), taskName)
 		if err != nil {
 			return err
 		}

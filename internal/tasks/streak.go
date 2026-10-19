@@ -12,7 +12,7 @@ import (
 func (tkm *TaskManager) GetCurrentStreak(name string) error {
 	todo, err := GetTodoByName(tkm, name)
 	if err != nil {
-		return fmt.Errorf("%s", i18n.T("tasks.error.getTodoByNameStreak"))
+		return err
 	}
 
 	streak, err := tkm.Queries.GetCurrentStreak(context.Background(), database.GetCurrentStreakParams{
@@ -20,7 +20,7 @@ func (tkm *TaskManager) GetCurrentStreak(name string) error {
 		ID:     todo.ID,
 	})
 	if err != nil {
-		return fmt.Errorf("%s", i18n.T("tasks.error.getCurrentStreak"))
+		return fmt.Errorf("%s: %w", i18n.T("tasks.error.getCurrentStreak"), err)
 	}
 
 	fmt.Printf(i18n.T("tasks.info.currentStreak"), todo.Name, streak)
@@ -31,7 +31,7 @@ func (tkm *TaskManager) GetCurrentStreak(name string) error {
 func (tkm *TaskManager) GetStreakHistory(name string) error {
 	todo, err := GetTodoByName(tkm, name)
 	if err != nil {
-		return fmt.Errorf("%s", i18n.T("tasks.error.getTaskByName"))
+		return err
 	}
 
 	streak_history, err := tkm.Queries.GetStreakHistory(context.Background(), database.GetStreakHistoryParams{
@@ -39,7 +39,7 @@ func (tkm *TaskManager) GetStreakHistory(name string) error {
 		ID:     todo.ID,
 	})
 	if err != nil {
-		return fmt.Errorf("%s", i18n.T("tasks.error.getStreakHistory"))
+		return fmt.Errorf("%s: %w", i18n.T("tasks.error.getStreakHistory"), err)
 	}
 
 	for i, streak := range streak_history {

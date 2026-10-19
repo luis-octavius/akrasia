@@ -3,6 +3,7 @@ package tasks
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -48,22 +49,34 @@ func todoKey(id interface{}) string {
 	return fmt.Sprintf("%v", id)
 }
 
-// printTodo receives a Todo and create a readable output
+// printTodo receives a Todo and create a readable output. Rendering never
+// uses the ID, so it is left out instead of converted.
 func printTodo(todo database.Todo) {
+	printTodoView(TodoView{
+		Name:        todo.Name,
+		Description: todo.Description,
+		Concluded:   todo.Concluded,
+		ExpiresAt:   todo.ExpiresAt,
+		Priority:    todo.Priority,
+		IsDaily:     todo.IsDaily,
+	})
+}
+
+func printTodoView(todo TodoView) {
 	fmt.Println(renderTodo(todo))
 }
 
 // renderTodo mounts the string to beautifully output the task
-func renderTodo(todo database.Todo) string {
+func renderTodo(todo TodoView) string {
 	icon, status := "○", i18n.T("tasks.tasks.notDone")
 
-	if todo.Concluded {
+	if todo.Done() {
 		icon, status = "✔", i18n.T("tasks.tasks.done")
 	}
 
 	state := color.Muted()
 	switch {
-	case todo.Concluded:
+	case todo.Done():
 		state = color.Success()
 	case checkIfTodoExpires(todo.ExpiresAt):
 		state = color.Warning()
@@ -239,6 +252,12 @@ func GetTodoByName(tkm *TaskManager, name string) (database.GetTodoByNameRow, er
 		Column3: sql.NullString{String: loweredName, Valid: true},
 		Column4: sql.NullString{String: loweredName, Valid: true},
 	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return database.GetTodoByNameRow{}, localizedError{
+			msg:      fmt.Sprintf(i18n.T("tasks.error.todoNotFound"), name),
+			sentinel: ErrTodoNotFound,
+		}
+	}
 	if err != nil {
 		return database.GetTodoByNameRow{}, fmt.Errorf(i18n.T("tasks.error.getTodoByName"), err)
 	}
@@ -246,21 +265,22 @@ func GetTodoByName(tkm *TaskManager, name string) (database.GetTodoByNameRow, er
 	return todo, nil
 }
 
-func newTodoView(todoStatus database.ListTodosWithTodayStatusRow) TodoView {
+func newTodoView(todoStatus database.ListTodosWithTodayStatusRow) (TodoView, error) {
 	id, err := toUUID(todoStatus.ID)
 	if err != nil {
-		return TodoView{}
+		return TodoView{}, err
 	}
 
 	return TodoView{
-		ID:           id,
-		Name:         todoStatus.Name,
-		Description:  todoStatus.Description,
-		ExpiresAt:    todoStatus.ExpiresAt,
-		IsDaily:      todoStatus.IsDaily,
-		Concluded:    todoStatus.DoneToday,
-		Priority:     todoStatus.Priority,
-	}
+		ID:          id,
+		Name:        todoStatus.Name,
+		Description: todoStatus.Description,
+		Concluded:   todoStatus.Concluded,
+		ExpiresAt:   todoStatus.ExpiresAt,
+		Priority:    todoStatus.Priority,
+		IsDaily:     todoStatus.IsDaily,
+		DoneToday:   todoStatus.DoneToday,
+	}, nil
 }
 
 func toUUID(v interface{}) (uuid.UUID, error) {
