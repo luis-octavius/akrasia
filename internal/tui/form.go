@@ -68,9 +68,11 @@ func labelWidth() int {
 	return w
 }
 
+// setWidth sizes the inputs to fit a modal of the given width: border and
+// padding take 6 columns, the focus mark and gap 4, the cursor 1.
 func (f *todoForm) setWidth(width int) {
 	for i := range f.fields {
-		f.fields[i].SetWidth(max(width-labelWidth()-8, 10))
+		f.fields[i].SetWidth(max(width-labelWidth()-11, 10))
 	}
 }
 

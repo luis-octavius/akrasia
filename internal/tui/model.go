@@ -8,6 +8,7 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"github.com/luis-octavius/akrasia/internal/tasks"
+	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
@@ -23,6 +24,7 @@ type Service interface {
 	DeleteByName(ctx context.Context, name string) (tasks.TodoView, error)
 	AddDump(ctx context.Context, name string) (tasks.DumpEntry, error)
 	CurrentStreak(ctx context.Context, name string) (tasks.TodoView, int64, error)
+	StreakHistory(ctx context.Context, name string) (tasks.TodoView, []tasks.StreakPeriod, error)
 }
 
 type tab int
@@ -94,9 +96,10 @@ type actionMsg struct {
 
 // streakMsg answers the streak lookup made when details open.
 type streakMsg struct {
-	name string
-	days int64
-	err  error
+	name    string
+	days    int64
+	periods []tasks.StreakPeriod
+	err     error
 }
 
 // Model is the root Bubble Tea model.
@@ -118,10 +121,15 @@ type Model struct {
 	search   string
 	priority string
 
-	details     bool
-	streakName  string
-	streakDays  int64
-	streakKnown bool
+	details       bool
+	streakName    string
+	streakDays    int64
+	streakHistory []tasks.StreakPeriod
+	streakKnown   bool
+
+	// saveTheme persists the theme chosen with `t`; tests swap it so they
+	// never write the real config.
+	saveTheme func(name string) error
 
 	status    string
 	statusErr bool
@@ -143,6 +151,8 @@ func newModel(ctx context.Context, svc Service, layout string) Model {
 		keys:  newKeyMap(layout),
 		help:  help.New(),
 		input: input,
+
+		saveTheme: color.SaveTheme,
 	}
 }
 
@@ -157,8 +167,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		m.help.SetWidth(msg.Width)
-		m.input.SetWidth(max(msg.Width-4, 10))
-		m.form.setWidth(msg.Width)
+		m.input.SetWidth(modalWidth(msg.Width) - 7)
+		m.form.setWidth(modalWidth(msg.Width))
 		return m, nil
 
 	case loadedMsg:
@@ -184,7 +194,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case streakMsg:
 		if msg.err == nil && msg.name == m.streakName {
-			m.streakDays, m.streakKnown = msg.days, true
+			m.streakDays, m.streakHistory, m.streakKnown = msg.days, msg.periods, true
 		}
 		return m, nil
 
@@ -395,6 +405,10 @@ func (m *Model) loadStreak() tea.Cmd {
 	ctx, svc, name := m.ctx, m.svc, r.todo.Name
 	return func() tea.Msg {
 		_, days, err := svc.CurrentStreak(ctx, name)
-		return streakMsg{name: name, days: days, err: err}
+		if err != nil {
+			return streakMsg{name: name, err: err}
+		}
+		_, periods, err := svc.StreakHistory(ctx, name)
+		return streakMsg{name: name, days: days, periods: periods, err: err}
 	}
 }

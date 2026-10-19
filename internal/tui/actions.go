@@ -7,6 +7,7 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"github.com/luis-octavius/akrasia/internal/tasks"
+	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
@@ -59,6 +60,11 @@ func (m Model) handleNormalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keys.Help):
 		m.help.ShowAll = !m.help.ShowAll
+
+	case key.Matches(msg, m.keys.Theme):
+		name := color.NextTheme(color.GetCurrentTheme().Name)
+		err := m.saveTheme(name)
+		m.setStatus(fmt.Sprintf(i18n.T("tui.status.theme"), name), err)
 
 	case msg.String() == "esc":
 		m.search, m.priority, m.details, m.status = "", "", false, ""
@@ -122,7 +128,7 @@ func (m Model) startAdd() (tea.Model, tea.Cmd) {
 
 	m.mode = modeAddTodo
 	m.status = ""
-	m.form = newTodoForm(m.width)
+	m.form = newTodoForm(modalWidth(m.width))
 	return m, textinput.Blink
 }
 

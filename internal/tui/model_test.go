@@ -8,16 +8,19 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/luis-octavius/akrasia/internal/tasks"
+	"github.com/luis-octavius/akrasia/pkg/color"
 )
 
 type fakeService struct {
-	today  tasks.TodayView
-	all    []tasks.TodoView
-	daily  []tasks.TodoView
-	dumps  []tasks.DumpEntry
-	streak int64
-	err    error
+	today   tasks.TodayView
+	all     []tasks.TodoView
+	daily   []tasks.TodoView
+	dumps   []tasks.DumpEntry
+	streak  int64
+	periods []tasks.StreakPeriod
+	err     error
 
 	calls     map[string]int
 	completed []string // "name|notes"
@@ -78,6 +81,10 @@ func (f *fakeService) CurrentStreak(_ context.Context, name string) (tasks.TodoV
 	return tasks.TodoView{Name: name}, f.streak, nil
 }
 
+func (f *fakeService) StreakHistory(_ context.Context, name string) (tasks.TodoView, []tasks.StreakPeriod, error) {
+	return tasks.TodoView{Name: name}, f.periods, nil
+}
+
 // send runs msg through Update and keeps feeding back the model's own
 // messages (loads, writes, streaks), the way the runtime would. Other
 // commands, like cursor blinks, are not run.
@@ -116,6 +123,7 @@ func runQuick(cmd tea.Cmd) tea.Msg {
 func start(t *testing.T, svc Service, layout string) Model {
 	t.Helper()
 	m := newModel(context.Background(), svc, layout)
+	m.saveTheme = func(name string) error { color.SetTheme(name); return nil }
 	return send(t, m, m.Init()())
 }
 
@@ -433,5 +441,96 @@ func TestDateParts(t *testing.T) {
 		if _, err := dateParts(bad); err == nil {
 			t.Errorf("dateParts(%q) should fail", bad)
 		}
+	}
+}
+
+func TestThemeKeyCyclesAndReportsTheme(t *testing.T) {
+	orig := color.GetCurrentTheme().Name
+	t.Cleanup(func() { color.SetTheme(orig) })
+	color.SetTheme("default")
+
+	m := send(t, start(t, &fakeService{}, KeymapDefault), runes("t"))
+
+	want := color.NextTheme("default")
+	if got := color.GetCurrentTheme().Name; got != want {
+		t.Fatalf("t should switch to %q, got %q", want, got)
+	}
+	if !strings.Contains(m.status, want) {
+		t.Fatalf("status should name the new theme, got %q", m.status)
+	}
+}
+
+// Every theme must render without panics, and no line may be wider than
+// the terminal, even on narrow screens and with every overlay open.
+func TestViewFitsEveryThemeAndWidth(t *testing.T) {
+	orig := color.GetCurrentTheme().Name
+	t.Cleanup(func() { color.SetTheme(orig) })
+
+	daily := todo("a daily task with a fairly long name to force truncation")
+	daily.IsDaily = true
+	high := todo("taxes")
+	high.Priority = "high"
+	svc := &fakeService{
+		today:   tasks.TodayView{Overdue: []tasks.TodoView{high}, Daily: []tasks.TodoView{daily}},
+		streak:  3,
+		periods: []tasks.StreakPeriod{{StartDate: "2026-10-01", EndDate: "2026-10-03", Days: 3}},
+	}
+
+	for _, theme := range color.GetAvailableThemes() {
+		color.SetTheme(theme)
+		for _, width := range []int{40, 60, 100} {
+			m := start(t, svc, KeymapDefault)
+			m = send(t, m, tea.WindowSizeMsg{Width: width, Height: 20})
+
+			screens := map[string]Model{
+				"list":    m,
+				"details": send(t, m, keyDown, keyEnter),
+				"delete":  send(t, m, runes("x")),
+				"form":    send(t, m, runes("a")),
+				"help":    send(t, m, runes("?")),
+			}
+			for name, s := range screens {
+				for i, l := range strings.Split(s.View().Content, "\n") {
+					if w := lipgloss.Width(l); w > width {
+						t.Fatalf("%s/%d/%s: line %d is %d wide:\n%s", theme, width, name, i, w, l)
+					}
+				}
+			}
+		}
+	}
+}
+
+func TestDetailsListStreakHistory(t *testing.T) {
+	daily := todo("read")
+	daily.IsDaily = true
+	svc := &fakeService{
+		daily:   []tasks.TodoView{daily},
+		streak:  4,
+		periods: []tasks.StreakPeriod{{StartDate: "2026-09-01", EndDate: "2026-09-10", Days: 10}},
+	}
+
+	m := send(t, start(t, svc, KeymapDefault), tea.WindowSizeMsg{Width: 100, Height: 24}, keyTab, keyTab, keyEnter)
+
+	view := m.View().Content
+	for _, want := range []string{"2026-09-01", "2026-09-10", "10"} {
+		if !strings.Contains(view, want) {
+			t.Fatalf("details should list the streak history (%q missing):\n%s", want, view)
+		}
+	}
+}
+
+func TestModalFloatsOverList(t *testing.T) {
+	svc := &fakeService{all: []tasks.TodoView{todo("taxes"), todo("groceries")}}
+	m := send(t, start(t, svc, KeymapDefault), tea.WindowSizeMsg{Width: 100, Height: 24}, keyTab, runes("x"))
+
+	view := m.View().Content
+	if !strings.Contains(view, "groceries") {
+		t.Fatalf("the list should stay visible behind the modal:\n%s", view)
+	}
+	if !strings.Contains(view, `"taxes"`) {
+		t.Fatalf("the delete modal should name the task:\n%s", view)
+	}
+	if got := lipgloss.Height(view); got != 24 {
+		t.Fatalf("screen should fill the terminal height, got %d lines", got)
 	}
 }

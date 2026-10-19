@@ -234,7 +234,8 @@
 			"help": "more keys",
 			"confirm": "confirm",
 			"cancel": "cancel",
-			"nextField": "next field"
+			"nextField": "next field",
+			"theme": "next theme"
 		},
 		"loading": "Loading...",
 		"empty": "Nothing here yet.",
@@ -267,7 +268,8 @@
 			"created": "%s created",
 			"dumpAdded": "Dump %q added",
 			"filter": "filter",
-			"priority": "priority"
+			"priority": "priority",
+			"theme": "theme: %s"
 		},
 		"details": {
 			"expires": "Expires",
@@ -278,7 +280,17 @@
 			"days": "%d day(s)",
 			"yes": "yes",
 			"no": "no",
-			"desc": "Description"
+			"desc": "Description",
+			"history": "Streak history",
+			"period": "%s → %s · %d day(s)"
+		},
+		"mode": {
+			"normal": "NORMAL",
+			"search": "SEARCH",
+			"notes": "NOTES",
+			"delete": "DELETE",
+			"dump": "DUMP",
+			"add": "NEW"
 		}
 	}
 }

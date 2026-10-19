@@ -55,6 +55,11 @@ func BorderMutedColor() color.Color {
 	return fgOrNone(GetCurrentTheme().Muted)
 }
 
+// AccentColor returns the accent foreground color, for borders and cursors.
+func AccentColor() color.Color {
+	return fgOrNone(GetCurrentTheme().Accent)
+}
+
 func fgOrNone(s ColorStyle) color.Color {
 	if c, ok := colorValue(s.Fg); ok {
 		return c

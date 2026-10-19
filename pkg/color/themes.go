@@ -257,6 +257,11 @@ func isEmpty(s ColorStyle) bool {
 	return s.Fg == "" && s.Bg == "" && len(s.Attributes) == 0
 }
 
+// SetTheme switches the active theme for this process without saving it.
+func SetTheme(themeName string) {
+	currentTheme = GetThemeByName(themeName)
+}
+
 // SaveTheme saves the theme to config file
 func SaveTheme(themeName string) error {
 	theme := GetThemeByName(themeName)

@@ -234,7 +234,8 @@
 			"help": "mais teclas",
 			"confirm": "confirmar",
 			"cancel": "cancelar",
-			"nextField": "próximo campo"
+			"nextField": "próximo campo",
+			"theme": "próximo tema"
 		},
 		"loading": "Carregando...",
 		"empty": "Nada por aqui ainda.",
@@ -267,7 +268,8 @@
 			"created": "%s criada",
 			"dumpAdded": "Dump %q adicionado",
 			"filter": "filtro",
-			"priority": "prioridade"
+			"priority": "prioridade",
+			"theme": "tema: %s"
 		},
 		"details": {
 			"expires": "Expira",
@@ -278,7 +280,17 @@
 			"days": "%d dia(s)",
 			"yes": "sim",
 			"no": "não",
-			"desc": "Descrição"
+			"desc": "Descrição",
+			"history": "Histórico de ofensivas",
+			"period": "%s → %s · %d dia(s)"
+		},
+		"mode": {
+			"normal": "NORMAL",
+			"search": "BUSCA",
+			"notes": "NOTAS",
+			"delete": "DELETAR",
+			"dump": "DUMP",
+			"add": "NOVA"
 		}
 	}
 }

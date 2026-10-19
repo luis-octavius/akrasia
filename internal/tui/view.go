@@ -12,9 +12,17 @@ import (
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
-// detailsMinWidth is the narrowest terminal that shows details beside the
-// list; below it they go under the list.
-const detailsMinWidth = 80
+const (
+	// detailsMinWidth is the narrowest terminal that shows details beside
+	// the list; below it they go under the list.
+	detailsMinWidth = 80
+	// defaultWidth is used before the first WindowSizeMsg (and in tests).
+	defaultWidth = 80
+	// maxModalWidth caps prompts and the form on wide terminals.
+	maxModalWidth = 64
+	// historyLimit is how many streak periods the details pane lists.
+	historyLimit = 5
+)
 
 // View renders the whole screen in the alternate screen buffer.
 func (m Model) View() tea.View {
@@ -24,180 +32,189 @@ func (m Model) View() tea.View {
 }
 
 func (m Model) render() string {
-	header := m.renderTabs() + "\n"
-	footer := m.renderFooter()
+	width := m.width
+	if width <= 0 {
+		width = defaultWidth
+	}
+
+	header := m.renderHeader(width)
+	footer := m.renderFooter(width)
 
 	bodyHeight := 0
 	if m.height > 0 {
-		bodyHeight = max(m.height-lipgloss.Height(header)-lipgloss.Height(footer)-1, 1)
+		bodyHeight = max(m.height-lipgloss.Height(header)-lipgloss.Height(footer), 3)
+	}
+	body := m.renderBody(width, bodyHeight)
+
+	// nothing may spill past the terminal edge, or JoinVertical would pad
+	// every other line to match it
+	clip := lipgloss.NewStyle().MaxWidth(width)
+	screen := lipgloss.JoinVertical(lipgloss.Left, clip.Render(header), clip.Render(body), clip.Render(footer))
+
+	modal := m.renderModal(width)
+	if modal == "" {
+		return screen
 	}
 
-	var body string
-	if m.mode == modeAddTodo {
-		body = m.renderForm()
-	} else {
-		body = m.renderMain(bodyHeight)
-	}
-
-	// pad so the footer sticks to the bottom of the screen
-	if gap := bodyHeight - lipgloss.Height(body); gap > 0 {
-		body += strings.Repeat("\n", gap)
-	}
-
-	return header + "\n" + body + "\n" + footer
+	// center the modal over the screen
+	height := max(m.height, lipgloss.Height(screen))
+	x := max((width-lipgloss.Width(modal))/2, 0)
+	y := max((height-lipgloss.Height(modal))/2, 0)
+	return lipgloss.NewCompositor(
+		lipgloss.NewLayer(screen),
+		lipgloss.NewLayer(modal).X(x).Y(y).Z(1),
+	).Render()
 }
 
-func (m Model) renderTabs() string {
-	titles := make([]string, tabCount)
+func modalWidth(width int) int {
+	if width <= 0 {
+		width = defaultWidth
+	}
+	return max(min(maxModalWidth, width-4), 20)
+}
+
+// --- header ------------------------------------------------------------
+
+func (m Model) renderHeader(width int) string {
+	tabs := make([]string, 0, tabCount+2)
 	for t := tab(0); t < tabCount; t++ {
-		if t == m.active {
-			titles[t] = color.Title().Underline(true).Render(t.title())
-		} else {
-			titles[t] = color.Muted().Render(t.title())
+		tabs = append(tabs, tabStyle(t == m.active).Render(m.tabLabel(t)))
+	}
+	row := lipgloss.JoinHorizontal(lipgloss.Bottom, tabs...)
+
+	// the badge goes first when there is room for it
+	badge := badgeStyle().Render("akrasia")
+	if lipgloss.Width(badge)+1+lipgloss.Width(row) <= width {
+		row = lipgloss.JoinHorizontal(lipgloss.Center, badge, " ", row)
+	}
+
+	if filters := m.filterSummary(); filters != "" {
+		label := color.Muted().Render("  " + filters)
+		if lipgloss.Width(row)+lipgloss.Width(label) <= width {
+			row = lipgloss.JoinHorizontal(lipgloss.Center, row, label)
 		}
 	}
-	line := " " + strings.Join(titles, "   ")
+	return row
+}
 
-	var filters []string
+func (m Model) tabLabel(t tab) string {
+	st := m.tabs[t]
+	if !st.loaded {
+		return t.title()
+	}
+	count := 0
+	for _, r := range st.rows {
+		if r.selectable() {
+			count++
+		}
+	}
+	return fmt.Sprintf("%s %d", t.title(), count)
+}
+
+func (m Model) filterSummary() string {
+	var parts []string
 	if m.search != "" {
-		filters = append(filters, fmt.Sprintf("%s: %q", i18n.T("tui.status.filter"), m.search))
+		parts = append(parts, fmt.Sprintf("%s: %q", i18n.T("tui.status.filter"), m.search))
 	}
 	if m.priority != "" {
-		filters = append(filters, i18n.T("tui.status.priority")+": "+m.priority)
+		parts = append(parts, i18n.T("tui.status.priority")+": "+m.priority)
 	}
-	if len(filters) > 0 {
-		line += color.Muted().Render("   [" + strings.Join(filters, " · ") + "]")
-	}
-	return line
+	return strings.Join(parts, " · ")
 }
 
-func (m Model) renderFooter() string {
-	var lines []string
+// --- body --------------------------------------------------------------
 
-	switch m.mode {
-	case modeNotes:
-		lines = append(lines, m.renderPrompt(fmt.Sprintf(i18n.T("tui.prompt.notes"), m.target.Name)))
-	case modeSearch:
-		lines = append(lines, m.renderPrompt(i18n.T("tui.prompt.search")))
-	case modeAddDump:
-		lines = append(lines, m.renderPrompt(i18n.T("tui.prompt.dumpName")))
-	case modeConfirmDelete:
-		lines = append(lines, color.Warning().Render(" "+fmt.Sprintf(i18n.T("tui.prompt.delete"), m.target.Name)))
-	}
-
-	if m.status != "" {
-		style := color.Success()
-		if m.statusErr {
-			style = color.Error()
-		}
-		lines = append(lines, style.Render(" "+m.status))
-	}
-
-	if m.mode == modeNormal {
-		lines = append(lines, m.help.View(m.keys))
-	} else {
-		lines = append(lines, color.Muted().Render(m.promptHelp()))
-	}
-
-	return strings.Join(lines, "\n")
-}
-
-func (m Model) renderPrompt(label string) string {
-	return color.Title().Render(" "+label) + " " + m.input.View()
-}
-
-// promptHelp lists the keys available while a prompt or the form is open.
-func (m Model) promptHelp() string {
-	switch m.mode {
-	case modeConfirmDelete:
-		return " y " + i18n.T("tui.help.confirm") + " • n/esc " + i18n.T("tui.help.cancel")
-	case modeAddTodo:
-		return " tab/↓ " + i18n.T("tui.help.nextField") + " • enter " + i18n.T("tui.help.confirm") + " • esc " + i18n.T("tui.help.cancel")
-	default:
-		return " enter " + i18n.T("tui.help.confirm") + " • esc " + i18n.T("tui.help.cancel")
-	}
-}
-
-// renderMain is the list, with the details pane beside or under it.
-func (m Model) renderMain(height int) string {
-	if !m.details {
-		return m.renderList(height)
-	}
-
+// renderBody is the list panel, with the details panel beside or under it.
+func (m Model) renderBody(width, height int) string {
 	r, ok := m.selected()
-	if !ok {
-		return m.renderList(height)
-	}
-	details := m.renderDetails(r)
-
-	if m.width >= detailsMinWidth {
-		listWidth := m.width * 55 / 100
-		list := lipgloss.NewStyle().Width(listWidth).Render(m.renderList(height))
-		pane := lipgloss.NewStyle().
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderLeft(true).
-			PaddingLeft(1).
-			Render(details)
-		return lipgloss.JoinHorizontal(lipgloss.Top, list, pane)
+	if !m.details || !ok {
+		return m.renderListPanel(width, height)
 	}
 
-	listHeight := max(height-lipgloss.Height(details)-1, 1)
-	return m.renderList(listHeight) + "\n\n" + details
+	if width >= detailsMinWidth {
+		listWidth := width * 58 / 100
+		return lipgloss.JoinHorizontal(lipgloss.Top,
+			m.renderListPanel(listWidth, height),
+			m.renderDetailsPanel(r, width-listWidth, height),
+		)
+	}
+
+	details := m.renderDetailsPanel(r, width, 0)
+	listHeight := 0
+	if height > 0 {
+		listHeight = max(height-lipgloss.Height(details), 3)
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, m.renderListPanel(width, listHeight), details)
 }
 
-func (m Model) renderList(height int) string {
+// panel draws content in a rounded box of exactly width x height (height
+// 0 means "fit the content").
+func panel(content string, focused bool, width, height int) string {
+	st := panelStyle(focused).Width(width)
+	if height > 0 {
+		st = st.Height(height)
+	}
+	return st.Render(content)
+}
+
+func (m Model) renderListPanel(width, height int) string {
+	innerWidth := max(width-4, 10)
+	innerHeight := 0
+	if height > 0 {
+		innerHeight = max(height-2, 1)
+	}
+	return panel(m.renderList(innerWidth, innerHeight), true, width, height)
+}
+
+func (m Model) renderList(width, height int) string {
 	st := m.tabs[m.active]
 	rows := m.rows()
 
+	var message string
 	switch {
 	case st.err != nil:
-		return color.Error().Render(" " + st.err.Error())
+		message = color.Error().Render(st.err.Error())
 	case !st.loaded:
-		return color.Muted().Render(" " + i18n.T("tui.loading"))
+		message = color.Muted().Render(i18n.T("tui.loading"))
 	case len(rows) == 0:
-		return color.Muted().Render(" " + emptyMessage(m.active))
+		message = color.Muted().Render(emptyMessage(m.active))
+	}
+	if message != "" {
+		if height <= 0 {
+			return message
+		}
+		return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, message)
 	}
 
 	start, end := visibleRange(len(rows), st.cursor, height)
 
 	lines := make([]string, 0, end-start)
 	for i := start; i < end; i++ {
-		lines = append(lines, renderRow(rows[i], i == st.cursor))
+		lines = append(lines, renderRow(rows, i, i == st.cursor, width))
 	}
 	return strings.Join(lines, "\n")
 }
 
-func (m Model) renderForm() string {
-	lines := []string{color.Title().Render(" " + i18n.T("tui.form.title")), ""}
-	labelStyle := lipgloss.NewStyle().Width(labelWidth())
-	for i := range m.form.fields {
-		label := labelStyle.Render(fieldLabel(i))
-		if i == m.form.focus {
-			label = color.Title().Render(" › " + label)
-		} else {
-			label = color.Muted().Render("   " + label)
-		}
-		lines = append(lines, label+"  "+m.form.fields[i].View())
-	}
-	if m.form.err != nil {
-		lines = append(lines, "", color.Error().Render(" "+m.form.err.Error()))
-	}
-	return strings.Join(lines, "\n")
+func (m Model) renderDetailsPanel(r row, width, height int) string {
+	innerWidth := max(width-4, 10)
+	content := lipgloss.NewStyle().Width(innerWidth).Render(m.renderDetails(r))
+	return panel(content, false, width, height)
 }
 
 func (m Model) renderDetails(r row) string {
+	field := func(label, value string) string {
+		return color.Muted().Render(label+"  ") + value
+	}
+
 	if r.dump != nil {
-		lines := []string{color.Title().Render(r.dump.Name)}
+		lines := []string{color.Accent().Render(r.dump.Name)}
 		if !r.dump.CreatedAt.IsZero() {
-			lines = append(lines, color.Muted().Render(r.dump.CreatedAt.Format(time.RFC822)))
+			lines = append(lines, "", color.Muted().Render(r.dump.CreatedAt.Format(time.RFC822)))
 		}
 		return strings.Join(lines, "\n")
 	}
 
 	todo := r.todo
-	field := func(label, value string) string {
-		return color.Muted().Render(label+": ") + value
-	}
 	yesNo := func(b bool) string {
 		if b {
 			return i18n.T("tui.details.yes")
@@ -205,27 +222,36 @@ func (m Model) renderDetails(r row) string {
 		return i18n.T("tui.details.no")
 	}
 
-	status := i18n.T("tasks.tasks.notDone")
+	status := color.Warning().Render(i18n.T("tasks.tasks.notDone"))
 	if todo.Done() {
-		status = i18n.T("tasks.tasks.done")
+		status = color.Success().Render(i18n.T("tasks.tasks.done"))
 	}
 
-	lines := []string{color.Title().Render(todo.Name), ""}
+	lines := []string{color.Accent().Render(todo.Name), ""}
 	if todo.Description.String != "" {
-		lines = append(lines, field(i18n.T("tui.details.desc"), todo.Description.String))
+		lines = append(lines, todo.Description.String, "")
 	}
 	if !todo.IsDaily {
 		lines = append(lines, field(i18n.T("tui.details.expires"), todo.ExpiresAt.Format("Mon 02 Jan 2006 15:04")))
 	}
 	if todo.Priority != "" {
-		lines = append(lines, field(i18n.T("tui.details.priority"), todo.Priority))
+		lines = append(lines, field(i18n.T("tui.details.priority"), priorityBadge(todo.Priority)))
 	}
 	lines = append(lines,
 		field(i18n.T("tui.details.daily"), yesNo(todo.IsDaily)),
 		field(i18n.T("tui.details.status"), status),
 	)
+
 	if todo.IsDaily && m.streakKnown && m.streakName == todo.Name {
-		lines = append(lines, field(i18n.T("tui.details.streak"), fmt.Sprintf(i18n.T("tui.details.days"), m.streakDays)))
+		days := color.Accent().Render(fmt.Sprintf(i18n.T("tui.details.days"), m.streakDays))
+		lines = append(lines, field(i18n.T("tui.details.streak"), days))
+
+		if len(m.streakHistory) > 0 {
+			lines = append(lines, "", color.Title().Render(i18n.T("tui.details.history")))
+			for _, p := range m.streakHistory[:min(len(m.streakHistory), historyLimit)] {
+				lines = append(lines, color.Muted().Render("• ")+fmt.Sprintf(i18n.T("tui.details.period"), p.StartDate, p.EndDate, p.Days))
+			}
+		}
 	}
 	return strings.Join(lines, "\n")
 }
@@ -254,55 +280,220 @@ func emptyMessage(t tab) string {
 	}
 }
 
-func renderRow(r row, selected bool) string {
+// --- rows --------------------------------------------------------------
+
+func renderRow(rows []row, i int, selected bool, width int) string {
+	r := rows[i]
 	switch {
 	case r.header != "":
-		return color.Title().Render(" " + r.header)
+		return renderSectionHeader(r.header, sectionCount(rows, i), width)
 	case r.todo != nil:
-		return cursorPrefix(selected) + renderTodoLine(*r.todo, selected)
+		return renderTodoLine(*r.todo, selected, width)
 	default:
-		return cursorPrefix(selected) + renderDumpLine(*r.dump, selected)
+		return renderDumpLine(*r.dump, selected, width)
 	}
 }
 
-func cursorPrefix(selected bool) string {
+// sectionCount counts the items under the header at index i.
+func sectionCount(rows []row, i int) int {
+	n := 0
+	for _, r := range rows[i+1:] {
+		if !r.selectable() {
+			break
+		}
+		n++
+	}
+	return n
+}
+
+// renderSectionHeader draws "TITLE 3 ────" across the panel.
+func renderSectionHeader(title string, count, width int) string {
+	label := color.Accent().Render(title) + " " + color.Muted().Render(fmt.Sprint(count)) + " "
+	rule := max(width-lipgloss.Width(label), 0)
+	return label + lipgloss.NewStyle().Foreground(color.BorderMutedColor()).Render(strings.Repeat("─", rule))
+}
+
+// line joins left and right parts across width, painting the gap and every
+// part with base so a selected row is highlighted end to end.
+func line(base lipgloss.Style, left, right string, width int) string {
+	gap := width - lipgloss.Width(left) - lipgloss.Width(right)
+	if gap < 1 {
+		right, gap = "", max(width-lipgloss.Width(left), 0)
+	}
+	out := left + base.Render(strings.Repeat(" ", gap)) + right
+	return lipgloss.NewStyle().MaxWidth(width).Render(out)
+}
+
+func rowBase(selected bool) lipgloss.Style {
 	if selected {
-		return color.Title().Render(" › ")
+		return color.Selection()
 	}
-	return "   "
+	return lipgloss.NewStyle()
 }
 
-// renderTodoLine is the compact one-line form of a task.
-func renderTodoLine(todo tasks.TodoView, selected bool) string {
-	icon, state := "○", color.Muted()
+func cursorMark(base lipgloss.Style, selected bool) string {
+	if selected {
+		return color.Accent().Inherit(base).Render("› ")
+	}
+	return base.Render("  ")
+}
+
+// renderTodoLine is the one-line form of a task: state icon, name and
+// daily marker on the left; due date and priority badge on the right.
+func renderTodoLine(todo tasks.TodoView, selected bool, width int) string {
+	base := rowBase(selected)
+
+	icon, iconStyle := "○", color.Muted()
+	nameStyle := lipgloss.NewStyle().Bold(selected)
 	switch {
 	case todo.Done():
-		icon, state = "✔", color.Success()
+		icon, iconStyle = "✔", color.Success()
+		nameStyle = color.Muted().Strikethrough(true)
 	case tasks.IsExpiringSoon(todo.ExpiresAt) && !todo.IsDaily:
-		state = color.Warning()
+		iconStyle = color.Warning()
 	}
 
-	name := lipgloss.NewStyle().Bold(selected).Render(todo.Name)
+	left := cursorMark(base, selected) +
+		iconStyle.Inherit(base).Render(icon) + base.Render(" ") +
+		nameStyle.Inherit(base).Render(todo.Name)
+	if todo.IsDaily {
+		left += color.Muted().Inherit(base).Render(" ↻")
+	}
 
-	meta := make([]string, 0, 2)
+	var right string
 	if !todo.IsDaily {
-		meta = append(meta, todo.ExpiresAt.Format("02 Jan 15:04"))
+		right = color.Muted().Inherit(base).Render(todo.ExpiresAt.Format("02 Jan 15:04"))
 	}
-	if todo.Priority != "" {
-		meta = append(meta, todo.Priority)
+	if badge := priorityBadge(todo.Priority); badge != "" {
+		if right != "" {
+			right += base.Render(" ")
+		}
+		right += badge
 	}
 
-	line := state.Render(icon) + " " + name
-	if len(meta) > 0 {
-		line += color.Muted().Render("  · " + strings.Join(meta, " · "))
-	}
-	return line
+	return line(base, left, right, width)
 }
 
-func renderDumpLine(d tasks.DumpEntry, selected bool) string {
-	line := lipgloss.NewStyle().Bold(selected).Render(d.Name)
+func renderDumpLine(d tasks.DumpEntry, selected bool, width int) string {
+	base := rowBase(selected)
+	left := cursorMark(base, selected) + lipgloss.NewStyle().Bold(selected).Inherit(base).Render(d.Name)
+
+	var right string
 	if !d.CreatedAt.IsZero() {
-		line += color.Muted().Render("  · " + d.CreatedAt.Format("02 Jan 15:04"))
+		right = color.Muted().Inherit(base).Render(d.CreatedAt.Format("02 Jan 15:04"))
 	}
-	return line
+	return line(base, left, right, width)
+}
+
+// --- modals ------------------------------------------------------------
+
+// renderModal returns the box floating over the screen for the current
+// mode, or "" when there is none.
+func (m Model) renderModal(width int) string {
+	mw := modalWidth(width)
+	box := modalStyle().Width(mw)
+
+	switch m.mode {
+	case modeNotes:
+		title := color.Accent().Render(fmt.Sprintf(i18n.T("tui.prompt.notes"), m.target.Name))
+		return box.Render(title + "\n\n" + themedInput(m.input).View())
+
+	case modeAddDump:
+		title := color.Accent().Render(i18n.T("tui.prompt.dumpName"))
+		return box.Render(title + "\n\n" + themedInput(m.input).View())
+
+	case modeConfirmDelete:
+		title := color.Warning().Bold(true).Render(fmt.Sprintf(i18n.T("tui.prompt.delete"), m.target.Name))
+		return box.Render(title + "\n\n" + color.Muted().Render(m.promptHelp()))
+
+	case modeAddTodo:
+		return box.Render(m.renderForm())
+	}
+	return ""
+}
+
+func (m Model) renderForm() string {
+	lines := []string{color.Accent().Render(i18n.T("tui.form.title")), ""}
+	labelStyle := lipgloss.NewStyle().Width(labelWidth())
+	for i := range m.form.fields {
+		label := labelStyle.Render(fieldLabel(i))
+		if i == m.form.focus {
+			label = color.Accent().Render("› " + label)
+		} else {
+			label = color.Muted().Render("  " + label)
+		}
+		lines = append(lines, label+"  "+themedInput(m.form.fields[i]).View())
+	}
+	if m.form.err != nil {
+		lines = append(lines, "", color.Error().Render(m.form.err.Error()))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// --- footer ------------------------------------------------------------
+
+func (m Model) renderFooter(width int) string {
+	bar := m.renderStatusBar(width)
+
+	if m.mode != modeNormal {
+		hint := color.Muted().Render(" " + m.promptHelp())
+		return bar + "\n" + lipgloss.NewStyle().MaxWidth(width).Render(hint)
+	}
+
+	h := m.help
+	h.Styles = helpStyles()
+	h.SetWidth(width)
+	return bar + "\n" + " " + h.View(m.keys)
+}
+
+// renderStatusBar is the full-width bar: mode pill and message on the left,
+// keymap and theme on the right.
+func (m Model) renderStatusBar(width int) string {
+	base := color.Bar()
+
+	left := pillStyle().Render(m.modeLabel()) + base.Render(" ")
+	switch {
+	case m.mode == modeSearch:
+		left += color.Accent().Inherit(base).Render("/ ") + themedInput(m.input).View()
+	case m.status != "" && m.statusErr:
+		left += color.Error().Inherit(base).Render(m.status)
+	case m.status != "":
+		left += color.Success().Inherit(base).Render(m.status)
+	}
+
+	info := "◐ " + color.GetCurrentTheme().Name
+	if CurrentKeymap() == KeymapVim {
+		info = "vim · " + info
+	}
+	right := base.Render(info + " ")
+	return line(base, left, right, width)
+}
+
+func (m Model) modeLabel() string {
+	switch m.mode {
+	case modeSearch:
+		return i18n.T("tui.mode.search")
+	case modeNotes:
+		return i18n.T("tui.mode.notes")
+	case modeConfirmDelete:
+		return i18n.T("tui.mode.delete")
+	case modeAddDump:
+		return i18n.T("tui.mode.dump")
+	case modeAddTodo:
+		return i18n.T("tui.mode.add")
+	default:
+		return i18n.T("tui.mode.normal")
+	}
+}
+
+// promptHelp lists the keys available while a prompt or the form is open.
+func (m Model) promptHelp() string {
+	switch m.mode {
+	case modeConfirmDelete:
+		return "y " + i18n.T("tui.help.confirm") + " • n/esc " + i18n.T("tui.help.cancel")
+	case modeAddTodo:
+		return "tab/↓ " + i18n.T("tui.help.nextField") + " • enter " + i18n.T("tui.help.confirm") + " • esc " + i18n.T("tui.help.cancel")
+	default:
+		return "enter " + i18n.T("tui.help.confirm") + " • esc " + i18n.T("tui.help.cancel")
+	}
 }

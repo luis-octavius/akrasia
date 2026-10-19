@@ -21,6 +21,7 @@ type keyMap struct {
 	Search   key.Binding
 	Priority key.Binding
 	Details  key.Binding
+	Theme    key.Binding
 	Reload   key.Binding
 	Help     key.Binding
 	Quit     key.Binding
@@ -94,6 +95,10 @@ func newKeyMap(layout string) keyMap {
 			key.WithKeys("enter"),
 			key.WithHelp("enter", i18n.T("tui.help.details")),
 		),
+		Theme: key.NewBinding(
+			key.WithKeys("t"),
+			key.WithHelp("t", i18n.T("tui.help.theme")),
+		),
 		Reload: key.NewBinding(
 			key.WithKeys("r"),
 			key.WithHelp("r", i18n.T("tui.help.reload")),
@@ -118,7 +123,7 @@ func (k keyMap) ShortHelp() []key.Binding {
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Top, k.Bottom},
-		{k.NextTab, k.PrevTab, k.Reload},
+		{k.NextTab, k.PrevTab, k.Reload, k.Theme},
 		{k.Complete, k.Add, k.Delete, k.Details},
 		{k.Search, k.Priority, k.Help, k.Quit},
 	}
