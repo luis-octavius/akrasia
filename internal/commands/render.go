@@ -240,12 +240,14 @@ func printDumps(entries []tasks.DumpEntry) {
 		return
 	}
 
-	for _, d := range entries {
+	// the numbers are what --delete and --to-task take
+	for i, d := range entries {
 		createdAt := ""
 		if !d.CreatedAt.IsZero() {
-			createdAt = d.CreatedAt.Format(time.RFC822)
+			// stored in local time, so no zone is shown
+			createdAt = d.CreatedAt.Format("02 Jan 06 15:04")
 		}
-		fmt.Printf(i18n.T("tasks.dump.row"), d.Name, createdAt)
+		fmt.Printf("%d. "+i18n.T("tasks.dump.row"), i+1, d.Name, createdAt)
 	}
 }
 

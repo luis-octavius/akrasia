@@ -452,7 +452,11 @@ func (m Model) renderModal(width int) string {
 		return box.Render(title + "\n\n" + themedInput(m.input).View())
 
 	case modeConfirmDelete:
-		title := color.Warning().Bold(true).Render(fmt.Sprintf(i18n.T("tui.prompt.delete"), m.target.Name))
+		question := fmt.Sprintf(i18n.T("tui.prompt.delete"), m.target.Name)
+		if m.targetDump != nil {
+			question = fmt.Sprintf(i18n.T("tui.prompt.deleteDump"), m.targetDump.Name)
+		}
+		title := color.Warning().Bold(true).Render(question)
 		return box.Render(title + "\n\n" + color.Muted().Render(m.promptHelp()))
 
 	case modeAddTodo:
@@ -469,8 +473,11 @@ func (m Model) renderModal(width int) string {
 
 func (m Model) renderForm() string {
 	title := i18n.T("tui.form.title")
-	if m.form.editing != nil {
+	switch {
+	case m.form.editing != nil:
 		title = i18n.T("tui.form.editTitle")
+	case m.form.fromDump != nil:
+		title = i18n.T("tui.form.fromDumpTitle")
 	}
 	lines := []string{color.Accent().Render(title), ""}
 	labelStyle := lipgloss.NewStyle().Width(labelWidth())

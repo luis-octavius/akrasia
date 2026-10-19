@@ -42,12 +42,24 @@ All notable changes to Akrasia are documented here. The format follows
   the CLI prints one. `esc`, `enter` or `q` close it; other keys are
   ignored while it is open. `Q` shows a quote at any time.
 
+- **Dump: delete entries and turn them into tasks.** `akrasia dump` now
+  numbers the list.
+  - `--delete N` removes an entry.
+  - `--to-task N` creates a task from it (optionally with `--priority`,
+    `--daily`, `--date`) and removes it from the dump. If the task can't be
+    created (for example, the name is taken), the entry stays.
+  - In the TUI, on the Dump tab: `x` deletes with confirmation, and `c`
+    opens the new-task form prefilled with the entry.
 - **Years in due dates.** `--date dd,mm,yyyy` in `add` and `edit`, and
   `dd/mm/yyyy` in the TUI form (a two-digit year means 20yy). The edit form
   prefills the full date.
 
 ### Fixed
 
+- Dump dates are shown without a wrong "UTC" label; they are stored in
+  local time.
+- Adding a task whose name is taken says so ("there is already a task
+  called X") instead of a raw database error.
 - Due dates are set at local midnight instead of UTC midnight. Before, a
   task due on the 21st showed up as due on the 20th in timezones behind
   UTC (like São Paulo).

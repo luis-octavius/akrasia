@@ -31,6 +31,9 @@ type todoForm struct {
 
 	// editing is the task being edited; nil when the form creates a task.
 	editing *tasks.TodoView
+	// fromDump is the dump entry the new task comes from; it leaves the
+	// dump once the task is created.
+	fromDump *tasks.DumpEntry
 	// initial holds the prefilled values, to tell which fields changed.
 	initial [fieldCount]string
 }
@@ -48,6 +51,15 @@ func newTodoForm(width int) todoForm {
 	f.fields[fieldDate].Placeholder = i18n.T("tui.form.dateHint")
 	f.setWidth(width)
 	f.fields[fieldName].Focus()
+	return f
+}
+
+// newDumpForm opens the new-task form with the dump entry as its name.
+func newDumpForm(width int, entry tasks.DumpEntry) todoForm {
+	f := newTodoForm(width)
+	f.fromDump = &entry
+	f.fields[fieldName].SetValue(entry.Name)
+	f.fields[fieldName].CursorEnd()
 	return f
 }
 

@@ -49,6 +49,8 @@ func (m Model) handleNormalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.startEdit()
 	case key.Matches(msg, m.keys.Notes):
 		return m.startNotesView()
+	case key.Matches(msg, m.keys.Convert):
+		return m.startConvert()
 	case key.Matches(msg, m.keys.Quote):
 		m.openQuote("")
 		return m, nil
@@ -134,14 +136,30 @@ func (m Model) todayNoteCmd(name string) tea.Cmd {
 // startDelete asks for confirmation before deleting the selected task.
 func (m Model) startDelete() (tea.Model, tea.Cmd) {
 	r, ok := m.selected()
-	if !ok || r.todo == nil {
+	switch {
+	case ok && r.dump != nil:
+		entry := *r.dump
+		m.mode, m.targetDump = modeConfirmDelete, &entry
+	case ok && r.todo != nil:
+		m.mode, m.target, m.targetDump = modeConfirmDelete, *r.todo, nil
+	default:
 		m.setStatus(i18n.T("tui.prompt.noSelection"), nil)
 		return m, nil
 	}
-
-	m.mode, m.target = modeConfirmDelete, *r.todo
 	m.status = ""
 	return m, nil
+}
+
+// startConvert opens the new-task form for the selected dump entry.
+func (m Model) startConvert() (tea.Model, tea.Cmd) {
+	r, ok := m.selected()
+	if !ok || r.dump == nil {
+		return m, nil
+	}
+
+	m.mode, m.status = modeAddTodo, ""
+	m.form = newDumpForm(modalWidth(m.width), *r.dump)
+	return m, textinput.Blink
 }
 
 // startAdd opens the dump prompt on the Dump tab and the task form
@@ -228,6 +246,9 @@ func (m Model) handleConfirmKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "y", "Y", "s", "S":
 		m.mode = modeNormal
+		if m.targetDump != nil {
+			return m, m.deleteDumpCmd(*m.targetDump)
+		}
 		return m, m.deleteCmd(m.target.Name)
 	case "n", "N", "esc":
 		m.mode = modeNormal
@@ -255,6 +276,9 @@ func (m Model) handleFormKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.mode = modeNormal
+		if m.form.fromDump != nil {
+			return m, m.promoteCmd(*m.form.fromDump, in)
+		}
 		return m, m.addTodoCmd(in)
 
 	case "tab", "down":
@@ -312,6 +336,22 @@ func (m Model) deleteCmd(name string) tea.Cmd {
 	return func() tea.Msg {
 		todo, err := svc.DeleteByName(ctx, name)
 		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.deleted"), todo.Name), err: err}
+	}
+}
+
+func (m Model) deleteDumpCmd(entry tasks.DumpEntry) tea.Cmd {
+	ctx, svc := m.ctx, m.svc
+	return func() tea.Msg {
+		err := svc.DeleteDump(ctx, entry.ID)
+		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.dumpDeleted"), entry.Name), err: err}
+	}
+}
+
+func (m Model) promoteCmd(entry tasks.DumpEntry, in tasks.NewTodo) tea.Cmd {
+	ctx, svc := m.ctx, m.svc
+	return func() tea.Msg {
+		todo, err := svc.PromoteDump(ctx, entry.ID, in)
+		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.promoted"), todo.Name), err: err}
 	}
 }
 

@@ -39,6 +39,13 @@ var (
 	editDate        []int
 
 	notesLimit int
+
+	// dump flags
+	dumpDelete   int
+	dumpToTask   int
+	dumpPriority string
+	dumpDaily    bool
+	dumpDate     []int
 )
 
 // rootCmd is the CLI entrypoint that registers all Akrasia subcommands.
@@ -525,11 +532,13 @@ var backfillHistory = &cobra.Command{
 	},
 }
 
-// dump stores a named entry in the dump table, or lists stored entries.
+// dump stores a named entry in the dump table, lists stored entries,
+// deletes one or turns one into a task.
 var dumpCmd = &cobra.Command{
 	Use:     i18n.T("commands.commands.dumpUse"),
 	Short:   i18n.T("commands.commands.dumpShort"),
 	Aliases: []string{"dp"},
+	Example: i18n.T("commands.commands.dumpExample"),
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		tkm, err := taskManagerFromContext(cmd.Context())
@@ -542,12 +551,53 @@ var dumpCmd = &cobra.Command{
 			dumpName = args[0]
 		}
 
-		if dumpName == "" {
+		flags := cmd.Flags()
+		deleting, promoting := flags.Changed("delete"), flags.Changed("to-task")
+		taskFlags := flags.Changed("priority") || flags.Changed("daily") || flags.Changed("date")
+
+		switch {
+		case (deleting && promoting) || ((deleting || promoting) && dumpName != ""):
+			return errors.New(i18n.T("commands.error.dumpFlags"))
+		case taskFlags && !promoting:
+			return errors.New(i18n.T("commands.error.dumpTaskFlags"))
+
+		case deleting:
+			entry, err := tkm.DumpAt(cmd.Context(), dumpDelete)
+			if err != nil {
+				return err
+			}
+			if err := tkm.DeleteDump(cmd.Context(), entry.ID); err != nil {
+				return err
+			}
+			color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.deletedDump"), entry.Name))
+			return nil
+
+		case promoting:
+			entry, err := tkm.DumpAt(cmd.Context(), dumpToTask)
+			if err != nil {
+				return err
+			}
+			expiresAt, err := tasks.ParseDate(dumpDate)
+			if err != nil {
+				return err
+			}
+			todo, err := tkm.PromoteDump(cmd.Context(), entry.ID, tasks.NewTodo{
+				Name:      entry.Name,
+				Priority:  dumpPriority,
+				IsDaily:   dumpDaily,
+				ExpiresAt: expiresAt,
+			})
+			if err != nil {
+				return err
+			}
+			color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.promotedDump"), todo.Name))
+			return nil
+
+		case dumpName == "":
 			entries, err := tkm.Dumps(cmd.Context())
 			if err != nil {
 				return err
 			}
-
 			printDumps(entries)
 			return nil
 		}
@@ -880,6 +930,11 @@ func init() {
 	backfillHistory.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.backfillHistoryName"))
 	debugTask.Flags().StringVar(&name, "task", "", i18n.T("commands.flags.debugName"))
 	dumpCmd.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.dumpName"))
+	dumpCmd.Flags().IntVar(&dumpDelete, "delete", 0, i18n.T("commands.flags.dumpDelete"))
+	dumpCmd.Flags().IntVar(&dumpToTask, "to-task", 0, i18n.T("commands.flags.dumpToTask"))
+	dumpCmd.Flags().StringVar(&dumpPriority, "priority", "", i18n.T("commands.flags.dumpPriority"))
+	dumpCmd.Flags().BoolVar(&dumpDaily, "daily", false, i18n.T("commands.flags.dumpDaily"))
+	dumpCmd.Flags().IntSliceVar(&dumpDate, "date", nil, i18n.T("commands.flags.dumpDate"))
 	notesCmd.Flags().IntVar(&notesLimit, "limit", 30, i18n.T("commands.flags.notesLimit"))
 	editCmd.Flags().StringVar(&editName, "name", "", i18n.T("commands.flags.editName"))
 	editCmd.Flags().StringVar(&editDescription, "desc", "", i18n.T("commands.flags.editDescription"))

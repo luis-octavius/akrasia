@@ -29,8 +29,8 @@
 			"backfillHistoryShort": "retropreencher tarefas diárias ausentes no histórico",
 			"debugShort": "inspecionar o histórico armazenado e o cálculo da ofensiva de uma tarefa (diagnóstico)",
 			"debugUse": "debug <nome>",
-			"dumpShort": "armazenar uma entrada nomeada, ou listar as armazenadas",
-			"dumpUse": "dump [<nome>]",
+			"dumpShort": "guardar um item no dump, listar, apagar um ou transformar um em tarefa",
+			"dumpUse": "dump [<item>]",
 			"configShort": "gerenciar configurações (tema, idioma, teclas da TUI)",
 			"configThemeShort": "gerenciar temas de cor",
 			"configThemeUse": "theme [list|show|<nome-do-tema>]",
@@ -45,7 +45,8 @@
 			"editExample": "akrasia edit \"Corrida\" --name \"Caminhada\"\nakrasia edit stendhal --priority low --date 30,11\nakrasia edit \"Ler\" --daily=false --desc \"\"",
 			"notesUse": "notes <nome>",
 			"notesShort": "mostrar as notas escritas em cada dia em que a tarefa foi concluída",
-			"notesExample": "akrasia notes \"Estudar Rust\"\nakrasia notes rust --limit 7"
+			"notesExample": "akrasia notes \"Estudar Rust\"\nakrasia notes rust --limit 7",
+			"dumpExample": "akrasia dump \"estudar índices em sql\"\nakrasia dump                      # lista numerada\nakrasia dump --delete 2\nakrasia dump --to-task 1 --priority high --date 30,11"
 		},
 		"flags": {
 			"addDate": "prazo: dd, dd,mm ou dd,mm,aaaa (padrão: amanhã)",
@@ -77,7 +78,12 @@
 			"editPriority": "nova prioridade (high|medium|low, \"\" apaga)",
 			"editDaily": "tornar a tarefa diária (true) ou única (false)",
 			"editDate": "novo prazo: dd, dd,mm ou dd,mm,aaaa",
-			"notesLimit": "quantos dias mostrar (0 = todos)"
+			"notesLimit": "quantos dias mostrar (0 = todos)",
+			"dumpDelete": "apagar o item do dump com este número",
+			"dumpToTask": "transformar o item do dump com este número em tarefa (com --priority, --daily, --date)",
+			"dumpPriority": "prioridade da tarefa criada com --to-task",
+			"dumpDaily": "tornar diária a tarefa criada com --to-task",
+			"dumpDate": "prazo da tarefa criada com --to-task: dd, dd,mm ou dd,mm,aaaa"
 		},
 		"cobra": {
 			"usage": "Uso:",
@@ -126,7 +132,9 @@
 			"unknownKeymap": "keymap desconhecido: %q (disponíveis: %v)",
 			"setKeymap": "falha ao definir o keymap: %w",
 			"nothingToEdit": "nada para alterar: use ao menos um de --name, --desc, --priority, --daily ou --date",
-			"invalidDay": "o dia %d não existe em %02d/%d"
+			"invalidDay": "o dia %d não existe em %02d/%d",
+			"dumpFlags": "use apenas um de --delete e --to-task, sem um item novo",
+			"dumpTaskFlags": "--priority, --daily e --date só valem com --to-task"
 		}
 	},
 	"db": {
@@ -188,7 +196,9 @@
 			"backfilledDailyTask": "Retropreenchidas %d entradas no histórico para %d tarefa(s) diária(s)",
 			"addedDump": "Dump '%s' adicionado\n",
 			"noDump": "Nenhuma entrada de dump armazenada",
-			"updatedTask": "Tarefa %s atualizada"
+			"updatedTask": "Tarefa %s atualizada",
+			"deletedDump": "Dump '%s' apagado",
+			"promotedDump": "Dump '%s' agora é uma tarefa"
 		},
 		"error": {
 			"createTask": "erro ao criar a tarefa: %w",
@@ -219,7 +229,9 @@
 			"invalidPriority": "a prioridade deve ser high, medium, low ou vazia (recebido '%s')",
 			"emptyName": "o nome da tarefa não pode ser vazio",
 			"updateTask": "erro ao atualizar a tarefa: %w",
-			"getNotes": "erro ao obter as notas da tarefa"
+			"getNotes": "erro ao obter as notas da tarefa",
+			"dumpNotFound": "não existe o item %d no dump (há %d; veja `akrasia dump`)",
+			"deleteDump": "erro ao apagar o item do dump"
 		}
 	},
 	"quotes": {
@@ -268,7 +280,8 @@
 			"notes": "notas",
 			"scroll": "rolar",
 			"close": "fechar",
-			"quote": "citação"
+			"quote": "citação",
+			"convert": "dump → tarefa"
 		},
 		"loading": "Carregando...",
 		"empty": "Nada por aqui ainda.",
@@ -280,7 +293,9 @@
 			"alreadyDone": "%q já foi concluída hoje",
 			"noSelection": "Nada selecionado",
 			"replaceNote": "Substituir a nota de hoje de %q:",
-			"replaceHint": "Salvar substitui a nota que você escreveu hoje."
+			"replaceHint": "Salvar substitui a nota que você escreveu hoje.",
+			"deleteDump": "Apagar o dump %q? (s/n)",
+			"notTask": "Selecione uma tarefa (na aba Dump: x apaga, c vira tarefa)"
 		},
 		"form": {
 			"title": "Nova tarefa",
@@ -296,7 +311,8 @@
 			"priorityHint": "high / medium / low",
 			"dailyHint": "s / n",
 			"dateHint": "dd, dd/mm ou dd/mm/aaaa; vazio = amanhã",
-			"editTitle": "Editar tarefa"
+			"editTitle": "Editar tarefa",
+			"fromDumpTitle": "Nova tarefa a partir do dump"
 		},
 		"status": {
 			"completed": "✔ %s concluída",
@@ -307,7 +323,9 @@
 			"priority": "prioridade",
 			"theme": "tema: %s",
 			"updated": "✔ %s atualizada",
-			"noteUpdated": "✔ nota de %s atualizada"
+			"noteUpdated": "✔ nota de %s atualizada",
+			"promoted": "✔ %s agora é uma tarefa",
+			"dumpDeleted": "dump %s apagado"
 		},
 		"details": {
 			"expires": "Expira",

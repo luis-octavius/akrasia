@@ -29,8 +29,8 @@
 			"backfillHistoryShort": "backfill missing daily task history entries",
 			"debugShort": "inspect a task's stored history and streak math (diagnostics)",
 			"debugUse": "debug <name>",
-			"dumpShort": "store a named dump entry, or list stored entries",
-			"dumpUse": "dump [<name>]",
+			"dumpShort": "store a dump entry, list them, delete one or turn one into a task",
+			"dumpUse": "dump [<entry>]",
 			"configShort": "manage settings (theme, language, TUI keymap)",
 			"configThemeShort": "manage color themes",
 			"configThemeUse": "theme [list|show|<theme-name>]",
@@ -45,7 +45,8 @@
 			"editExample": "akrasia edit \"Morning run\" --name \"Morning walk\"\nakrasia edit stendhal --priority low --date 30,11\nakrasia edit \"Read\" --daily=false --desc \"\"",
 			"notesUse": "notes <name>",
 			"notesShort": "show the notes written each day a task was completed",
-			"notesExample": "akrasia notes \"Estudar Rust\"\nakrasia notes rust --limit 7"
+			"notesExample": "akrasia notes \"Estudar Rust\"\nakrasia notes rust --limit 7",
+			"dumpExample": "akrasia dump \"learn about sql indexes\"\nakrasia dump                      # numbered list\nakrasia dump --delete 2\nakrasia dump --to-task 1 --priority high --date 30,11"
 		},
 		"flags": {
 			"addDate": "due date: dd, dd,mm or dd,mm,yyyy (default: tomorrow)",
@@ -77,7 +78,12 @@
 			"editPriority": "new priority (high|medium|low, \"\" clears it)",
 			"editDaily": "make the task daily (true) or one-off (false)",
 			"editDate": "new due date: dd, dd,mm or dd,mm,yyyy",
-			"notesLimit": "how many days to show (0 = all)"
+			"notesLimit": "how many days to show (0 = all)",
+			"dumpDelete": "delete the dump entry with this number",
+			"dumpToTask": "turn the dump entry with this number into a task (with --priority, --daily, --date)",
+			"dumpPriority": "priority of the task created with --to-task",
+			"dumpDaily": "make the task created with --to-task daily",
+			"dumpDate": "due date of the task created with --to-task: dd, dd,mm or dd,mm,yyyy"
 		},
 		"cobra": {
 			"usage": "Usage:",
@@ -126,7 +132,9 @@
 			"unknownKeymap": "unknown keymap: %q (available: %v)",
 			"setKeymap": "failed to set keymap: %w",
 			"nothingToEdit": "nothing to change: pass at least one of --name, --desc, --priority, --daily or --date",
-			"invalidDay": "day %d does not exist in %02d/%d"
+			"invalidDay": "day %d does not exist in %02d/%d",
+			"dumpFlags": "use only one of --delete and --to-task, without a new entry",
+			"dumpTaskFlags": "--priority, --daily and --date only apply with --to-task"
 		}
 	},
 	"db": {
@@ -188,7 +196,9 @@
 			"backfilledDailyTask": "Backfilled %d history entries for %d daily task(s)",
 			"addedDump": "Dump '%s' added\n",
 			"noDump": "No dump entries stored",
-			"updatedTask": "Task %s updated"
+			"updatedTask": "Task %s updated",
+			"deletedDump": "Dump '%s' deleted",
+			"promotedDump": "Dump '%s' is now a task"
 		},
 		"error": {
 			"createTask": "error creating task: %w",
@@ -219,7 +229,9 @@
 			"invalidPriority": "priority must be high, medium, low or empty (got '%s')",
 			"emptyName": "the task name can't be empty",
 			"updateTask": "error updating task: %w",
-			"getNotes": "error getting the notes of the task"
+			"getNotes": "error getting the notes of the task",
+			"dumpNotFound": "there is no dump entry %d (there are %d; see `akrasia dump`)",
+			"deleteDump": "error deleting the dump entry"
 		}
 	},
 	"quotes": {
@@ -268,7 +280,8 @@
 			"notes": "notes",
 			"scroll": "scroll",
 			"close": "close",
-			"quote": "quote"
+			"quote": "quote",
+			"convert": "dump → task"
 		},
 		"loading": "Loading...",
 		"empty": "Nothing here yet.",
@@ -280,7 +293,9 @@
 			"alreadyDone": "%q is already done today",
 			"noSelection": "Nothing selected",
 			"replaceNote": "Replace today's note for %q:",
-			"replaceHint": "Saving replaces the note you wrote today."
+			"replaceHint": "Saving replaces the note you wrote today.",
+			"deleteDump": "Delete dump %q? (y/n)",
+			"notTask": "Select a task (on the Dump tab: x deletes, c turns into a task)"
 		},
 		"form": {
 			"title": "New task",
@@ -296,7 +311,8 @@
 			"priorityHint": "high / medium / low",
 			"dailyHint": "y / n",
 			"dateHint": "dd, dd/mm or dd/mm/yyyy; empty = tomorrow",
-			"editTitle": "Edit task"
+			"editTitle": "Edit task",
+			"fromDumpTitle": "New task from dump"
 		},
 		"status": {
 			"completed": "✔ %s completed",
@@ -307,7 +323,9 @@
 			"priority": "priority",
 			"theme": "theme: %s",
 			"updated": "✔ %s updated",
-			"noteUpdated": "✔ note for %s updated"
+			"noteUpdated": "✔ note for %s updated",
+			"promoted": "✔ %s is now a task",
+			"dumpDeleted": "dump %s deleted"
 		},
 		"details": {
 			"expires": "Expires",

@@ -215,15 +215,29 @@ Current streak: 3 (counting history dates >= history_since = 2026-10-16)
 
 ### Dump
 
-A quick place for loose ideas that are not tasks yet.
+A quick place for loose ideas: some will become tasks, some never will.
 
 ```bash
-akrasia dump "remember this"
-Dump 'remember this' added
+akrasia dump "learn about sql indexes"
+Dump 'learn about sql indexes' added
 
+# the list is numbered; the numbers are what --delete and --to-task take
 akrasia dump
-remember this | 19 Oct 26 14:38 UTC
+1. app idea | 19 Oct 26 19:42
+2. learn about sql indexes | 19 Oct 26 19:42
+3. buy plants | 19 Oct 26 19:43
+
+akrasia dump --delete 3
+Dump 'buy plants' deleted
+
+# turn an entry into a task (it leaves the dump); --priority, --daily and
+# --date work like in `add`
+akrasia dump --to-task 2 --priority high --date 30,11
+Dump 'learn about sql indexes' is now a task
 ```
+
+In the TUI, on the Dump tab: `a` adds, `x` deletes and `c` turns the selected
+entry into a task through the new-task form.
 
 ### Deleting
 

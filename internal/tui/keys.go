@@ -20,6 +20,7 @@ type keyMap struct {
 	Edit     key.Binding
 	Notes    key.Binding
 	Quote    key.Binding
+	Convert  key.Binding
 	Delete   key.Binding
 	Search   key.Binding
 	Priority key.Binding
@@ -94,6 +95,10 @@ func newKeyMap(layout string) keyMap {
 			key.WithKeys("Q"),
 			key.WithHelp("Q", i18n.T("tui.help.quote")),
 		),
+		Convert: key.NewBinding(
+			key.WithKeys("c"),
+			key.WithHelp("c", i18n.T("tui.help.convert")),
+		),
 		Delete: key.NewBinding(
 			key.WithKeys("x", "delete"),
 			key.WithHelp("x", i18n.T("tui.help.delete")),
@@ -136,11 +141,13 @@ func (k keyMap) ShortHelp() []key.Binding {
 
 // FullHelp implements help.KeyMap.
 func (k keyMap) FullHelp() [][]key.Binding {
+	// five columns of four keys, so every row of the full help starts at
+	// the left edge
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Top, k.Bottom},
-		{k.NextTab, k.PrevTab, k.Reload},
+		{k.NextTab, k.PrevTab, k.Reload, k.Theme},
 		{k.Complete, k.Add, k.Edit, k.Delete},
-		{k.Details, k.Notes, k.Search, k.Priority},
-		{k.Theme, k.Quote, k.Help, k.Quit},
+		{k.Convert, k.Details, k.Notes, k.Search},
+		{k.Priority, k.Quote, k.Help, k.Quit},
 	}
 }

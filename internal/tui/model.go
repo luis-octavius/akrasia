@@ -9,6 +9,7 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/google/uuid"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
@@ -26,6 +27,8 @@ type Service interface {
 	Complete(ctx context.Context, name, notes string) (tasks.TodoView, error)
 	DeleteByName(ctx context.Context, name string) (tasks.TodoView, error)
 	AddDump(ctx context.Context, name string) (tasks.DumpEntry, error)
+	DeleteDump(ctx context.Context, id uuid.UUID) error
+	PromoteDump(ctx context.Context, id uuid.UUID, in tasks.NewTodo) (tasks.TodoView, error)
 	CurrentStreak(ctx context.Context, name string) (tasks.TodoView, int64, error)
 	TodayProgress(ctx context.Context) (tasks.Progress, error)
 	StreakHistory(ctx context.Context, name string) (tasks.TodoView, []tasks.StreakPeriod, error)
@@ -147,6 +150,9 @@ type Model struct {
 	input  textinput.Model // notes, search and dump name prompts
 	form   todoForm
 	target tasks.TodoView // task the current prompt acts on
+	// targetDump is the dump entry the delete confirmation acts on; when
+	// set, x on the Dump tab deletes it instead of a task
+	targetDump *tasks.DumpEntry
 	// replacingNote: the notes prompt rewrites today's note of a task that
 	// is already done today
 	replacingNote bool

@@ -13,7 +13,8 @@ Below the tabs, a bar shows today's progress (see `akrasia progress`).
 | `space` | complete the selected task (asks for optional notes, then shows a quote; `esc` closes it). On a task already done today, it opens today's note to rewrite it |
 | `a` | new task (on the Dump tab: new dump entry) |
 | `e` | edit the selected task (the form opens prefilled; only what you change is saved) |
-| `x` | delete the selected task (asks for confirmation) |
+| `x` | delete the selected task or dump entry (asks for confirmation) |
+| `c` | on the Dump tab: turn the selected entry into a task (opens the new-task form with its text) |
 | `enter` | toggle the details panel (last notes, plus streak and streak history for daily tasks) |
 | `n` | open every note of the selected task in a scrollable window (`esc` closes) |
 | `/` | filter by name; `esc` clears it |
@@ -51,7 +52,7 @@ Available Commands:
  cfg config           manage settings (theme, language, TUI keymap)
  dbg debug            inspect a task's stored history and streak math (diagnostics)
  dn  delete-by-name   delete a todo by name
- dp  dump             store a named dump entry, or list stored entries
+ dp  dump             store a dump entry, list them, delete one or turn one into a task
  e   edit             change the name, description, priority, daily mode or date of a task
  fc  focus            show top 1-3 priority items to focus on right now
  ga  get-all          returns all the todos saved in storage
@@ -86,6 +87,7 @@ Available Commands:
 | `focus` | `--limit 1-3` (default 3), `--priority` |
 | `get-all` | `--priority` |
 | `update-status` | `--notes "text"` (saved in the task's history for today; completing again the same day replaces it) |
+| `dump` | `--delete N`, `--to-task N` (with optional `--priority`, `--daily`, `--date`); `N` is the number `akrasia dump` prints |
 | `notes` | `--limit N` days (default 30, `0` = all) |
 | `delete-by-name` | `--yes` (required) |
 | `backfill-history` | `--days N` (default 30), `--task <name>` (default: every daily task) |

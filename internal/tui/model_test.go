@@ -11,6 +11,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/google/uuid"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/color"
 )
@@ -26,12 +27,14 @@ type fakeService struct {
 	notes    []tasks.NoteEntry
 	err      error
 
-	calls     map[string]int
-	edited    []editCall
-	completed []string // "name|notes"
-	deleted   []string
-	added     []tasks.NewTodo
-	dumped    []string
+	calls        map[string]int
+	edited       []editCall
+	dumpsDeleted []uuid.UUID
+	promoted     []tasks.NewTodo
+	completed    []string // "name|notes"
+	deleted      []string
+	added        []tasks.NewTodo
+	dumped       []string
 }
 
 func (f *fakeService) called(name string) {
@@ -80,6 +83,17 @@ func (f *fakeService) Complete(_ context.Context, name, notes string) (tasks.Tod
 func (f *fakeService) DeleteByName(_ context.Context, name string) (tasks.TodoView, error) {
 	f.deleted = append(f.deleted, name)
 	return tasks.TodoView{Name: name}, nil
+}
+
+func (f *fakeService) DeleteDump(_ context.Context, id uuid.UUID) error {
+	f.dumpsDeleted = append(f.dumpsDeleted, id)
+	return nil
+}
+
+func (f *fakeService) PromoteDump(_ context.Context, id uuid.UUID, in tasks.NewTodo) (tasks.TodoView, error) {
+	f.promoted = append(f.promoted, in)
+	f.dumpsDeleted = append(f.dumpsDeleted, id)
+	return tasks.TodoView{Name: in.Name}, nil
 }
 
 func (f *fakeService) AddDump(_ context.Context, name string) (tasks.DumpEntry, error) {
@@ -876,5 +890,61 @@ func TestReplacePromptStartsEmptyWithoutNoteToday(t *testing.T) {
 	m := send(t, start(t, svc, KeymapDefault), keyTab, keyTab, keySpace)
 	if m.input.Value() != "" {
 		t.Fatalf("a note from another day must not be prefilled, got %q", m.input.Value())
+	}
+}
+
+func dumpTab(t *testing.T, svc *fakeService) Model {
+	t.Helper()
+	m := send(t, start(t, svc, KeymapDefault), tea.WindowSizeMsg{Width: 100, Height: 24}, tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift})
+	if m.active != tabDump {
+		t.Fatalf("expected the Dump tab, got %v", m.active)
+	}
+	return m
+}
+
+func TestDeleteDumpNeedsConfirmation(t *testing.T) {
+	idea := tasks.DumpEntry{ID: uuid.New(), Name: "app idea"}
+	svc := &fakeService{dumps: []tasks.DumpEntry{idea}}
+	m := dumpTab(t, svc)
+
+	m = send(t, m, runes("x"))
+	if view := ansi.Strip(m.View().Content); !strings.Contains(view, `Delete dump "app idea"?`) {
+		t.Fatalf("x on a dump should ask to delete it:\n%s", view)
+	}
+
+	send(t, m, runes("y"))
+	if len(svc.dumpsDeleted) != 1 || svc.dumpsDeleted[0] != idea.ID {
+		t.Fatalf("y should delete the dump entry, got %v", svc.dumpsDeleted)
+	}
+}
+
+func TestConvertDumpToTask(t *testing.T) {
+	idea := tasks.DumpEntry{ID: uuid.New(), Name: "learn sql"}
+	svc := &fakeService{dumps: []tasks.DumpEntry{idea}}
+	m := dumpTab(t, svc)
+
+	m = send(t, m, runes("c"))
+	if m.mode != modeAddTodo || m.form.fromDump == nil {
+		t.Fatalf("c should open the new-task form for the dump entry")
+	}
+	if view := ansi.Strip(m.View().Content); !strings.Contains(view, "New task from dump") || !strings.Contains(view, "learn sql") {
+		t.Fatalf("form should be titled and prefilled from the dump:\n%s", view)
+	}
+
+	// name, description, priority "high", daily, date
+	m = send(t, m, keyEnter, keyEnter, runes("high"), keyEnter, keyEnter, keyEnter)
+	if len(svc.promoted) != 1 || svc.promoted[0].Name != "learn sql" || svc.promoted[0].Priority != "high" {
+		t.Fatalf("expected learn sql promoted with high priority, got %+v (form err %v)", svc.promoted, m.form.err)
+	}
+	if len(svc.dumpsDeleted) != 1 || svc.dumpsDeleted[0] != idea.ID || !strings.Contains(m.status, "learn sql") {
+		t.Fatalf("the entry should leave the dump; deleted %v status %q", svc.dumpsDeleted, m.status)
+	}
+}
+
+func TestConvertOnlyWorksOnDumps(t *testing.T) {
+	svc := &fakeService{all: []tasks.TodoView{todo("taxes")}}
+	m := send(t, start(t, svc, KeymapDefault), keyTab, runes("c"))
+	if m.mode != modeNormal {
+		t.Fatalf("c on a task should do nothing, mode %v", m.mode)
 	}
 }

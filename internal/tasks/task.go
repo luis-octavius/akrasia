@@ -28,6 +28,12 @@ func (tkm *TaskManager) AddTodo(ctx context.Context, in NewTodo) (TodoView, erro
 		IsDaily:      in.IsDaily,
 		HistorySince: sql.NullString{String: now.Format(time.DateOnly), Valid: true},
 	})
+	if isUniqueViolation(err) {
+		return TodoView{}, localizedError{
+			msg:      fmt.Sprintf(i18n.T("tasks.error.nameTaken"), in.Name),
+			sentinel: ErrNameTaken,
+		}
+	}
 	if err != nil {
 		return TodoView{}, fmt.Errorf(i18n.T("tasks.error.createTask"), err)
 	}

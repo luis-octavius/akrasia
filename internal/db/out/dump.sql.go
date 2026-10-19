@@ -29,6 +29,16 @@ func (q *Queries) AddDump(ctx context.Context, arg AddDumpParams) (Dump, error) 
 	return i, err
 }
 
+const deleteDump = `-- name: DeleteDump :exec
+DELETE FROM dump
+WHERE id = ?
+`
+
+func (q *Queries) DeleteDump(ctx context.Context, id interface{}) error {
+	_, err := q.db.ExecContext(ctx, deleteDump, id)
+	return err
+}
+
 const getAllDump = `-- name: GetAllDump :many
 SELECT id, name, created_at FROM dump 
 ORDER BY created_at
