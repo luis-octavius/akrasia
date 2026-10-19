@@ -12,7 +12,7 @@
 			"focusShort": "mostrar os top 1-3 itens para focar agora",
 			"getTodoByNameShort": "pesquisar por uma tarefa pelo nome (pesquisa aproximada, não diferencia maiúsculas/minúsculas)",
 			"getTodoByNameUse": "get-by-name <nome>",
-			"updateStatusShort": "marcar uma tarefa como feita e registrar no histórico com notas opcionais",
+			"updateStatusShort": "marcar uma tarefa como concluída e registrar no histórico com notas opcionais (rode de novo no mesmo dia para substituir as notas)",
 			"updateStatusUse": "update-status <nome>",
 			"updateStatusExample": "akrasia update-status --name \"Corrida matinal\" --notes \"Feita depois do almoço\"",
 			"deleteConcludedShort": "deletar todas as tarefas concluídas",
@@ -61,7 +61,7 @@
 			"delByNameName": "nome da tarefa",
 			"delByNameDeleteYes": "confirmar a exclusão da tarefa",
 			"updateStatusToConcludedName": "nome da tarefa",
-			"updateStatusToConcludedNotes": "notas diárias",
+			"updateStatusToConcludedNotes": "notas de hoje; concluir a tarefa de novo no mesmo dia as substitui",
 			"deleteConcludedDeleteYes": "confirmar remoção destrutiva de tarefas concluídas",
 			"getTodoCurrentStreakName": "nome da tarefa",
 			"getTodoStreakHistoryName": "histórico de ofensivas da tarefa",
@@ -278,7 +278,9 @@
 			"search": "Buscar:",
 			"dumpName": "Novo dump:",
 			"alreadyDone": "%q já foi concluída hoje",
-			"noSelection": "Nada selecionado"
+			"noSelection": "Nada selecionado",
+			"replaceNote": "Substituir a nota de hoje de %q:",
+			"replaceHint": "Salvar substitui a nota que você escreveu hoje."
 		},
 		"form": {
 			"title": "Nova tarefa",
@@ -304,7 +306,8 @@
 			"filter": "filtro",
 			"priority": "prioridade",
 			"theme": "tema: %s",
-			"updated": "✔ %s atualizada"
+			"updated": "✔ %s atualizada",
+			"noteUpdated": "✔ nota de %s atualizada"
 		},
 		"details": {
 			"expires": "Expira",

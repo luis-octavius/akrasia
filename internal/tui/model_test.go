@@ -145,7 +145,7 @@ func ownMessages(cmd tea.Cmd) []tea.Msg {
 			msgs = append(msgs, ownMessages(c)...)
 		}
 		return msgs
-	case loadedMsg, actionMsg, streakMsg, progressMsg, notesMsg:
+	case loadedMsg, actionMsg, streakMsg, progressMsg, notesMsg, notePrefillMsg:
 		return []tea.Msg{out}
 	}
 	return nil
@@ -832,5 +832,49 @@ func TestQuoteOnDemandAndOnlyForCompletions(t *testing.T) {
 	m = send(t, m, runes("a"), runes("new"), keyEnter, keyEnter, keyEnter, keyEnter, keyEnter)
 	if m.mode == modeQuote {
 		t.Fatal("adding should not open a quote")
+	}
+}
+
+func TestSpaceOnTaskDoneTodayReplacesNote(t *testing.T) {
+	read := todo("read")
+	read.IsDaily, read.DoneToday = true, true
+	today := time.Now().Format(time.DateOnly)
+	svc := &fakeService{
+		daily: []tasks.TodoView{read},
+		notes: []tasks.NoteEntry{{Date: today, Notes: "chapter 1"}},
+	}
+
+	m := send(t, start(t, svc, KeymapDefault), tea.WindowSizeMsg{Width: 100, Height: 24}, keyTab, keyTab, keySpace)
+
+	if m.mode != modeNotes || !m.replacingNote {
+		t.Fatalf("space on a task done today should open the replace prompt, mode %v", m.mode)
+	}
+	if got := m.input.Value(); got != "chapter 1" {
+		t.Fatalf("prompt should be prefilled with today's note, got %q", got)
+	}
+	if view := ansi.Strip(m.View().Content); !strings.Contains(view, "Replace today's note") {
+		t.Fatalf("prompt should say it replaces the note:\n%s", view)
+	}
+
+	m = send(t, m, runes(" and 2"), keyEnter)
+	if len(svc.completed) != 1 || svc.completed[0] != "read|chapter 1 and 2" {
+		t.Fatalf("expected the note replaced, got %v", svc.completed)
+	}
+	if m.mode != modeNormal || !strings.Contains(m.status, "note") {
+		t.Fatalf("replacing a note should not open a quote; mode %v status %q", m.mode, m.status)
+	}
+}
+
+func TestReplacePromptStartsEmptyWithoutNoteToday(t *testing.T) {
+	read := todo("read")
+	read.IsDaily, read.DoneToday = true, true
+	svc := &fakeService{
+		daily: []tasks.TodoView{read},
+		notes: []tasks.NoteEntry{{Date: "2026-01-01", Notes: "old"}},
+	}
+
+	m := send(t, start(t, svc, KeymapDefault), keyTab, keyTab, keySpace)
+	if m.input.Value() != "" {
+		t.Fatalf("a note from another day must not be prefilled, got %q", m.input.Value())
 	}
 }

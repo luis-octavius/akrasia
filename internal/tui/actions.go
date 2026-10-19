@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"time"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
@@ -99,15 +100,35 @@ func (m Model) startComplete() (tea.Model, tea.Cmd) {
 		m.setStatus(i18n.T("tui.prompt.noSelection"), nil)
 		return m, nil
 	}
+	// done today: completing again replaces today's note, so offer that
+	if r.todo.DoneToday {
+		m.mode, m.target, m.replacingNote = modeNotes, *r.todo, true
+		m.status = ""
+		m.openInput("")
+		return m, tea.Batch(textinput.Blink, m.todayNoteCmd(r.todo.Name))
+	}
 	if r.todo.Done() {
 		m.setStatus(fmt.Sprintf(i18n.T("tui.prompt.alreadyDone"), r.todo.Name), nil)
 		return m, nil
 	}
 
-	m.mode, m.target = modeNotes, *r.todo
+	m.mode, m.target, m.replacingNote = modeNotes, *r.todo, false
 	m.status = ""
 	m.openInput("")
 	return m, textinput.Blink
+}
+
+// todayNoteCmd fetches the note written today, if any, to prefill the
+// prompt that replaces it.
+func (m Model) todayNoteCmd(name string) tea.Cmd {
+	ctx, svc := m.ctx, m.svc
+	return func() tea.Msg {
+		_, entries, err := svc.Notes(ctx, name, 1)
+		if err != nil || len(entries) == 0 || entries[0].Date != time.Now().Format(time.DateOnly) {
+			return nil
+		}
+		return notePrefillMsg{name: name, text: entries[0].Notes}
+	}
 }
 
 // startDelete asks for confirmation before deleting the selected task.
@@ -182,7 +203,7 @@ func (m Model) handlePromptKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 		switch current {
 		case modeNotes:
-			return m, m.completeCmd(m.target.Name, value)
+			return m, m.completeCmd(m.target.Name, value, m.replacingNote)
 		case modeAddDump:
 			if value == "" {
 				return m, nil
@@ -273,10 +294,15 @@ func (m Model) editCmd(name string, patch tasks.TodoPatch) tea.Cmd {
 	}
 }
 
-func (m Model) completeCmd(name, notes string) tea.Cmd {
+// completeCmd completes the task with notes. When replacing today's note
+// it only reports the update; a real completion celebrates with a quote.
+func (m Model) completeCmd(name, notes string, replacing bool) tea.Cmd {
 	ctx, svc := m.ctx, m.svc
 	return func() tea.Msg {
 		todo, err := svc.Complete(ctx, name, notes)
+		if replacing {
+			return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.noteUpdated"), todo.Name), err: err}
+		}
 		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.completed"), todo.Name), completed: true, err: err}
 	}
 }

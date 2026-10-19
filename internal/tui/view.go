@@ -439,6 +439,11 @@ func (m Model) renderModal(width int) string {
 
 	switch m.mode {
 	case modeNotes:
+		if m.replacingNote {
+			title := color.Accent().Render(fmt.Sprintf(i18n.T("tui.prompt.replaceNote"), m.target.Name))
+			hint := color.Muted().Render(i18n.T("tui.prompt.replaceHint"))
+			return box.Render(title + "\n\n" + themedInput(m.input).View() + "\n\n" + hint)
+		}
 		title := color.Accent().Render(fmt.Sprintf(i18n.T("tui.prompt.notes"), m.target.Name))
 		return box.Render(title + "\n\n" + themedInput(m.input).View())
 

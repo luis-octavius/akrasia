@@ -33,6 +33,10 @@ All notable changes to Akrasia are documented here. The format follows
   - TUI: the details panel shows the last 3 notes, and `n` opens every note
     in a scrollable window (`esc` closes).
   - Backfilled days and days without notes are marked as such.
+  - Rewriting today's note: completing a task again on the same day
+    replaces its note (now stated in `update-status --help`). In the TUI,
+    `space` on a task already done today opens today's note, ready to
+    edit, instead of only saying "already done".
 - **Quotes in the TUI.** Completing a task opens a pop-up with
   "✔ X completed" and a quote in the theme's quote style, the same moment
   the CLI prints one. `esc`, `enter` or `q` close it; other keys are

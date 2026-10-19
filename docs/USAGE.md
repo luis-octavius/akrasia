@@ -71,7 +71,11 @@ akrasia notes rust --limit 2   # only the last 2 days
 ```
 
 Days recorded by `backfill-history` show as "backfilled"; days completed
-without a note show "(no notes)". In the TUI, the details panel (`enter`)
+without a note show "(no notes)".
+
+There is one note per day. To rewrite today's note, complete the task again:
+`akrasia update-status rust --notes "new text"` replaces it. In the TUI,
+`space` on a task already done today opens today's note, ready to edit. In the TUI, the details panel (`enter`)
 shows the last 3 notes and `n` opens all of them.
 
 ### Editing tasks

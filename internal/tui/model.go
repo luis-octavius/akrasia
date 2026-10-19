@@ -116,6 +116,13 @@ type streakMsg struct {
 	err     error
 }
 
+// notePrefillMsg carries today's note of a task, to prefill the prompt
+// that replaces it.
+type notePrefillMsg struct {
+	name string
+	text string
+}
+
 // notesMsg carries a task's notes: the last few for the details panel, or
 // all of them (full) for the notes window.
 type notesMsg struct {
@@ -140,6 +147,9 @@ type Model struct {
 	input  textinput.Model // notes, search and dump name prompts
 	form   todoForm
 	target tasks.TodoView // task the current prompt acts on
+	// replacingNote: the notes prompt rewrites today's note of a task that
+	// is already done today
+	replacingNote bool
 
 	search   string
 	priority string
@@ -237,6 +247,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.openQuote(msg.status)
 		}
 		return m.reload(m.active)
+
+	case notePrefillMsg:
+		if m.mode == modeNotes && m.replacingNote && msg.name == m.target.Name && m.input.Value() == "" {
+			m.input.SetValue(msg.text)
+			m.input.CursorEnd()
+		}
+		return m, nil
 
 	case notesMsg:
 		switch {
