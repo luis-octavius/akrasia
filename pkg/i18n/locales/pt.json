@@ -3,7 +3,6 @@
 		"commands": {
 			"rootCmdShort": "Um aplicativo que ajuda a combater a Akrasia",
 			"rootCmdLong": "Akrasia é um termo grego que significa \"Incontinência\", a qual significa a perda do auto-controle.\nEsse aplicativo foi construído simplesmente para ajudar a combater a akrasia rapidamente no terminal,\nadicionando coisas a fazer e monitorando essas coisas para você.\n\nRode `akrasia` sozinho para abrir a interface interativa, ou `akrasia help` para ver todos os comandos.",
-			"updateDailyTodoShort": "reconfigurar tarefas diárias para mais um dia e registrar o histórico de conclusões (roda pelo cron)",
 			"addShort": "cria uma nova tarefa com descrição opcional, prioridade e data de expiração",
 			"addUse": "add [<nome> [<descrição>]]",
 			"addExample": "akrasia add \"Corrida matinal\" --daily --priority high --date 31,12\nakrasia add \"Corrida matinal\" \"Fazer 5km no parque\" --priority medium\nakrasia add --name \"Corrida matinal\" --daily --priority low",
