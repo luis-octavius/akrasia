@@ -45,7 +45,12 @@ func renderTodo(todo tasks.TodoView) string {
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s %s\n", state.Render(icon), color.Title().Render(todo.Name))
+	fmt.Fprintf(&b, "%s %s", state.Render(icon), color.Title().Render(todo.Name))
+	if len(todo.Subtasks) > 0 {
+		p := todo.SubtaskProgress()
+		b.WriteString(color.Muted().Render(fmt.Sprintf("  %d/%d", p.Done, p.Total)))
+	}
+	b.WriteString("\n")
 
 	if desc := todo.Description.String; desc != "" {
 		fmt.Fprintf(&b, "- %s\n", desc)
@@ -60,7 +65,26 @@ func renderTodo(todo tasks.TodoView) string {
 		fmt.Fprintf(&b, "  %s\n", color.Muted().Render("Priority: "+todo.Priority))
 	}
 
+	for _, sub := range todo.Subtasks {
+		b.WriteString(renderSubtask(sub))
+	}
+
 	return b.String()
+}
+
+// renderSubtask is the one-line form of a subtask, indented under its
+// parent: state, name and, for a one-off one, its due date.
+func renderSubtask(sub tasks.TodoView) string {
+	icon, state := "○", color.Muted()
+	if sub.Done() {
+		icon, state = "✔", color.Success()
+	}
+
+	line := "    " + state.Render(icon) + " " + sub.Name
+	if !sub.IsDaily {
+		line += color.Muted().Render(" · " + sub.ExpiresAt.Format("02 Jan"))
+	}
+	return line + "\n"
 }
 
 // progressBarWidth is the width of the CLI progress bar, percentage included.
@@ -135,8 +159,14 @@ func printFocus(todos []tasks.TodoView, progress tasks.Progress) {
 }
 
 func printFoundTodo(todo tasks.TodoView) {
+	if todo.IsSubtask() {
+		color.MsgMuted(fmt.Sprintf(i18n.T("tasks.info.subtaskOf"), todo.Parent))
+	}
 	s := fmt.Sprintf(i18n.T("tasks.tasks.getTaskByName"), todo.Name, todo.Description.String, todo.ExpiresAt.Format(time.RFC1123))
 	color.MsgSuccess(s)
+	for _, sub := range todo.Subtasks {
+		lipgloss.Print(renderSubtask(sub))
+	}
 }
 
 func printExpired(todos []tasks.TodoView) {

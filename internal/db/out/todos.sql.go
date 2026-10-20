@@ -9,14 +9,16 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const addTodo = `-- name: AddTodo :one
-INSERT INTO todos (id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since)
+INSERT INTO todos (id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, parent_id)
 VALUES (
-  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 )
-RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since
+RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, parent_id
 `
 
 type AddTodoParams struct {
@@ -30,6 +32,7 @@ type AddTodoParams struct {
 	Priority     string
 	IsDaily      bool
 	HistorySince sql.NullString
+	ParentID     uuid.NullUUID
 }
 
 func (q *Queries) AddTodo(ctx context.Context, arg AddTodoParams) (Todo, error) {
@@ -44,6 +47,7 @@ func (q *Queries) AddTodo(ctx context.Context, arg AddTodoParams) (Todo, error) 
 		arg.Priority,
 		arg.IsDaily,
 		arg.HistorySince,
+		arg.ParentID,
 	)
 	var i Todo
 	err := row.Scan(
@@ -57,6 +61,7 @@ func (q *Queries) AddTodo(ctx context.Context, arg AddTodoParams) (Todo, error) 
 		&i.Priority,
 		&i.IsDaily,
 		&i.HistorySince,
+		&i.ParentID,
 	)
 	return i, err
 }
@@ -75,7 +80,7 @@ func (q *Queries) AutoCompleteDelete(ctx context.Context, dollar_1 sql.NullStrin
 }
 
 const checkExpired = `-- name: CheckExpired :many
-SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since FROM todos 
+SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, parent_id FROM todos 
 WHERE expires_at < datetime('now') AND is_daily = false
 ORDER BY expires_at DESC
 `
@@ -100,6 +105,7 @@ func (q *Queries) CheckExpired(ctx context.Context) ([]Todo, error) {
 			&i.Priority,
 			&i.IsDaily,
 			&i.HistorySince,
+			&i.ParentID,
 		); err != nil {
 			return nil, err
 		}
@@ -114,13 +120,40 @@ func (q *Queries) CheckExpired(ctx context.Context) ([]Todo, error) {
 	return items, nil
 }
 
-const deleteTodoByName = `-- name: DeleteTodoByName :exec
-DELETE FROM todos 
-WHERE name = ?
+const clampSubtaskDates = `-- name: ClampSubtaskDates :exec
+UPDATE todos
+SET expires_at = ?1
+WHERE parent_id = ?2 AND expires_at > ?1
 `
 
-func (q *Queries) DeleteTodoByName(ctx context.Context, name string) error {
-	_, err := q.db.ExecContext(ctx, deleteTodoByName, name)
+type ClampSubtaskDatesParams struct {
+	ExpiresAt time.Time
+	ParentID  uuid.NullUUID
+}
+
+// Keeps subtasks due no later than their parent.
+func (q *Queries) ClampSubtaskDates(ctx context.Context, arg ClampSubtaskDatesParams) error {
+	_, err := q.db.ExecContext(ctx, clampSubtaskDates, arg.ExpiresAt, arg.ParentID)
+	return err
+}
+
+const deleteSubtasks = `-- name: DeleteSubtasks :exec
+DELETE FROM todos
+WHERE parent_id = ?
+`
+
+func (q *Queries) DeleteSubtasks(ctx context.Context, parentID uuid.NullUUID) error {
+	_, err := q.db.ExecContext(ctx, deleteSubtasks, parentID)
+	return err
+}
+
+const deleteTodoByID = `-- name: DeleteTodoByID :exec
+DELETE FROM todos
+WHERE id = ?
+`
+
+func (q *Queries) DeleteTodoByID(ctx context.Context, id interface{}) error {
+	_, err := q.db.ExecContext(ctx, deleteTodoByID, id)
 	return err
 }
 
@@ -145,7 +178,7 @@ func (q *Queries) ExtendHistorySince(ctx context.Context, arg ExtendHistorySince
 }
 
 const getDailyTodos = `-- name: GetDailyTodos :many
-SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since FROM todos 
+SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, parent_id FROM todos 
 WHERE is_daily = true
 `
 
@@ -169,6 +202,7 @@ func (q *Queries) GetDailyTodos(ctx context.Context) ([]Todo, error) {
 			&i.Priority,
 			&i.IsDaily,
 			&i.HistorySince,
+			&i.ParentID,
 		); err != nil {
 			return nil, err
 		}
@@ -195,31 +229,74 @@ func (q *Queries) GetIDByName(ctx context.Context, name string) (interface{}, er
 	return id, err
 }
 
-const getTodoByName = `-- name: GetTodoByName :one
-WITH ranked_todos AS (
-  SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since,
-    CASE
-    -- same text (case-insensitive; the caller passes a lowercase term)
-    WHEN LOWER(name) = ? THEN 1
-    -- begins with the term 
-    WHEN name LIKE ? || '%' THEN 2
-    WHEN name LIKE '%' || ? || '%' THEN 3
-    ELSE 4 
-    END as relevance
-  FROM todos
-  WHERE name LIKE '%' || ? || '%'
-) 
-SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, relevance FROM ranked_todos
-ORDER BY relevance, name COLLATE NOCASE
-LIMIT 1
+const getSubtaskByPath = `-- name: GetSubtaskByPath :one
+SELECT c.id, c.name, c.description, c.created_at, c.updated_at, c.concluded, c.expires_at, c.priority, c.is_daily, c.history_since, c.parent_id, p.name AS parent_name
+FROM todos c
+JOIN todos p ON p.id = c.parent_id
+WHERE LOWER(p.name) = ?1 AND p.parent_id IS NULL
+  AND LOWER(c.name) = ?2
 `
 
-type GetTodoByNameParams struct {
-	Name    string
-	Column2 sql.NullString
-	Column3 sql.NullString
-	Column4 sql.NullString
+type GetSubtaskByPathParams struct {
+	Parent string
+	Child  string
 }
+
+type GetSubtaskByPathRow struct {
+	ID           interface{}
+	Name         string
+	Description  sql.NullString
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	Concluded    bool
+	ExpiresAt    time.Time
+	Priority     string
+	IsDaily      bool
+	HistorySince sql.NullString
+	ParentID     uuid.NullUUID
+	ParentName   string
+}
+
+// The subtask written as "Parent/Subtask" (exact names, case-insensitive).
+func (q *Queries) GetSubtaskByPath(ctx context.Context, arg GetSubtaskByPathParams) (GetSubtaskByPathRow, error) {
+	row := q.db.QueryRowContext(ctx, getSubtaskByPath, arg.Parent, arg.Child)
+	var i GetSubtaskByPathRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Concluded,
+		&i.ExpiresAt,
+		&i.Priority,
+		&i.IsDaily,
+		&i.HistorySince,
+		&i.ParentID,
+		&i.ParentName,
+	)
+	return i, err
+}
+
+const getTodoByName = `-- name: GetTodoByName :many
+WITH ranked_todos AS (
+  SELECT t.id, t.name, t.description, t.created_at, t.updated_at, t.concluded, t.expires_at, t.priority, t.is_daily, t.history_since, t.parent_id,
+    COALESCE(p.name, '') AS parent_name,
+    CASE
+    -- same text (case-insensitive; the caller passes a lowercase term)
+    WHEN LOWER(t.name) = ?1 THEN 1
+    -- begins with the term
+    WHEN t.name LIKE ?1 || '%' THEN 2
+    ELSE 3
+    END AS relevance
+  FROM todos t
+  LEFT JOIN todos p ON p.id = t.parent_id
+  WHERE t.name LIKE '%' || ?1 || '%'
+)
+SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, parent_id, parent_name, relevance FROM ranked_todos
+ORDER BY relevance, parent_name != '', name COLLATE NOCASE
+LIMIT 20
+`
 
 type GetTodoByNameRow struct {
 	ID           interface{}
@@ -232,35 +309,52 @@ type GetTodoByNameRow struct {
 	Priority     string
 	IsDaily      bool
 	HistorySince sql.NullTime
+	ParentID     interface{}
+	ParentName   string
 	Relevance    int64
 }
 
-func (q *Queries) GetTodoByName(ctx context.Context, arg GetTodoByNameParams) (GetTodoByNameRow, error) {
-	row := q.db.QueryRowContext(ctx, getTodoByName,
-		arg.Name,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-	)
-	var i GetTodoByNameRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Description,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Concluded,
-		&i.ExpiresAt,
-		&i.Priority,
-		&i.IsDaily,
-		&i.HistorySince,
-		&i.Relevance,
-	)
-	return i, err
+// Candidates for a fuzzy name search, best first. Subtasks come with their
+// parent's name; on equal relevance a top-level task wins.
+func (q *Queries) GetTodoByName(ctx context.Context, term string) ([]GetTodoByNameRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTodoByName, term)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTodoByNameRow
+	for rows.Next() {
+		var i GetTodoByNameRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Concluded,
+			&i.ExpiresAt,
+			&i.Priority,
+			&i.IsDaily,
+			&i.HistorySince,
+			&i.ParentID,
+			&i.ParentName,
+			&i.Relevance,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getTodos = `-- name: GetTodos :many
-SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since FROM todos
+SELECT id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, parent_id FROM todos
 ORDER BY expires_at
 `
 
@@ -284,6 +378,7 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 			&i.Priority,
 			&i.IsDaily,
 			&i.HistorySince,
+			&i.ParentID,
 		); err != nil {
 			return nil, err
 		}
@@ -299,7 +394,7 @@ func (q *Queries) GetTodos(ctx context.Context) ([]Todo, error) {
 }
 
 const listTodosWithTodayStatus = `-- name: ListTodosWithTodayStatus :many
-SELECT t.id, t.name, t.description, t.created_at, t.updated_at, t.concluded, t.expires_at, t.priority, t.is_daily, t.history_since, CAST(COALESCE(h.completed, 0) AS BOOLEAN) AS done_today
+SELECT t.id, t.name, t.description, t.created_at, t.updated_at, t.concluded, t.expires_at, t.priority, t.is_daily, t.history_since, t.parent_id, CAST(COALESCE(h.completed, 0) AS BOOLEAN) AS done_today
 FROM todos t 
 LEFT JOIN todos_history h 
 ON h.todo_id = t.id AND h.date = date('now', 'localtime')
@@ -317,6 +412,7 @@ type ListTodosWithTodayStatusRow struct {
 	Priority     string
 	IsDaily      bool
 	HistorySince sql.NullString
+	ParentID     uuid.NullUUID
 	DoneToday    bool
 }
 
@@ -340,6 +436,7 @@ func (q *Queries) ListTodosWithTodayStatus(ctx context.Context) ([]ListTodosWith
 			&i.Priority,
 			&i.IsDaily,
 			&i.HistorySince,
+			&i.ParentID,
 			&i.DoneToday,
 		); err != nil {
 			return nil, err
@@ -355,6 +452,37 @@ func (q *Queries) ListTodosWithTodayStatus(ctx context.Context) ([]ListTodosWith
 	return items, nil
 }
 
+const reopenTodo = `-- name: ReopenTodo :exec
+UPDATE todos
+SET concluded = 0, updated_at = datetime('now', 'localtime')
+WHERE id = ?
+`
+
+// Undoes a parent's completion when it gets a pending subtask: a one-off
+// task is no longer concluded, a daily one loses today's history row.
+func (q *Queries) ReopenTodo(ctx context.Context, id interface{}) error {
+	_, err := q.db.ExecContext(ctx, reopenTodo, id)
+	return err
+}
+
+const setSubtasksDaily = `-- name: SetSubtasksDaily :exec
+UPDATE todos
+SET is_daily = ?1,
+    history_since = COALESCE(history_since, date('now', 'localtime'))
+WHERE parent_id = ?2
+`
+
+type SetSubtasksDailyParams struct {
+	IsDaily  bool
+	ParentID uuid.NullUUID
+}
+
+// Subtasks follow their parent's daily mode.
+func (q *Queries) SetSubtasksDaily(ctx context.Context, arg SetSubtasksDailyParams) error {
+	_, err := q.db.ExecContext(ctx, setSubtasksDaily, arg.IsDaily, arg.ParentID)
+	return err
+}
+
 const updateTodo = `-- name: UpdateTodo :one
 UPDATE todos
 SET name = ?1,
@@ -365,7 +493,7 @@ SET name = ?1,
     history_since = COALESCE(history_since, date('now', 'localtime')),
     updated_at = ?6
 WHERE id = ?7
-RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since
+RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, parent_id
 `
 
 type UpdateTodoParams struct {
@@ -403,6 +531,7 @@ func (q *Queries) UpdateTodo(ctx context.Context, arg UpdateTodoParams) (Todo, e
 		&i.Priority,
 		&i.IsDaily,
 		&i.HistorySince,
+		&i.ParentID,
 	)
 	return i, err
 }
@@ -411,7 +540,7 @@ const updateTodoStatusById = `-- name: UpdateTodoStatusById :one
 UPDATE todos 
 SET concluded = 1, updated_at = datetime('now', 'localtime')
 WHERE id = ?
-RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since
+RETURNING id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, parent_id
 `
 
 func (q *Queries) UpdateTodoStatusById(ctx context.Context, id interface{}) (Todo, error) {
@@ -428,6 +557,7 @@ func (q *Queries) UpdateTodoStatusById(ctx context.Context, id interface{}) (Tod
 		&i.Priority,
 		&i.IsDaily,
 		&i.HistorySince,
+		&i.ParentID,
 	)
 	return i, err
 }

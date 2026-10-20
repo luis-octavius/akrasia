@@ -141,28 +141,87 @@ func priorityRank(priority string) int {
 	}
 }
 
-// findTodoByName runs the fuzzy name search and maps "no rows" to
-// ErrTodoNotFound.
+// findTodoByName finds a task by name. "Parent/Subtask" picks that
+// subtask exactly; otherwise the search is fuzzy and case-insensitive, as
+// before subtasks. On an exact match a top-level task wins (its name is
+// its only full name); subtasks of several parents with exactly that name
+// are ambiguous, and the error lists their full names to pick from.
 func findTodoByName(ctx context.Context, tkm *TaskManager, name string) (database.GetTodoByNameRow, error) {
-	loweredName := strings.ToLower(name)
+	loweredName := strings.ToLower(strings.TrimSpace(name))
 
-	todo, err := tkm.Queries.GetTodoByName(ctx, database.GetTodoByNameParams{
-		Name:    loweredName,
-		Column2: sql.NullString{String: loweredName, Valid: true},
-		Column3: sql.NullString{String: loweredName, Valid: true},
-		Column4: sql.NullString{String: loweredName, Valid: true},
-	})
-	if errors.Is(err, sql.ErrNoRows) {
+	if row, ok, err := findSubtaskByPath(ctx, tkm, loweredName); ok || err != nil {
+		return row, err
+	}
+
+	rows, err := tkm.Queries.GetTodoByName(ctx, loweredName)
+	if err != nil {
+		return database.GetTodoByNameRow{}, fmt.Errorf(i18n.T("tasks.error.getTodoByName"), err)
+	}
+	if len(rows) == 0 {
 		return database.GetTodoByNameRow{}, localizedError{
 			msg:      fmt.Sprintf(i18n.T("tasks.error.todoNotFound"), name),
 			sentinel: ErrTodoNotFound,
 		}
 	}
-	if err != nil {
-		return database.GetTodoByNameRow{}, fmt.Errorf(i18n.T("tasks.error.getTodoByName"), err)
+
+	// rows are sorted top-level first on equal relevance
+	var exact []string
+	for _, r := range rows {
+		if r.Relevance == 1 {
+			exact = append(exact, path(r.ParentName, r.Name))
+		}
+	}
+	if len(exact) > 1 && rows[0].ParentName != "" {
+		return database.GetTodoByNameRow{}, localizedError{
+			msg:      fmt.Sprintf(i18n.T("tasks.error.ambiguousName"), name, strings.Join(exact, `", "`)),
+			sentinel: ErrAmbiguousName,
+		}
 	}
 
-	return todo, nil
+	return rows[0], nil
+}
+
+// findSubtaskByPath tries every "/" in name as the parent/subtask split,
+// since a task name can contain "/" itself.
+func findSubtaskByPath(ctx context.Context, tkm *TaskManager, name string) (database.GetTodoByNameRow, bool, error) {
+	for i, r := range name {
+		if r != '/' {
+			continue
+		}
+		parent, child := strings.TrimSpace(name[:i]), strings.TrimSpace(name[i+1:])
+		if parent == "" || child == "" {
+			continue
+		}
+
+		row, err := tkm.Queries.GetSubtaskByPath(ctx, database.GetSubtaskByPathParams{Parent: parent, Child: child})
+		if errors.Is(err, sql.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return database.GetTodoByNameRow{}, false, fmt.Errorf(i18n.T("tasks.error.getTodoByName"), err)
+		}
+
+		since := sql.NullTime{}
+		if t, err := time.Parse(time.DateOnly, row.HistorySince.String); err == nil && row.HistorySince.Valid {
+			since = sql.NullTime{Time: t, Valid: true}
+		}
+		return database.GetTodoByNameRow{
+			ID:           row.ID,
+			Name:         row.Name,
+			Description:  row.Description,
+			CreatedAt:    row.CreatedAt,
+			UpdatedAt:    row.UpdatedAt,
+			Concluded:    row.Concluded,
+			ExpiresAt:    row.ExpiresAt,
+			Priority:     row.Priority,
+			IsDaily:      row.IsDaily,
+			HistorySince: since,
+			ParentID:     row.ParentID,
+			ParentName:   row.ParentName,
+			Relevance:    1,
+		}, true, nil
+	}
+	return database.GetTodoByNameRow{}, false, nil
 }
 
 func newTodoView(todoStatus database.ListTodosWithTodayStatusRow) (TodoView, error) {
@@ -180,6 +239,7 @@ func newTodoView(todoStatus database.ListTodosWithTodayStatusRow) (TodoView, err
 		Priority:    todoStatus.Priority,
 		IsDaily:     todoStatus.IsDaily,
 		DoneToday:   todoStatus.DoneToday,
+		ParentID:    nullUUID(todoStatus.ParentID),
 	}, nil
 }
 
@@ -199,11 +259,17 @@ func viewFromTodo(todo database.Todo) (TodoView, error) {
 		ExpiresAt:   todo.ExpiresAt,
 		Priority:    todo.Priority,
 		IsDaily:     todo.IsDaily,
+		ParentID:    nullUUID(todo.ParentID),
 	}, nil
 }
 
 func viewFromNameRow(todo database.GetTodoByNameRow) (TodoView, error) {
-	return viewFromTodo(database.Todo{
+	parentID, err := optionalUUID(todo.ParentID)
+	if err != nil {
+		return TodoView{}, err
+	}
+
+	view, err := viewFromTodo(database.Todo{
 		ID:          todo.ID,
 		Name:        todo.Name,
 		Description: todo.Description,
@@ -212,6 +278,27 @@ func viewFromNameRow(todo database.GetTodoByNameRow) (TodoView, error) {
 		Priority:    todo.Priority,
 		IsDaily:     todo.IsDaily,
 	})
+	view.ParentID, view.Parent = parentID, todo.ParentName
+	return view, err
+}
+
+// nullUUID is uuid.Nil for a NULL column.
+func nullUUID(id uuid.NullUUID) uuid.UUID {
+	if !id.Valid {
+		return uuid.Nil
+	}
+	return id.UUID
+}
+
+// optionalUUID reads a nullable id column that sqlc left untyped.
+func optionalUUID(v interface{}) (uuid.UUID, error) {
+	switch id := v.(type) {
+	case nil:
+		return uuid.Nil, nil
+	case uuid.NullUUID:
+		return nullUUID(id), nil
+	}
+	return toUUID(v)
 }
 
 func viewsFromTodos(todos []database.Todo) ([]TodoView, error) {

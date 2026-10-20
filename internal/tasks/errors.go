@@ -10,6 +10,13 @@ var (
 	ErrNameTaken    = errors.New("todo name already taken")
 	ErrInvalidInput = errors.New("invalid todo field")
 	ErrDumpNotFound = errors.New("dump entry not found")
+	// ErrAmbiguousName: several tasks have exactly that name; use
+	// "Parent/Subtask" to pick one.
+	ErrAmbiguousName = errors.New("todo name is ambiguous")
+	// ErrPendingSubtasks: completing the task needs confirmation, since it
+	// also completes its pending subtasks (see CompleteAll).
+	ErrPendingSubtasks = errors.New("todo has pending subtasks")
+	ErrNestedSubtask   = errors.New("subtasks can't have subtasks")
 )
 
 // localizedError shows a translated message to the user while still

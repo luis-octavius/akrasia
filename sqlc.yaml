@@ -8,6 +8,8 @@ sql:
         package: "database"
         out: "internal/db/out"
         overrides:
+          - column: "todos.parent_id"
+            go_type: "github.com/google/uuid.NullUUID"
           - column: "todos.history_since"
             go_type: "database/sql.NullString"
           - column: "todos_history.date"

@@ -6,6 +6,35 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-10-20
+
+### Added
+
+- **Subtasks**, one level deep: a task can be split into subtasks, and the
+  parent shows how many are done (`2/5`).
+  - Finishing the last subtask completes the parent; completing the parent
+    with pending subtasks completes them too, after a confirmation
+    (`update-status --yes` skips it). A new subtask reopens a finished
+    parent, and deleting a parent deletes its subtasks.
+  - A subtask follows its parent's daily mode and is due no later than it
+    (by default, on the same day). For a daily parent, each subtask is done
+    once a day and the parent closes the day, and its streak, when all are
+    done.
+  - CLI: `akrasia add <name> --parent <task>`; listings show subtasks
+    indented under their parent, and `today --json` nests them in
+    `Subtasks`.
+  - TUI: subtasks under their parent with its progress, `s` adds one, `z`
+    folds them, and `space` on a parent asks before completing them all.
+  - Today's progress, `today`, `focus` and reminders count a parent as one
+    task.
+
+### Changed
+
+- Task names only need to be unique among the subtasks of one parent (and
+  among top-level tasks). A subtask can be named `"Parent/Subtask"`; on an
+  exact name a top-level task comes first, and a name shared by subtasks
+  of several parents is refused with their full names to choose from.
+
 ## [2.3.0] - 2026-10-20
 
 ### Added
@@ -217,7 +246,8 @@ is a major version because two behaviors that scripts may rely on changed:
 
 See the [GitHub releases and tags](https://github.com/luis-octavius/akrasia/tags).
 
-[Unreleased]: https://github.com/luis-octavius/akrasia/compare/v.2.3.0...dev
+[Unreleased]: https://github.com/luis-octavius/akrasia/compare/v.2.4.0...dev
+[2.4.0]: https://github.com/luis-octavius/akrasia/compare/v.2.3.0...v.2.4.0
 [2.3.0]: https://github.com/luis-octavius/akrasia/compare/v.2.2.0...v.2.3.0
 [2.2.0]: https://github.com/luis-octavius/akrasia/compare/v.2.1.0...v.2.2.0
 [2.1.0]: https://github.com/luis-octavius/akrasia/compare/v.2.0.0...v.2.1.0

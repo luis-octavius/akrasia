@@ -34,6 +34,9 @@ type todoForm struct {
 	// fromDump is the dump entry the new task comes from; it leaves the
 	// dump once the task is created.
 	fromDump *tasks.DumpEntry
+	// parent is the task a new subtask goes under; an empty date then
+	// means the parent's.
+	parent *tasks.TodoView
 	// initial holds the prefilled values, to tell which fields changed.
 	initial [fieldCount]string
 }
@@ -60,6 +63,18 @@ func newDumpForm(width int, entry tasks.DumpEntry) todoForm {
 	f.fromDump = &entry
 	f.fields[fieldName].SetValue(entry.Name)
 	f.fields[fieldName].CursorEnd()
+	return f
+}
+
+// newSubtaskForm opens the new-task form for a subtask of parent, with the
+// parent's daily mode filled in.
+func newSubtaskForm(width int, parent tasks.TodoView) todoForm {
+	f := newTodoForm(width)
+	f.parent = &parent
+	if parent.IsDaily {
+		f.fields[fieldDaily].SetValue("y")
+	}
+	f.fields[fieldDate].Placeholder = i18n.T("tui.form.subtaskDateHint")
 	return f
 }
 
@@ -149,6 +164,13 @@ func (f todoForm) value() (tasks.NewTodo, error) {
 	}
 	if in.IsDaily, err = parseDaily(f.fields[fieldDaily].Value()); err != nil {
 		return in, err
+	}
+	if f.parent != nil {
+		in.Parent = f.parent.Name
+		// no date: due with the parent (a zero date tells AddTodo so)
+		if strings.TrimSpace(f.fields[fieldDate].Value()) == "" {
+			return in, nil
+		}
 	}
 	in.ExpiresAt, err = parseDueDate(f.fields[fieldDate].Value())
 	return in, err

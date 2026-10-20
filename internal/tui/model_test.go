@@ -84,6 +84,11 @@ func (f *fakeService) Complete(_ context.Context, name, notes string) (tasks.Tod
 	return tasks.TodoView{Name: name}, nil
 }
 
+func (f *fakeService) CompleteAll(_ context.Context, name, notes string) (tasks.TodoView, error) {
+	f.completed = append(f.completed, "all:"+name+"|"+notes)
+	return tasks.TodoView{Name: name}, nil
+}
+
 func (f *fakeService) DeleteByName(_ context.Context, name string) (tasks.TodoView, error) {
 	f.deleted = append(f.deleted, name)
 	return tasks.TodoView{Name: name}, nil
@@ -991,5 +996,103 @@ func TestLastBackup(t *testing.T) {
 	}
 	if label, _ := lastBackup(now); label != i18n.T("tui.status.backupToday") {
 		t.Errorf("with a copy from today: %q", label)
+	}
+}
+
+// party is a parent with one subtask done and one pending.
+func party() tasks.TodoView {
+	parent := todo("party")
+	parent.ID = uuid.New()
+	cake, invite := todo("cake"), todo("invite")
+	cake.Concluded = true
+	for _, s := range []*tasks.TodoView{&cake, &invite} {
+		s.ID, s.ParentID, s.Parent = uuid.New(), parent.ID, parent.Name
+	}
+	parent.Subtasks = []tasks.TodoView{cake, invite}
+	return parent
+}
+
+func TestSubtasksAreRowsUnderTheirParent(t *testing.T) {
+	svc := &fakeService{all: []tasks.TodoView{party(), todo("taxes")}}
+	m := send(t, start(t, svc, KeymapDefault), keyTab)
+
+	if got := len(m.rows()); got != 4 {
+		t.Fatalf("expected parent, 2 subtasks and taxes, got %d rows", got)
+	}
+	list := ansi.Strip(m.renderList(60, 0))
+	if !strings.Contains(list, "party ▾ 1/2") || !strings.Contains(list, "     ✔ cake") {
+		t.Errorf("parent progress or indented subtask missing:\n%s", list)
+	}
+
+	// z folds the subtasks away, and back
+	m = send(t, m, runes("z"))
+	if got := len(m.rows()); got != 2 || !strings.Contains(ansi.Strip(m.renderList(60, 0)), "party ▸ 1/2") {
+		t.Fatalf("folded: %d rows\n%s", got, ansi.Strip(m.renderList(60, 0)))
+	}
+	m = send(t, m, runes("z"))
+	if got := len(m.rows()); got != 4 {
+		t.Fatalf("unfolded: %d rows", got)
+	}
+}
+
+func TestCompletingParentAsksFirst(t *testing.T) {
+	svc := &fakeService{all: []tasks.TodoView{party()}}
+	m := send(t, start(t, svc, KeymapDefault), keyTab, keySpace)
+
+	if m.mode != modeConfirmComplete {
+		t.Fatalf("space on a parent with pending subtasks should ask, mode %v", m.mode)
+	}
+	if modal := ansi.Strip(m.renderModal(80)); !strings.Contains(modal, "party") || !strings.Contains(modal, "1") {
+		t.Errorf("confirmation should name the parent and the pending count:\n%s", modal)
+	}
+
+	m = send(t, m, runes("n"))
+	if m.mode != modeNormal || len(svc.completed) != 0 {
+		t.Fatalf("n should cancel, mode %v completed %v", m.mode, svc.completed)
+	}
+
+	m = send(t, m, keySpace, runes("y"))
+	if m.mode != modeNotes {
+		t.Fatalf("y should open the notes prompt, mode %v", m.mode)
+	}
+	send(t, m, runes("done"), keyEnter)
+	if len(svc.completed) != 1 || svc.completed[0] != "all:party|done" {
+		t.Fatalf("expected CompleteAll on party, got %v", svc.completed)
+	}
+}
+
+func TestSubtaskActionsUseTheFullName(t *testing.T) {
+	svc := &fakeService{all: []tasks.TodoView{party()}}
+	m := send(t, start(t, svc, KeymapDefault), keyTab, keyDown, keyDown)
+
+	send(t, m, keySpace, runes("sent"), keyEnter)
+	if len(svc.completed) != 1 || svc.completed[0] != "party/invite|sent" {
+		t.Fatalf("expected party/invite completed, got %v", svc.completed)
+	}
+}
+
+func TestAddSubtask(t *testing.T) {
+	svc := &fakeService{all: []tasks.TodoView{party()}}
+	m := send(t, start(t, svc, KeymapDefault), keyTab, runes("s"))
+
+	if m.mode != modeAddTodo || m.form.parent == nil {
+		t.Fatalf("s should open the subtask form, mode %v", m.mode)
+	}
+	if modal := ansi.Strip(m.renderModal(80)); !strings.Contains(modal, "party") {
+		t.Errorf("form title should name the parent:\n%s", modal)
+	}
+
+	m = send(t, m, runes("b"), runes("a"), runes("l"), runes("l"), runes("s"))
+	for range fieldCount - 1 {
+		m = send(t, m, keyEnter)
+	}
+	send(t, m, keyEnter)
+
+	if len(svc.added) != 1 {
+		t.Fatalf("expected one task added, got %v", svc.added)
+	}
+	in := svc.added[0]
+	if in.Name != "balls" || in.Parent != "party" || !in.ExpiresAt.IsZero() {
+		t.Errorf("added %+v; want balls under party with the parent's date", in)
 	}
 }

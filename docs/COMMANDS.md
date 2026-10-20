@@ -10,8 +10,10 @@ Below the tabs, a bar shows today's progress (see `akrasia progress`).
 | --- | --- |
 | `↑` `↓` / `home` `end` | move / jump to top or bottom |
 | `tab` `shift+tab` / `←` `→` | switch tabs (Today, All, Daily, Dump) |
-| `space` | complete the selected task (asks for optional notes, then shows a quote; `esc` closes it). On a task already done today, it opens today's note to rewrite it |
+| `space` | complete the selected task (asks for optional notes, then shows a quote; `esc` closes it). On a task already done today, it opens today's note to rewrite it. On a task with pending subtasks, it asks before completing them too |
 | `a` | new task (on the Dump tab: new dump entry) |
+| `s` | new subtask of the selected task (or of the selected subtask's parent) |
+| `z` | fold or unfold the subtasks of the selected task |
 | `e` | edit the selected task (the form opens prefilled; only what you change is saved) |
 | `x` | delete the selected task or dump entry (asks for confirmation) |
 | `c` | on the Dump tab: turn the selected entry into a task (opens the new-task form with its text) |
@@ -86,12 +88,12 @@ Available Commands:
 
 | Command | Flags |
 | --- | --- |
-| `add` | `--desc`, `--priority high\|medium\|low`, `--daily`, `--date dd`, `--date dd,mm` or `--date dd,mm,yyyy` (default: tomorrow), `--name` (instead of the positional name) |
+| `add` | `--parent <name>` (make it a subtask), `--desc`, `--priority high\|medium\|low`, `--daily`, `--date dd`, `--date dd,mm` or `--date dd,mm,yyyy` (default: tomorrow), `--name` (instead of the positional name) |
 | `edit` | `--name`, `--desc` (`""` clears it), `--priority` (`""` clears it), `--daily=true\|false`, `--date dd`, `dd,mm` or `dd,mm,yyyy`; only the flags you pass are changed |
 | `today` | `--only overdue\|today\|daily\|soon`, `--limit N`, `--priority`, `--json` |
 | `focus` | `--limit 1-3` (default 3), `--priority` |
 | `get-all` | `--priority` |
-| `update-status` | `--notes "text"` (saved in the task's history for today; completing again the same day replaces it) |
+| `update-status` | `--notes "text"` (saved in the task's history for today; completing again the same day replaces it), `--yes` (complete a task with pending subtasks, and them, without asking) |
 | `dump` | `--delete N`, `--to-task N` (with optional `--priority`, `--daily`, `--date`); `N` is the number `akrasia dump` prints |
 | `notes` | `--limit N` days (default 30, `0` = all) |
 | `delete-by-name` | `--yes` (required) |
@@ -100,7 +102,10 @@ Available Commands:
 | `backfill-history` | `--days N` (default 30), `--task <name>` (default: every daily task) |
 
 Names are matched case-insensitively and fuzzily: `akrasia get-by-name stend`
-finds "Stendhal".
+finds "Stendhal". A subtask is also found by its full name,
+`"Parent/Subtask"`. On an exact name, a top-level task comes first; when
+subtasks of several parents have exactly the name you typed, the error
+lists their full names to choose from.
 
 ## Files and environment
 

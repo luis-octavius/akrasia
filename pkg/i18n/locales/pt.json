@@ -5,7 +5,7 @@
 			"rootCmdLong": "Akrasia é um termo grego que significa \"Incontinência\", a qual significa a perda do auto-controle.\nEsse aplicativo foi construído simplesmente para ajudar a combater a akrasia rapidamente no terminal,\nadicionando coisas a fazer e monitorando essas coisas para você.\n\nRode `akrasia` sozinho para abrir a interface interativa, ou `akrasia help` para ver todos os comandos.",
 			"addShort": "cria uma nova tarefa com descrição opcional, prioridade e data de expiração",
 			"addUse": "add [<nome> [<descrição>]]",
-			"addExample": "akrasia add \"Corrida matinal\" --daily --priority high --date 31,12\nakrasia add \"Corrida matinal\" \"Fazer 5km no parque\" --priority medium\nakrasia add --name \"Corrida matinal\" --daily --priority low",
+			"addExample": "akrasia add \"Corrida matinal\" --daily --priority high --date 31,12\nakrasia add \"Corrida matinal\" \"Fazer 5km no parque\" --priority medium\nakrasia add --name \"Corrida matinal\" --daily --priority low\nakrasia add \"Fazer bolo\" --parent \"Festa\"",
 			"getAllShort": "retorna todas as tarefas salvas no disco",
 			"todayShort": "mostrar um painel do foco diário (atrasados, vence hoje, pendências diárias, expirando em breve)",
 			"focusShort": "mostrar os top 1-3 itens para focar agora",
@@ -96,7 +96,9 @@
 			"dumpDaily": "tornar diária a tarefa criada com --to-task",
 			"dumpDate": "prazo da tarefa criada com --to-task: dd, dd,mm ou dd,mm,aaaa",
 			"backupProfile": "usar os backups de outra máquina (padrão: o perfil desta máquina)",
-			"restoreYes": "restaurar sem perguntar"
+			"restoreYes": "restaurar sem perguntar",
+			"addParent": "criar como subtarefa desta tarefa (segue o modo diário dela; vence junto, a menos que --date seja passado)",
+			"updateStatusToConcludedYes": "concluir uma tarefa com subtarefas pendentes (e elas) sem perguntar"
 		},
 		"cobra": {
 			"usage": "Uso:",
@@ -140,7 +142,9 @@
 			"notifyUninstalled": "Entrada do crontab removida.",
 			"notifyNotSet": "não definido (lembretes desligados)",
 			"notifyNoMention": "ninguém",
-			"notifyConfig": "Webhook:          %s\nMenção:           %s\nDias antes:       %d\nHorários:         %s\nTarefas diárias:  às %s\n"
+			"notifyConfig": "Webhook:          %s\nMenção:           %s\nDias antes:       %d\nHorários:         %s\nTarefas diárias:  às %s\n",
+			"completeAllConfirm": "%v. Concluir todas?",
+			"completeCancelled": "Nada foi concluído."
 		},
 		"error": {
 			"taskName": "nome da tarefa é obrigatório (use o argumento posicional ou a opção --name)",
@@ -180,7 +184,8 @@
 			"notifyDays": "número de dias inválido: %q (use de 0 a 60)",
 			"notifyDailyAt": "%s não é um dos horários de lembrete %v; adicione-o antes com `config notify times`",
 			"notifyAction": "opção desconhecida: %q (use show, test, install, uninstall, off, discord, mention, days, times ou daily-at)",
-			"noCrontab": "crontab não encontrado: instale o cron (cronie no Arch) ou rode `akrasia notify` por outro agendador"
+			"noCrontab": "crontab não encontrado: instale o cron (cronie no Arch) ou rode `akrasia notify` por outro agendador",
+			"completeAllYes": "%v (use --yes para concluir todas)"
 		}
 	},
 	"db": {
@@ -244,7 +249,9 @@
 			"noDump": "Nenhuma entrada de dump armazenada",
 			"updatedTask": "Tarefa %s atualizada",
 			"deletedDump": "Dump '%s' apagado",
-			"promotedDump": "Dump '%s' agora é uma tarefa"
+			"promotedDump": "Dump '%s' agora é uma tarefa",
+			"taskDeletedWithSubtasks": "Tarefa %s e suas %d subtarefa(s) deletadas com sucesso",
+			"subtaskOf": "Subtarefa de %s"
 		},
 		"error": {
 			"createTask": "erro ao criar a tarefa: %w",
@@ -277,7 +284,12 @@
 			"updateTask": "erro ao atualizar a tarefa: %w",
 			"getNotes": "erro ao obter as notas da tarefa",
 			"dumpNotFound": "não existe o item %d no dump (há %d; veja `akrasia dump`)",
-			"deleteDump": "erro ao apagar o item do dump"
+			"deleteDump": "erro ao apagar o item do dump",
+			"ambiguousName": "mais de uma tarefa se chama %q: use o nome completo (\"%s\")",
+			"pendingSubtasks": "%s ainda tem %d subtarefa(s) pendente(s); concluí-la conclui elas também",
+			"nestedSubtask": "%s é uma subtarefa, e subtarefas não podem ter subtarefas",
+			"subtaskDaily": "subtarefas seguem o modo diário da tarefa pai (%s)",
+			"subtaskDate": "uma subtarefa não pode vencer depois da tarefa pai (%s, vence em %s)"
 		}
 	},
 	"quotes": {
@@ -327,7 +339,9 @@
 			"scroll": "rolar",
 			"close": "fechar",
 			"quote": "citação",
-			"convert": "dump → tarefa"
+			"convert": "dump → tarefa",
+			"subtask": "nova subtarefa",
+			"fold": "recolher subtarefas"
 		},
 		"loading": "Carregando...",
 		"empty": "Nada por aqui ainda.",
@@ -341,7 +355,9 @@
 			"replaceNote": "Substituir a nota de hoje de %q:",
 			"replaceHint": "Salvar substitui a nota que você escreveu hoje.",
 			"deleteDump": "Apagar o dump %q? (s/n)",
-			"notTask": "Selecione uma tarefa (na aba Dump: x apaga, c vira tarefa)"
+			"notTask": "Selecione uma tarefa (na aba Dump: x apaga, c vira tarefa)",
+			"completeAll": "Concluir %s e suas %d subtarefa(s) pendente(s)?",
+			"deleteWithSubtasks": "Deletar %s e suas %d subtarefa(s)?"
 		},
 		"form": {
 			"title": "Nova tarefa",
@@ -358,7 +374,9 @@
 			"dailyHint": "s / n",
 			"dateHint": "dd, dd/mm ou dd/mm/aaaa; vazio = amanhã",
 			"editTitle": "Editar tarefa",
-			"fromDumpTitle": "Nova tarefa a partir do dump"
+			"fromDumpTitle": "Nova tarefa a partir do dump",
+			"subtaskTitle": "Nova subtarefa de %s",
+			"subtaskDateHint": "dd, dd/mm ou dd/mm/aaaa; vazio = data do pai"
 		},
 		"status": {
 			"completed": "✔ %s concluída",
@@ -388,7 +406,8 @@
 			"desc": "Descrição",
 			"history": "Histórico de ofensivas",
 			"period": "%s → %s · %d dia(s)",
-			"notes": "Notas recentes"
+			"notes": "Notas recentes",
+			"subtasks": "Subtarefas"
 		},
 		"mode": {
 			"normal": "NORMAL",
@@ -398,7 +417,8 @@
 			"dump": "DUMP",
 			"add": "NOVA",
 			"edit": "EDITAR",
-			"quote": "CITAÇÃO"
+			"quote": "CITAÇÃO",
+			"complete": "CONCLUIR"
 		}
 	},
 	"notify": {

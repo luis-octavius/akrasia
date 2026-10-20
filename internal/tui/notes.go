@@ -29,7 +29,7 @@ func (m Model) startNotesView() (tea.Model, tea.Cmd) {
 	m.notesView = viewport.New(viewport.WithWidth(m.notesWidth()), viewport.WithHeight(1))
 	m.notesView.SetContent(color.Muted().Render(i18n.T("tui.loading")))
 
-	ctx, svc, name := m.ctx, m.svc, r.todo.Name
+	ctx, svc, name := m.ctx, m.svc, r.todo.Path()
 	return m, func() tea.Msg {
 		_, entries, err := svc.Notes(ctx, name, 0)
 		return notesMsg{name: name, entries: entries, full: true, err: err}

@@ -90,6 +90,16 @@ func (q *Queries) BackfillDailyDone(ctx context.Context, arg BackfillDailyDonePa
 	return i, err
 }
 
+const deleteTodayHistory = `-- name: DeleteTodayHistory :exec
+DELETE FROM todos_history
+WHERE todo_id = ? AND date = date('now', 'localtime')
+`
+
+func (q *Queries) DeleteTodayHistory(ctx context.Context, todoID interface{}) error {
+	_, err := q.db.ExecContext(ctx, deleteTodayHistory, todoID)
+	return err
+}
+
 const getCurrentStreak = `-- name: GetCurrentStreak :one
 WITH ordered AS (
     SELECT

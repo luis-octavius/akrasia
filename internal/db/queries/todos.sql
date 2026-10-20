@@ -1,7 +1,7 @@
 -- name: AddTodo :one 
-INSERT INTO todos (id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since)
+INSERT INTO todos (id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, parent_id)
 VALUES (
-  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 )
 RETURNING *;
 
@@ -22,23 +22,34 @@ ORDER BY expires_at;
 SELECT * FROM todos 
 WHERE is_daily = true; 
 
--- name: GetTodoByName :one 
+-- name: GetTodoByName :many
+-- Candidates for a fuzzy name search, best first. Subtasks come with their
+-- parent's name; on equal relevance a top-level task wins.
 WITH ranked_todos AS (
-  SELECT *,
+  SELECT t.*,
+    COALESCE(p.name, '') AS parent_name,
     CASE
     -- same text (case-insensitive; the caller passes a lowercase term)
-    WHEN LOWER(name) = ? THEN 1
-    -- begins with the term 
-    WHEN name LIKE ? || '%' THEN 2
-    WHEN name LIKE '%' || ? || '%' THEN 3
-    ELSE 4 
-    END as relevance
-  FROM todos
-  WHERE name LIKE '%' || ? || '%'
-) 
+    WHEN LOWER(t.name) = sqlc.arg(term) THEN 1
+    -- begins with the term
+    WHEN t.name LIKE sqlc.arg(term) || '%' THEN 2
+    ELSE 3
+    END AS relevance
+  FROM todos t
+  LEFT JOIN todos p ON p.id = t.parent_id
+  WHERE t.name LIKE '%' || sqlc.arg(term) || '%'
+)
 SELECT * FROM ranked_todos
-ORDER BY relevance, name COLLATE NOCASE
-LIMIT 1;
+ORDER BY relevance, parent_name != '', name COLLATE NOCASE
+LIMIT 20;
+
+-- name: GetSubtaskByPath :one
+-- The subtask written as "Parent/Subtask" (exact names, case-insensitive).
+SELECT c.*, p.name AS parent_name
+FROM todos c
+JOIN todos p ON p.id = c.parent_id
+WHERE LOWER(p.name) = sqlc.arg(parent) AND p.parent_id IS NULL
+  AND LOWER(c.name) = sqlc.arg(child);
 
 -- name: GetIDByName :one 
 SELECT id FROM todos 
@@ -65,9 +76,33 @@ SET name = sqlc.arg(name),
 WHERE id = sqlc.arg(id)
 RETURNING *;
 
--- name: DeleteTodoByName :exec 
-DELETE FROM todos 
-WHERE name = ?;
+-- name: DeleteTodoByID :exec
+DELETE FROM todos
+WHERE id = ?;
+
+-- name: DeleteSubtasks :exec
+DELETE FROM todos
+WHERE parent_id = ?;
+
+-- name: ReopenTodo :exec
+-- Undoes a parent's completion when it gets a pending subtask: a one-off
+-- task is no longer concluded, a daily one loses today's history row.
+UPDATE todos
+SET concluded = 0, updated_at = datetime('now', 'localtime')
+WHERE id = ?;
+
+-- name: SetSubtasksDaily :exec
+-- Subtasks follow their parent's daily mode.
+UPDATE todos
+SET is_daily = sqlc.arg(is_daily),
+    history_since = COALESCE(history_since, date('now', 'localtime'))
+WHERE parent_id = sqlc.arg(parent_id);
+
+-- name: ClampSubtaskDates :exec
+-- Keeps subtasks due no later than their parent.
+UPDATE todos
+SET expires_at = sqlc.arg(expires_at)
+WHERE parent_id = sqlc.arg(parent_id) AND expires_at > sqlc.arg(expires_at);
 
 -- name: CheckExpired :many 
 SELECT * FROM todos 
