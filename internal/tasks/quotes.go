@@ -1,28 +1,19 @@
 package tasks
 
 import (
+	"fmt"
 	"math/rand"
 
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
-var quotes = []string{
-	i18n.T("quotes.quote1"),
-	i18n.T("quotes.quote2"),
-	i18n.T("quotes.quote3"),
-	i18n.T("quotes.quote4"),
-	i18n.T("quotes.quote5"),
-	i18n.T("quotes.quote6"),
-	i18n.T("quotes.quote7"),
-	i18n.T("quotes.quote8"),
-	i18n.T("quotes.quote9"),
-	i18n.T("quotes.quote10"),
-	i18n.T("quotes.quote11"),
-	i18n.T("quotes.quote12"),
-	i18n.T("quotes.quote13"),
-}
+// quoteCount is how many quotes the locales hold (quotes.quote1 to
+// quotes.quoteN).
+const quoteCount = 13
 
-// RandomQuote returns one of the motivational quotes, unwrapped.
+// RandomQuote returns one of the motivational quotes, unwrapped. It is
+// looked up when asked for, not when the package loads, so a missing
+// translation can never stop the program from starting.
 func RandomQuote() string {
-	return quotes[rand.Intn(len(quotes))]
+	return i18n.T(fmt.Sprintf("quotes.quote%d", rand.Intn(quoteCount)+1))
 }

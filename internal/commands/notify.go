@@ -164,6 +164,10 @@ var configNotify = &cobra.Command{
 // 15 minutes. Cron starts with an almost empty environment, so the
 // database and config paths in use now are written into the entry.
 func installNotifyJob() error {
+	if err := unixOnly("config notify install", "cron"); err != nil {
+		return err
+	}
+
 	exe, err := os.Executable()
 	if err != nil {
 		return err

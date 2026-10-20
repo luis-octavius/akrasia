@@ -3,7 +3,11 @@ package tasks
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
+
+	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
 func TestNotesNewestFirstWithBackfilledFlag(t *testing.T) {
@@ -57,5 +61,22 @@ func TestNotesLimitAndEmpty(t *testing.T) {
 	}
 	if _, _, err := tkm.Notes(ctx, "missing", 0); !errors.Is(err, ErrTodoNotFound) {
 		t.Fatalf("unknown task should be ErrTodoNotFound, got %v", err)
+	}
+}
+
+// quoteCount must match the quotes in the locales: every one of them is
+// reachable and there is none past the end.
+func TestQuoteCountMatchesLocales(t *testing.T) {
+	for i := 1; i <= quoteCount; i++ {
+		key := fmt.Sprintf("quotes.quote%d", i)
+		if i18n.T(key) == key {
+			t.Errorf("%s is missing from the locales", key)
+		}
+	}
+	if next := fmt.Sprintf("quotes.quote%d", quoteCount+1); i18n.T(next) != next {
+		t.Errorf("%s exists: raise quoteCount", next)
+	}
+	if q := RandomQuote(); strings.HasPrefix(q, "quotes.") {
+		t.Errorf("RandomQuote returned an id: %q", q)
 	}
 }

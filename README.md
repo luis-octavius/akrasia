@@ -28,6 +28,19 @@ This gap between available tools and my personal workflow led me to develop my o
 
 SQLite is built in (pure-Go driver) and the database migrations ship inside the binary, so nothing else needs to be installed.
 
+## Platforms
+
+Akrasia is made for **Linux**, where everything works.
+
+On **Windows**, the recommended way is [WSL](https://learn.microsoft.com/windows/wsl/install) (Windows Subsystem for Linux): install a Linux distribution with `wsl --install`, then follow the [Quick Start](docs/QUICK-START.md) inside it. Everything works there, including `akrasia serve install` (enable systemd in WSL) and the reminders with cron.
+
+Akrasia also runs natively on Windows (`go install .` in PowerShell), with these limits:
+
+- The CLI, the TUI (use Windows Terminal), `akrasia serve`, backups and `akrasia notify` work.
+- `akrasia serve install` (systemd) and `akrasia config notify install` (cron) don't: they stop with a message. Use the Task Scheduler to start `akrasia serve` at login, or to run `akrasia notify` every 15 minutes.
+- Windows doesn't set `LANG`, so the interface starts in English. Run `akrasia config language pt` for Portuguese.
+- `akrasia restore` can't tell whether `akrasia serve` is running, so stop it before restoring.
+
 ## Links
 
 - [Quick Start](docs/QUICK-START.md)

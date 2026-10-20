@@ -199,7 +199,8 @@
 			"noCrontab": "crontab not found: install cron (cronie on Arch) or run `akrasia notify` from another scheduler",
 			"completeAllYes": "%v (pass --yes to complete them all)",
 			"serveRunning": "akrasia serve is already running on this database (systemctl --user status akrasia)",
-			"restoreWhileServing": "akrasia serve is using the database: stop it first (systemctl --user stop akrasia), restore, then start it again"
+			"restoreWhileServing": "akrasia serve is using the database: stop it first (systemctl --user stop akrasia), restore, then start it again",
+			"windowsUnsupported": "`akrasia %s` needs %s, which Windows doesn't have. Run akrasia inside WSL (Windows Subsystem for Linux), where it works, or use the Windows Task Scheduler to run `akrasia serve` or `akrasia notify`."
 		}
 	},
 	"db": {

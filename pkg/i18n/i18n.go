@@ -3,8 +3,10 @@ package i18n
 import (
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -17,9 +19,13 @@ type Language struct {
 }
 
 var (
-	lcz             *i18n.Localizer
+	lcz *i18n.Localizer
+	// english finds a message the current language lacks
+	english         *i18n.Localizer
 	currentLanguage *Language
 	configDir       string
+	// loadErr holds whatever failed while loading the embedded locales
+	loadErr error
 )
 
 //go:embed locales
@@ -33,16 +39,30 @@ func init() {
 		loadLanguageEnv()
 	}
 
-	// Initialize parser
-	bnd := i18n.NewBundle(language.English)
+	bnd, err := newBundle()
+	loadErr = err
 	lcz = i18n.NewLocalizer(bnd, currentLanguage.Code)
+	english = i18n.NewLocalizer(bnd, language.English.String())
+}
 
-	// Load message files
-	locales := GetAvailableLanguages()
-	for _, lcl := range locales {
-		file := filepath.Join("locales", lcl+".json")
-		bnd.LoadMessageFileFS(localeFS, file)
+// newBundle loads every embedded locale. Paths inside an embed.FS always
+// use "/": filepath.Join would build "locales\en.json" on Windows, where
+// nothing would load.
+func newBundle() (*i18n.Bundle, error) {
+	bnd := i18n.NewBundle(language.English)
+	var errs error
+	for _, lcl := range GetAvailableLanguages() {
+		if _, err := bnd.LoadMessageFileFS(localeFS, path.Join("locales", lcl+".json")); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("locale %s: %w", lcl, err))
+		}
 	}
+	return bnd, errs
+}
+
+// LoadError reports what failed while loading the translations, or nil.
+// The app keeps working without them: T falls back to the message id.
+func LoadError() error {
+	return loadErr
 }
 
 // returns the terminal's environment language
@@ -72,11 +92,18 @@ func getConfigFile() string {
 	return filepath.Join(configDir, "lang.json")
 }
 
-// T returns a localized string from a key
+// T returns the message id in the current language. It never panics: a
+// message missing there comes in English, and one missing everywhere comes
+// back as its id, so a broken translation shows up as text, not a crash.
 func T(id string) string {
-	return lcz.MustLocalize(&i18n.LocalizeConfig{
-		MessageID: id,
-	})
+	cfg := &i18n.LocalizeConfig{MessageID: id}
+	if msg, err := lcz.Localize(cfg); err == nil {
+		return msg
+	}
+	if msg, err := english.Localize(cfg); err == nil {
+		return msg
+	}
+	return id
 }
 
 // GetAvailableLanguages returns the available languages to choose

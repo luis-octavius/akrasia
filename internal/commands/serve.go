@@ -178,6 +178,10 @@ var serveInstallCmd = &cobra.Command{
 	Short: i18n.T("commands.commands.serveInstallShort"),
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := unixOnly("serve install", "systemd"); err != nil {
+			return err
+		}
+
 		exe, err := os.Executable()
 		if err != nil {
 			return err
