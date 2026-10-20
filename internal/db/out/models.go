@@ -7,6 +7,8 @@ package database
 import (
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Dump struct {
@@ -32,6 +34,7 @@ type Todo struct {
 	Priority     string
 	IsDaily      bool
 	HistorySince sql.NullString
+	ParentID     uuid.NullUUID
 }
 
 type TodosHistory struct {

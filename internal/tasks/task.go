@@ -12,9 +12,28 @@ import (
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
-// AddTodo persists a new task and returns it.
+// AddTodo persists a new task and returns it. With Parent set, it becomes
+// a subtask of that task: it follows the parent's daily mode, is due no
+// later than it (its date by default), and reopens a parent that was done.
 func (tkm *TaskManager) AddTodo(ctx context.Context, in NewTodo) (TodoView, error) {
 	now := time.Now()
+
+	var parent TodoView
+	if in.Parent != "" {
+		var err error
+		if parent, err = tkm.parentFor(ctx, in.Parent); err != nil {
+			return TodoView{}, err
+		}
+		if parent.IsDaily {
+			in.IsDaily = true
+		}
+		if in.ExpiresAt.IsZero() {
+			in.ExpiresAt = parent.ExpiresAt
+		}
+		if err := subtaskRules(parent, in.IsDaily, in.ExpiresAt); err != nil {
+			return TodoView{}, err
+		}
+	}
 
 	todo, err := tkm.Queries.AddTodo(ctx, database.AddTodoParams{
 		ID:           uuid.New(),
@@ -27,10 +46,11 @@ func (tkm *TaskManager) AddTodo(ctx context.Context, in NewTodo) (TodoView, erro
 		Priority:     in.Priority,
 		IsDaily:      in.IsDaily,
 		HistorySince: sql.NullString{String: now.Format(time.DateOnly), Valid: true},
+		ParentID:     uuid.NullUUID{UUID: parent.ID, Valid: in.Parent != ""},
 	})
 	if isUniqueViolation(err) {
 		return TodoView{}, localizedError{
-			msg:      fmt.Sprintf(i18n.T("tasks.error.nameTaken"), in.Name),
+			msg:      fmt.Sprintf(i18n.T("tasks.error.nameTaken"), path(parent.Name, in.Name)),
 			sentinel: ErrNameTaken,
 		}
 	}
@@ -38,36 +58,62 @@ func (tkm *TaskManager) AddTodo(ctx context.Context, in NewTodo) (TodoView, erro
 		return TodoView{}, fmt.Errorf(i18n.T("tasks.error.createTask"), err)
 	}
 
-	return viewFromTodo(todo)
+	view, err := viewFromTodo(todo)
+	if err != nil {
+		return TodoView{}, err
+	}
+	if in.Parent != "" {
+		view.Parent = parent.Name
+		// a new pending subtask means the parent isn't done any more
+		if err := tkm.syncParent(ctx, parent.ID); err != nil {
+			return view, err
+		}
+	}
+	return view, nil
 }
 
-// ListTodos returns every task with today's status, optionally filtered by
-// priority.
+// parentFor finds the task a subtask goes under; it must be top-level.
+func (tkm *TaskManager) parentFor(ctx context.Context, name string) (TodoView, error) {
+	row, err := findTodoByName(ctx, tkm, name)
+	if err != nil {
+		return TodoView{}, err
+	}
+	if row.ParentName != "" {
+		return TodoView{}, localizedError{
+			msg:      fmt.Sprintf(i18n.T("tasks.error.nestedSubtask"), path(row.ParentName, row.Name)),
+			sentinel: ErrNestedSubtask,
+		}
+	}
+	id, err := toUUID(row.ID)
+	if err != nil {
+		return TodoView{}, err
+	}
+	return tkm.family(ctx, id)
+}
+
+// ListTodos returns every top-level task with today's status and its
+// subtasks attached, optionally filtered by priority (of the top-level
+// task).
 func (tkm *TaskManager) ListTodos(ctx context.Context, priorityFilter string) ([]TodoView, error) {
 	return tkm.listTodoViews(ctx, func(v TodoView) bool {
 		return priorityFilter == "" || v.Priority == priorityFilter
 	})
 }
 
-// listTodoViews loads every task with today's status and keeps the ones
-// accepted by keep.
+// listTodoViews loads every top-level task with today's status and its
+// subtasks, and keeps the ones accepted by keep.
 func (tkm *TaskManager) listTodoViews(ctx context.Context, keep func(TodoView) bool) ([]TodoView, error) {
-	rows, err := tkm.Queries.ListTodosWithTodayStatus(ctx)
+	flat, err := tkm.allTodoViews(ctx)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.T("tasks.error.getTaskDatabase"), err)
+		return nil, err
 	}
 
-	views := make([]TodoView, 0, len(rows))
-	for _, row := range rows {
-		view, err := newTodoView(row)
-		if err != nil {
-			return nil, err
-		}
+	var views []TodoView
+	for _, view := range nest(flat) {
 		if keep(view) {
 			views = append(views, view)
 		}
 	}
-
 	return views, nil
 }
 
@@ -89,6 +135,13 @@ func (tkm *TaskManager) FindTodo(ctx context.Context, name string) (TodoView, er
 		return TodoView{}, err
 	}
 
+	if !view.IsSubtask() {
+		family, err := tkm.family(ctx, view.ID)
+		if err != nil {
+			return TodoView{}, err
+		}
+		view.Subtasks = family.Subtasks
+	}
 	return view, nil
 }
 
@@ -103,16 +156,28 @@ func (tkm *TaskManager) DailyTodos(ctx context.Context) ([]TodoView, error) {
 }
 
 // DeleteByName removes the task that best matches name and returns it, so
-// callers can show which task the fuzzy search actually picked.
+// callers can show which task the fuzzy search actually picked. A parent
+// goes with its subtasks (returned in Subtasks); removing a pending
+// subtask can leave the parent with every subtask done, which completes it.
 func (tkm *TaskManager) DeleteByName(ctx context.Context, name string) (TodoView, error) {
-	row, err := findTodoByName(ctx, tkm, name)
+	todo, err := tkm.FindTodo(ctx, name)
 	if err != nil {
 		return TodoView{}, err
 	}
 
-	if err := tkm.Queries.DeleteTodoByName(ctx, row.Name); err != nil {
+	if len(todo.Subtasks) > 0 {
+		if err := tkm.Queries.DeleteSubtasks(ctx, uuid.NullUUID{UUID: todo.ID, Valid: true}); err != nil {
+			return TodoView{}, fmt.Errorf(i18n.T("tasks.error.deleteTaskByName"), err)
+		}
+	}
+	if err := tkm.Queries.DeleteTodoByID(ctx, todo.ID); err != nil {
 		return TodoView{}, fmt.Errorf(i18n.T("tasks.error.deleteTaskByName"), err)
 	}
 
-	return viewFromNameRow(row)
+	if todo.IsSubtask() {
+		if err := tkm.syncParent(ctx, todo.ParentID); err != nil {
+			return todo, err
+		}
+	}
+	return todo, nil
 }

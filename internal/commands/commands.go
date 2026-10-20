@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"slices"
+	"time"
 
 	"github.com/luis-octavius/akrasia/internal/db"
 	"github.com/luis-octavius/akrasia/internal/tasks"
@@ -29,6 +30,8 @@ var (
 	todayJSON      bool
 	filterPriority string
 	deleteYes      bool
+	parentName     string
+	completeYes    bool
 	focusLimit     int
 
 	// edit flags; only the ones the user passes are applied
@@ -126,9 +129,12 @@ var add = &cobra.Command{
 			return errors.New(i18n.T("commands.error.taskName"))
 		}
 
-		expiresAt, err := tasks.ParseDate(date)
-		if err != nil {
-			return err
+		// a subtask without --date is due with its parent
+		var expiresAt time.Time
+		if parentName == "" || len(date) > 0 {
+			if expiresAt, err = tasks.ParseDate(date); err != nil {
+				return err
+			}
 		}
 
 		isDaily, err := cmd.Flags().GetBool("daily")
@@ -142,12 +148,13 @@ var add = &cobra.Command{
 			Priority:    priority,
 			IsDaily:     isDaily,
 			ExpiresAt:   expiresAt,
+			Parent:      parentName,
 		})
 		if err != nil {
 			return err
 		}
 
-		color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.createdTask"), todo.Name))
+		color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.createdTask"), todo.Path()))
 		printQuote()
 		return nil
 	},
@@ -306,7 +313,25 @@ var updateStatusToConcluded = &cobra.Command{
 			taskName = args[0]
 		}
 
-		if _, err := tkm.Complete(cmd.Context(), taskName, notes); err != nil {
+		_, err = tkm.Complete(cmd.Context(), taskName, notes)
+		if errors.Is(err, tasks.ErrPendingSubtasks) {
+			// completing a parent completes its pending subtasks: ask first
+			ok := completeYes
+			if !ok && !isInteractive() {
+				return fmt.Errorf(i18n.T("commands.error.completeAllYes"), err)
+			}
+			if !ok {
+				if ok, err = confirm(cmd, fmt.Sprintf(i18n.T("commands.info.completeAllConfirm"), err)); err != nil {
+					return err
+				}
+			}
+			if !ok {
+				color.MsgMuted(i18n.T("commands.info.completeCancelled"))
+				return nil
+			}
+			_, err = tkm.CompleteAll(cmd.Context(), taskName, notes)
+		}
+		if err != nil {
 			return err
 		}
 
@@ -402,7 +427,11 @@ var delByName = &cobra.Command{
 			return err
 		}
 
-		color.MsgSuccess(fmt.Sprintf(i18n.T("tasks.info.taskDeletedSuccessfully"), todo.Name))
+		msg := fmt.Sprintf(i18n.T("tasks.info.taskDeletedSuccessfully"), todo.Path())
+		if n := len(todo.Subtasks); n > 0 {
+			msg = fmt.Sprintf(i18n.T("tasks.info.taskDeletedWithSubtasks"), todo.Name, n)
+		}
+		color.MsgSuccess(msg)
 		return nil
 	},
 }
@@ -923,6 +952,7 @@ func init() {
 	add.Flags().StringVar(&priority, "priority", "", i18n.T("commands.flags.addPriority"))
 	add.Flags().Bool("daily", false, i18n.T("commands.flags.addDaily"))
 	add.Flags().StringVar(&description, "desc", "", i18n.T("commands.flags.addDescription"))
+	add.Flags().StringVar(&parentName, "parent", "", i18n.T("commands.flags.addParent"))
 	getAll.Flags().StringVar(&filterPriority, "priority", "", i18n.T("commands.flags.getAllPriority"))
 	today.Flags().StringVar(&filterPriority, "priority", "", i18n.T("commands.flags.todayPriority"))
 	focus.Flags().IntVar(&focusLimit, "limit", 3, i18n.T("commands.flags.focusLimit"))
@@ -932,6 +962,7 @@ func init() {
 	delByName.Flags().BoolVar(&deleteYes, "yes", false, i18n.T("commands.flags.delByNameDeleteYes"))
 	updateStatusToConcluded.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.updateStatusToConcludedName"))
 	updateStatusToConcluded.Flags().StringVar(&notes, "notes", "", i18n.T("commands.flags.updateStatusToConcludedNotes"))
+	updateStatusToConcluded.Flags().BoolVar(&completeYes, "yes", false, i18n.T("commands.flags.updateStatusToConcludedYes"))
 	getTodoCurrentStreak.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.getTodoCurrentStreakName"))
 	getTodoStreakHistory.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.getTodoStreakHistoryName"))
 	backfillHistory.Flags().IntVar(&daysBackfill, "days", 30, i18n.T("commands.flags.backfillHistoryDays"))

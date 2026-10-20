@@ -129,9 +129,10 @@ func (m Model) tabLabel(t tab) string {
 	if !st.loaded {
 		return t.title()
 	}
+	// subtasks count with their parent, as in the section headers
 	count := 0
 	for _, r := range st.rows {
-		if r.selectable() {
+		if r.selectable() && (r.todo == nil || !r.todo.IsSubtask()) {
 			count++
 		}
 	}
@@ -230,7 +231,7 @@ func (m Model) renderList(width, height int) string {
 
 	lines := make([]string, 0, end-start)
 	for i := start; i < end; i++ {
-		lines = append(lines, renderRow(rows, i, i == st.cursor, width))
+		lines = append(lines, m.renderRow(rows, i, i == st.cursor, width))
 	}
 	return strings.Join(lines, "\n")
 }
@@ -268,6 +269,9 @@ func (m Model) renderDetails(r row) string {
 	}
 
 	lines := []string{color.Accent().Render(todo.Name), ""}
+	if todo.IsSubtask() {
+		lines = []string{color.Muted().Render(todo.Parent + " /"), color.Accent().Render(todo.Name), ""}
+	}
 	if todo.Description.String != "" {
 		lines = append(lines, todo.Description.String, "")
 	}
@@ -281,8 +285,12 @@ func (m Model) renderDetails(r row) string {
 		field(i18n.T("tui.details.daily"), yesNo(todo.IsDaily)),
 		field(i18n.T("tui.details.status"), status),
 	)
+	if len(todo.Subtasks) > 0 {
+		p := todo.SubtaskProgress()
+		lines = append(lines, field(i18n.T("tui.details.subtasks"), fmt.Sprintf("%d/%d", p.Done, p.Total)))
+	}
 
-	if todo.IsDaily && m.streakKnown && m.detailsName == todo.Name {
+	if todo.IsDaily && m.streakKnown && m.detailsName == todo.Path() {
 		days := color.Accent().Render(fmt.Sprintf(i18n.T("tui.details.days"), m.streakDays))
 		lines = append(lines, field(i18n.T("tui.details.streak"), days))
 
@@ -293,7 +301,7 @@ func (m Model) renderDetails(r row) string {
 			}
 		}
 	}
-	if m.notesKnown && m.detailsName == todo.Name && len(m.detailNotes) > 0 {
+	if m.notesKnown && m.detailsName == todo.Path() && len(m.detailNotes) > 0 {
 		lines = append(lines, "", color.Title().Render(i18n.T("tui.details.notes")))
 		lines = append(lines, noteLines(m.detailNotes, detailsTextWidth)...)
 	}
@@ -326,26 +334,29 @@ func emptyMessage(t tab) string {
 
 // --- rows --------------------------------------------------------------
 
-func renderRow(rows []row, i int, selected bool, width int) string {
+func (m Model) renderRow(rows []row, i int, selected bool, width int) string {
 	r := rows[i]
 	switch {
 	case r.header != "":
 		return renderSectionHeader(r.header, sectionCount(rows, i), width)
 	case r.todo != nil:
-		return renderTodoLine(*r.todo, selected, width)
+		return renderTodoLine(*r.todo, selected, m.folded[r.todo.ID], width)
 	default:
 		return renderDumpLine(*r.dump, selected, width)
 	}
 }
 
-// sectionCount counts the items under the header at index i.
+// sectionCount counts the items under the header at index i; subtasks
+// count with their parent.
 func sectionCount(rows []row, i int) int {
 	n := 0
 	for _, r := range rows[i+1:] {
 		if !r.selectable() {
 			break
 		}
-		n++
+		if r.todo == nil || !r.todo.IsSubtask() {
+			n++
+		}
 	}
 	return n
 }
@@ -383,8 +394,10 @@ func cursorMark(base lipgloss.Style, selected bool) string {
 }
 
 // renderTodoLine is the one-line form of a task: state icon, name and
-// daily marker on the left; due date and priority badge on the right.
-func renderTodoLine(todo tasks.TodoView, selected bool, width int) string {
+// daily marker on the left; due date and priority badge on the right. A
+// subtask is indented under its parent; a parent shows how many of its
+// subtasks are done, and ▸ while they are folded away.
+func renderTodoLine(todo tasks.TodoView, selected, folded bool, width int) string {
 	base := rowBase(selected)
 
 	icon, iconStyle := "○", color.Muted()
@@ -397,11 +410,22 @@ func renderTodoLine(todo tasks.TodoView, selected bool, width int) string {
 		iconStyle = color.Warning()
 	}
 
-	left := cursorMark(base, selected) +
-		iconStyle.Inherit(base).Render(icon) + base.Render(" ") +
+	left := cursorMark(base, selected)
+	if todo.IsSubtask() {
+		left += base.Render("   ")
+	}
+	left += iconStyle.Inherit(base).Render(icon) + base.Render(" ") +
 		nameStyle.Inherit(base).Render(todo.Name)
-	if todo.IsDaily {
+	if todo.IsDaily && !todo.IsSubtask() {
 		left += color.Muted().Inherit(base).Render(" ↻")
+	}
+	if len(todo.Subtasks) > 0 {
+		p := todo.SubtaskProgress()
+		mark := "▾"
+		if folded {
+			mark = "▸"
+		}
+		left += color.Accent().Inherit(base).Render(fmt.Sprintf(" %s %d/%d", mark, p.Done, p.Total))
 	}
 
 	var right string
@@ -453,9 +477,18 @@ func (m Model) renderModal(width int) string {
 
 	case modeConfirmDelete:
 		question := fmt.Sprintf(i18n.T("tui.prompt.delete"), m.target.Name)
+		if n := len(m.target.Subtasks); n > 0 {
+			question = fmt.Sprintf(i18n.T("tui.prompt.deleteWithSubtasks"), m.target.Name, n)
+		}
 		if m.targetDump != nil {
 			question = fmt.Sprintf(i18n.T("tui.prompt.deleteDump"), m.targetDump.Name)
 		}
+		title := color.Warning().Bold(true).Render(question)
+		return box.Render(title + "\n\n" + color.Muted().Render(m.promptHelp()))
+
+	case modeConfirmComplete:
+		p := m.target.SubtaskProgress()
+		question := fmt.Sprintf(i18n.T("tui.prompt.completeAll"), m.target.Name, p.Total-p.Done)
 		title := color.Warning().Bold(true).Render(question)
 		return box.Render(title + "\n\n" + color.Muted().Render(m.promptHelp()))
 
@@ -478,6 +511,8 @@ func (m Model) renderForm() string {
 		title = i18n.T("tui.form.editTitle")
 	case m.form.fromDump != nil:
 		title = i18n.T("tui.form.fromDumpTitle")
+	case m.form.parent != nil:
+		title = fmt.Sprintf(i18n.T("tui.form.subtaskTitle"), m.form.parent.Name)
 	}
 	lines := []string{color.Accent().Render(title), ""}
 	labelStyle := lipgloss.NewStyle().Width(labelWidth())
@@ -552,6 +587,8 @@ func (m Model) modeLabel() string {
 		return i18n.T("tui.mode.notes")
 	case modeConfirmDelete:
 		return i18n.T("tui.mode.delete")
+	case modeConfirmComplete:
+		return i18n.T("tui.mode.complete")
 	case modeAddDump:
 		return i18n.T("tui.mode.dump")
 	case modeNotesView:
@@ -571,7 +608,7 @@ func (m Model) modeLabel() string {
 // promptHelp lists the keys available while a prompt or the form is open.
 func (m Model) promptHelp() string {
 	switch m.mode {
-	case modeConfirmDelete:
+	case modeConfirmDelete, modeConfirmComplete:
 		return "y " + i18n.T("tui.help.confirm") + " • n/esc " + i18n.T("tui.help.cancel")
 	case modeNotesView:
 		return "↑/↓ pgup/pgdn " + i18n.T("tui.help.scroll") + " • esc " + i18n.T("tui.help.close")

@@ -26,6 +26,7 @@ type Service interface {
 	AddTodo(ctx context.Context, in tasks.NewTodo) (tasks.TodoView, error)
 	EditTodo(ctx context.Context, name string, patch tasks.TodoPatch) (tasks.TodoView, error)
 	Complete(ctx context.Context, name, notes string) (tasks.TodoView, error)
+	CompleteAll(ctx context.Context, name, notes string) (tasks.TodoView, error)
 	DeleteByName(ctx context.Context, name string) (tasks.TodoView, error)
 	AddDump(ctx context.Context, name string) (tasks.DumpEntry, error)
 	DeleteDump(ctx context.Context, id uuid.UUID) error
@@ -72,6 +73,7 @@ const (
 	modeAddTodo
 	modeNotesView
 	modeQuote
+	modeConfirmComplete
 )
 
 // row is one line of a tab: either a section header or an item.
@@ -157,6 +159,12 @@ type Model struct {
 	// replacingNote: the notes prompt rewrites today's note of a task that
 	// is already done today
 	replacingNote bool
+	// completeAll: the notes prompt completes a parent and its pending
+	// subtasks, as confirmed in modeConfirmComplete
+	completeAll bool
+
+	// folded holds the parents whose subtasks are hidden (z)
+	folded map[uuid.UUID]bool
 
 	search   string
 	priority string
@@ -263,7 +271,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.reload(m.active)
 
 	case notePrefillMsg:
-		if m.mode == modeNotes && m.replacingNote && msg.name == m.target.Name && m.input.Value() == "" {
+		if m.mode == modeNotes && m.replacingNote && msg.name == m.target.Path() && m.input.Value() == "" {
 			m.input.SetValue(msg.text)
 			m.input.CursorEnd()
 		}
@@ -271,7 +279,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case notesMsg:
 		switch {
-		case msg.full && m.mode == modeNotesView && msg.name == m.target.Name:
+		case msg.full && m.mode == modeNotesView && msg.name == m.target.Path():
 			m.setNotesContent(msg.entries, msg.err)
 		case !msg.full && msg.err == nil && msg.name == m.detailsName:
 			m.detailNotes, m.notesKnown = msg.entries, true
@@ -301,6 +309,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleFormKey(msg)
 		case modeConfirmDelete:
 			return m.handleConfirmKey(msg)
+		case modeConfirmComplete:
+			return m.handleConfirmCompleteKey(msg)
 		case modeNotesView:
 			return m.handleNotesViewKey(msg)
 		case modeQuote:
@@ -313,7 +323,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// anything else (cursor blink) belongs to whichever input is open
 	var cmd tea.Cmd
 	switch m.mode {
-	case modeNormal, modeConfirmDelete, modeQuote:
+	case modeNormal, modeConfirmDelete, modeConfirmComplete, modeQuote:
 	case modeNotesView:
 		m.notesView, cmd = m.notesView.Update(msg)
 	case modeAddTodo:
@@ -408,10 +418,14 @@ func appendSection(rows []row, title string, todos []tasks.TodoView) []row {
 	return append(rows, todoRows(todos)...)
 }
 
+// todoRows lists each task followed by its subtasks.
 func todoRows(todos []tasks.TodoView) []row {
-	rows := make([]row, len(todos))
+	rows := make([]row, 0, len(todos))
 	for i := range todos {
-		rows[i] = row{todo: &todos[i]}
+		rows = append(rows, row{todo: &todos[i]})
+		for j := range todos[i].Subtasks {
+			rows = append(rows, row{todo: &todos[i].Subtasks[j]})
+		}
 	}
 	return rows
 }
@@ -423,7 +437,7 @@ func (m Model) rows() []row {
 
 func (m Model) filteredRows(t tab) []row {
 	all := m.tabs[t].rows
-	if m.search == "" && m.priority == "" {
+	if m.search == "" && m.priority == "" && len(m.folded) == 0 {
 		return all
 	}
 
@@ -431,7 +445,11 @@ func (m Model) filteredRows(t tab) []row {
 	keep := func(r row) bool {
 		switch {
 		case r.todo != nil:
-			return strings.Contains(strings.ToLower(r.todo.Name), search) &&
+			if r.todo.IsSubtask() && m.folded[r.todo.ParentID] {
+				return false
+			}
+			// the full name, so searching a parent shows its subtasks too
+			return strings.Contains(strings.ToLower(r.todo.Path()), search) &&
 				(m.priority == "" || r.todo.Priority == m.priority)
 		case r.dump != nil:
 			return strings.Contains(strings.ToLower(r.dump.Name), search)
@@ -507,12 +525,12 @@ func (m *Model) loadDetails() tea.Cmd {
 		m.detailsName, m.streakKnown, m.notesKnown = "", false, false
 		return nil
 	}
-	if r.todo.Name == m.detailsName {
+	if r.todo.Path() == m.detailsName {
 		return nil
 	}
 
-	m.detailsName, m.streakKnown, m.notesKnown = r.todo.Name, false, false
-	ctx, svc, name := m.ctx, m.svc, r.todo.Name
+	m.detailsName, m.streakKnown, m.notesKnown = r.todo.Path(), false, false
+	ctx, svc, name := m.ctx, m.svc, r.todo.Path()
 
 	cmds := []tea.Cmd{func() tea.Msg {
 		_, entries, err := svc.Notes(ctx, name, detailsNotesLimit)

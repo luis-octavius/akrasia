@@ -41,6 +41,37 @@ type TodoView struct {
 	Priority    string
 	IsDaily     bool
 	DoneToday   bool
+
+	// ParentID is uuid.Nil for a top-level task; Parent is the parent's name.
+	ParentID uuid.UUID `json:"-"`
+	Parent   string    `json:",omitempty"`
+	// Subtasks of a top-level task, nearest due date first.
+	Subtasks []TodoView `json:",omitempty"`
+}
+
+// IsSubtask reports whether the task belongs to a parent.
+func (v TodoView) IsSubtask() bool { return v.ParentID != uuid.Nil }
+
+// Path is the name that finds this exact task: "Parent/Subtask" for a
+// subtask, the name otherwise.
+func (v TodoView) Path() string { return path(v.Parent, v.Name) }
+
+// SubtaskProgress counts the subtasks done (today, for daily ones).
+func (v TodoView) SubtaskProgress() Progress {
+	p := Progress{Total: len(v.Subtasks)}
+	for _, s := range v.Subtasks {
+		if s.Done() {
+			p.Done++
+		}
+	}
+	return p
+}
+
+func path(parent, name string) string {
+	if parent == "" {
+		return name
+	}
+	return parent + "/" + name
 }
 
 // Done reports whether the task counts as done right now: daily tasks are
@@ -58,7 +89,10 @@ type NewTodo struct {
 	Description string
 	Priority    string
 	IsDaily     bool
-	ExpiresAt   time.Time
+	// ExpiresAt zero takes the parent's date for a subtask
+	ExpiresAt time.Time
+	// Parent is the name of the task this one is a subtask of, if any
+	Parent string
 }
 
 // StreakPeriod is one completed run of consecutive days.

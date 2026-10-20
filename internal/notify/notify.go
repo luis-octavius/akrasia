@@ -109,6 +109,10 @@ func Message(r tasks.Reminders, cfg Config, now time.Time) string {
 		lines = append(lines, "", fmt.Sprintf("**%s (%d)**", title, len(todos)))
 		for _, t := range todos {
 			line := "• " + t.Name
+			if len(t.Subtasks) > 0 {
+				p := t.SubtaskProgress()
+				line += fmt.Sprintf(" (%d/%d)", p.Done, p.Total)
+			}
 			if d := detail(t); d != "" {
 				line += " — " + d
 			}

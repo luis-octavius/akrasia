@@ -14,7 +14,19 @@ func (tkm *TaskManager) Expired(ctx context.Context) ([]TodoView, error) {
 		return nil, fmt.Errorf(i18n.T("tasks.error.checkExpiredTasks"), err)
 	}
 
-	return viewsFromTodos(todos)
+	views, err := viewsFromTodos(todos)
+	if err != nil {
+		return nil, err
+	}
+
+	// a subtask shows under its parent, not on its own
+	var top []TodoView
+	for _, v := range views {
+		if !v.IsSubtask() {
+			top = append(top, v)
+		}
+	}
+	return top, nil
 }
 
 // Expiring returns pending tasks within ExpiringWindow of their deadline.

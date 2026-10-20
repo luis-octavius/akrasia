@@ -98,6 +98,45 @@ Error: there is already a task called 'Morning walk'
 
 In the TUI, press `e` on a task: the form opens prefilled.
 
+### Subtasks
+
+A task can be split into subtasks, one level deep. The parent shows how many
+are done (`2/5`), and finishing the last one completes the parent.
+
+```bash
+akrasia add "Party" --date 25,10
+akrasia add "Bake cake" --parent "Party"        # due with the parent
+akrasia add "Invite friends" --parent "Party" --date 22,10
+
+akrasia update-status "Bake cake"
+akrasia update-status "Party/Invite friends"    # the full name, when needed
+
+akrasia get-all
+○ Party  1/2
+  25 Oct 26 00:00 · Not done
+    ✔ Bake cake · 25 Oct
+    ○ Invite friends · 22 Oct
+```
+
+- A subtask follows its parent's daily mode and can't be due after it.
+  Moving the parent's date earlier brings later subtasks along.
+- Completing the parent itself while subtasks are pending completes them
+  too, after a confirmation (`--yes` skips it, and scripts need it).
+- Adding a subtask to a finished parent makes it pending again.
+- Daily parent (a routine): each subtask is done once a day, and the parent
+  closes the day, and its streak, when all of them are done.
+- Subtasks have names unique within their parent. When the same name exists
+  elsewhere, use `"Parent/Subtask"`: a bare name picks the top-level task,
+  and a name shared by subtasks of several parents is refused with the
+  full names to choose from.
+- Deleting the parent deletes its subtasks.
+- Today's progress, `today`, `focus` and the Discord reminders count a
+  parent as one task, with its subtasks listed under it.
+
+In the TUI, `s` adds a subtask to the selected task, `z` folds its subtasks
+away, and `space` on a parent with pending subtasks asks before completing
+them all.
+
 ### Listing tasks
 
 ```bash

@@ -13,6 +13,10 @@ ON CONFLICT(todo_id, date) DO UPDATE SET
     notes = excluded.notes
 RETURNING *;
 
+-- name: DeleteTodayHistory :exec
+DELETE FROM todos_history
+WHERE todo_id = ? AND date = date('now', 'localtime');
+
 -- name: IsDoneToday :one
 SELECT EXISTS(
     SELECT 1 FROM todos_history

@@ -7,6 +7,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
+	"github.com/google/uuid"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
@@ -45,6 +46,10 @@ func (m Model) handleNormalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.startDelete()
 	case key.Matches(msg, m.keys.Add):
 		return m.startAdd()
+	case key.Matches(msg, m.keys.Subtask):
+		return m.startAddSubtask()
+	case key.Matches(msg, m.keys.Fold):
+		m.toggleFold()
 	case key.Matches(msg, m.keys.Edit):
 		return m.startEdit()
 	case key.Matches(msg, m.keys.Notes):
@@ -104,20 +109,71 @@ func (m Model) startComplete() (tea.Model, tea.Cmd) {
 	}
 	// done today: completing again replaces today's note, so offer that
 	if r.todo.DoneToday {
-		m.mode, m.target, m.replacingNote = modeNotes, *r.todo, true
+		m.mode, m.target, m.replacingNote, m.completeAll = modeNotes, *r.todo, true, false
 		m.status = ""
 		m.openInput("")
-		return m, tea.Batch(textinput.Blink, m.todayNoteCmd(r.todo.Name))
+		return m, tea.Batch(textinput.Blink, m.todayNoteCmd(r.todo.Path()))
 	}
 	if r.todo.Done() {
 		m.setStatus(fmt.Sprintf(i18n.T("tui.prompt.alreadyDone"), r.todo.Name), nil)
 		return m, nil
 	}
 
-	m.mode, m.target, m.replacingNote = modeNotes, *r.todo, false
+	// completing a parent completes its pending subtasks: confirm first
+	if p := r.todo.SubtaskProgress(); p.Done < p.Total {
+		m.mode, m.target, m.status = modeConfirmComplete, *r.todo, ""
+		return m, nil
+	}
+
+	m.mode, m.target, m.replacingNote, m.completeAll = modeNotes, *r.todo, false, false
 	m.status = ""
 	m.openInput("")
 	return m, textinput.Blink
+}
+
+// handleConfirmCompleteKey answers "complete X and its pending subtasks?";
+// yes goes on to the notes prompt.
+func (m Model) handleConfirmCompleteKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "y", "Y", "s", "S":
+		m.mode, m.replacingNote, m.completeAll = modeNotes, false, true
+		m.openInput("")
+		return m, textinput.Blink
+	case "n", "N", "esc":
+		m.mode = modeNormal
+	}
+	return m, nil
+}
+
+// toggleFold hides or shows the subtasks of the selected parent (or of the
+// selected subtask's parent, leaving the cursor on that parent).
+func (m *Model) toggleFold() {
+	r, ok := m.selected()
+	if !ok || r.todo == nil {
+		return
+	}
+	id := r.todo.ID
+	if r.todo.IsSubtask() {
+		id = r.todo.ParentID
+	} else if len(r.todo.Subtasks) == 0 {
+		return
+	}
+
+	if m.folded == nil {
+		m.folded = map[uuid.UUID]bool{}
+	}
+	if m.folded[id] {
+		delete(m.folded, id)
+	} else {
+		m.folded[id] = true
+	}
+
+	for i, row := range m.rows() {
+		if row.todo != nil && row.todo.ID == id {
+			m.tabs[m.active].cursor = i
+			break
+		}
+	}
 }
 
 // todayNoteCmd fetches the note written today, if any, to prefill the
@@ -178,6 +234,26 @@ func (m Model) startAdd() (tea.Model, tea.Cmd) {
 	return m, textinput.Blink
 }
 
+// startAddSubtask opens the form for a new subtask of the selected task,
+// or of the selected subtask's parent.
+func (m Model) startAddSubtask() (tea.Model, tea.Cmd) {
+	r, ok := m.selected()
+	if !ok || r.todo == nil {
+		m.setStatus(i18n.T("tui.prompt.noSelection"), nil)
+		return m, nil
+	}
+
+	parent := *r.todo
+	if parent.IsSubtask() {
+		parent = tasks.TodoView{ID: parent.ParentID, Name: parent.Parent, IsDaily: parent.IsDaily}
+	}
+
+	m.mode = modeAddTodo
+	m.status = ""
+	m.form = newSubtaskForm(modalWidth(m.width), parent)
+	return m, textinput.Blink
+}
+
 // startEdit opens the form prefilled with the selected task.
 func (m Model) startEdit() (tea.Model, tea.Cmd) {
 	r, ok := m.selected()
@@ -221,7 +297,10 @@ func (m Model) handlePromptKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 		switch current {
 		case modeNotes:
-			return m, m.completeCmd(m.target.Name, value, m.replacingNote)
+			if m.completeAll {
+				return m, m.completeAllCmd(m.target.Path(), value)
+			}
+			return m, m.completeCmd(m.target.Path(), value, m.replacingNote)
 		case modeAddDump:
 			if value == "" {
 				return m, nil
@@ -249,7 +328,7 @@ func (m Model) handleConfirmKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.targetDump != nil {
 			return m, m.deleteDumpCmd(*m.targetDump)
 		}
-		return m, m.deleteCmd(m.target.Name)
+		return m, m.deleteCmd(m.target.Path())
 	case "n", "N", "esc":
 		m.mode = modeNormal
 	}
@@ -307,7 +386,7 @@ func (m Model) submitEdit() (tea.Model, tea.Cmd) {
 	if patch.Empty() {
 		return m, nil
 	}
-	return m, m.editCmd(m.form.editing.Name, patch)
+	return m, m.editCmd(m.form.editing.Path(), patch)
 }
 
 func (m Model) editCmd(name string, patch tasks.TodoPatch) tea.Cmd {
@@ -327,6 +406,15 @@ func (m Model) completeCmd(name, notes string, replacing bool) tea.Cmd {
 		if replacing {
 			return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.noteUpdated"), todo.Name), err: err}
 		}
+		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.completed"), todo.Name), completed: true, err: err}
+	}
+}
+
+// completeAllCmd completes a parent and its pending subtasks.
+func (m Model) completeAllCmd(name, notes string) tea.Cmd {
+	ctx, svc := m.ctx, m.svc
+	return func() tea.Msg {
+		todo, err := svc.CompleteAll(ctx, name, notes)
 		return actionMsg{status: fmt.Sprintf(i18n.T("tui.status.completed"), todo.Name), completed: true, err: err}
 	}
 }
