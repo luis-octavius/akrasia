@@ -12,10 +12,11 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// focus the notes as soon as the dialog opens
+// focus the dialog's text as soon as it opens: the notes, or the name of a
+// task made from a dump
 document.addEventListener("htmx:afterSwap", (e) => {
   if (e.detail.target.id === "overlay") {
-    e.detail.target.querySelector("textarea")?.focus();
+    e.detail.target.querySelector("textarea, input[name=name]")?.focus();
   }
 });
 

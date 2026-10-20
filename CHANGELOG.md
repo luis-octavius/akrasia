@@ -6,6 +6,49 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Dump tab in the web app.** The dump entries saved from the phone (or
+  anywhere else) can now be seen there, with their count in the tab bar.
+  - `→` opens a dialog to turn an entry into a task: the name can be
+    edited, and date, priority, daily and parent can be set. The entry
+    leaves the dump once the task is created, and stays if it can't be
+    (for example, the name is taken).
+  - `×` deletes an entry after the browser's confirmation.
+
+### Fixed
+
+- **Akrasia crashed on start on Windows** ("message quotes.quote1 not
+  found"). The translations are embedded files, whose paths always use
+  `/`, but they were built with the OS separator (`\` on Windows), so
+  nothing loaded. They load on every OS now.
+- A missing translation no longer crashes the app on any OS: it falls
+  back to English, then to the message id, and a load failure is reported
+  on stderr. Quotes are looked up when shown, not at startup.
+- On Windows, `serve install` (systemd) and `config notify install` (cron)
+  stop with a message that points to WSL or the Task Scheduler.
+- Web app: tapping a button with an empty name did nothing on phones (the
+  browser's own check shows no message there). The app now shows "name is
+  required".
+- Web app: messages (status and errors) appear in the add bar at the
+  bottom, so they are visible however far the list is scrolled.
+
+### Documentation
+
+- README: new "Platforms" section, covering Linux, Windows through WSL
+  (recommended) and native Windows with its limits.
+
+### Development
+
+- **Continuous integration** (GitHub Actions, `.github/workflows/ci.yml`)
+  on every pull request and on pushes to `main` and `dev`:
+  - Linux: gofmt, `go mod tidy`, `go vet` and the tests with the race
+    detector;
+  - Windows: build and tests.
+- `.github` was in `.gitignore`, which would have kept any workflow out of
+  the repository; it no longer is.
+- Tests of Unix-only features skip themselves on Windows, with the reason.
+
 ## [2.5.0] - 2026-10-20
 
 ### Added

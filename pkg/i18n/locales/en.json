@@ -199,7 +199,8 @@
 			"noCrontab": "crontab not found: install cron (cronie on Arch) or run `akrasia notify` from another scheduler",
 			"completeAllYes": "%v (pass --yes to complete them all)",
 			"serveRunning": "akrasia serve is already running on this database (systemctl --user status akrasia)",
-			"restoreWhileServing": "akrasia serve is using the database: stop it first (systemctl --user stop akrasia), restore, then start it again"
+			"restoreWhileServing": "akrasia serve is using the database: stop it first (systemctl --user stop akrasia), restore, then start it again",
+			"windowsUnsupported": "`akrasia %s` needs %s, which Windows doesn't have. Run akrasia inside WSL (Windows Subsystem for Linux), where it works, or use the Windows Task Scheduler to run `akrasia serve` or `akrasia notify`."
 		}
 	},
 	"db": {
@@ -459,6 +460,10 @@
 		"token": "Access token",
 		"wrongToken": "Wrong token.",
 		"login": "Enter",
-		"tokenHint": "On the computer, run `akrasia serve token` to see it. You only enter it once per device."
+		"tokenHint": "On the computer, run `akrasia serve token` to see it. You only enter it once per device.",
+		"toTask": "Turn into a task",
+		"confirmDeleteDump": "Delete dump \"%s\"?",
+		"dumpGone": "This dump entry no longer exists; reload the page.",
+		"convertHint": "The entry leaves the dump once the task is created. Without a date, the task is due tomorrow."
 	}
 }

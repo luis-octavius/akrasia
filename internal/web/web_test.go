@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -272,6 +273,9 @@ func TestIcons(t *testing.T) {
 }
 
 func TestLock(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Lock uses flock, which Windows lacks; there it does nothing")
+	}
 	dbPath := filepath.Join(t.TempDir(), "akrasia.db")
 
 	if Running(dbPath) {
@@ -306,8 +310,126 @@ func TestConfigCreatesAPrivateToken(t *testing.T) {
 		t.Error("the token changed between loads")
 	}
 
-	info, err := os.Stat(configFile())
-	if err != nil || info.Mode().Perm() != 0600 {
-		t.Errorf("serve.json mode = %v, %v; want 0600", info.Mode(), err)
+	// Windows has no Unix permission bits to check
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(configFile())
+		if err != nil || info.Mode().Perm() != 0600 {
+			t.Errorf("serve.json mode = %v, %v; want 0600", info.Mode(), err)
+		}
+	}
+}
+
+func addDumps(t *testing.T, tkm *tasks.TaskManager, names ...string) []tasks.DumpEntry {
+	t.Helper()
+	for _, name := range names {
+		if _, err := tkm.AddDump(context.Background(), name); err != nil {
+			t.Fatalf("AddDump(%q) error = %v", name, err)
+		}
+	}
+	dumps, err := tkm.Dumps(context.Background())
+	if err != nil {
+		t.Fatalf("Dumps() error = %v", err)
+	}
+	return dumps
+}
+
+func TestDumpTabListsEntries(t *testing.T) {
+	s, tkm := newTestServer(t)
+	addDumps(t, tkm, "app idea", "<b>learn sql</b>")
+
+	body := do(t, s, "GET", "/dump", nil, true, false).Body.String()
+	if !strings.Contains(body, "app idea") || !strings.Contains(body, "&lt;b&gt;learn sql&lt;/b&gt;") {
+		t.Errorf("the Dump tab should list the entries, escaped:\n%s", body)
+	}
+	if !strings.Contains(body, `href="/dump"`) || !strings.Contains(body, `<span class="n">2</span></a>`) {
+		t.Errorf("the tab bar should link the Dump tab with its count:\n%s", body)
+	}
+
+	// every tab shows the count, and the empty Dump tab says so
+	s2, _ := newTestServer(t)
+	if body := do(t, s2, "GET", "/dump", nil, true, false).Body.String(); !strings.Contains(body, `class="empty"`) {
+		t.Errorf("an empty dump should say so:\n%s", body)
+	}
+}
+
+func TestDeleteDump(t *testing.T) {
+	s, tkm := newTestServer(t)
+	dumps := addDumps(t, tkm, "app idea", "buy plants")
+
+	if w := do(t, s, "POST", "/dump/delete", url.Values{"id": {dumps[1].ID.String()}}, true, false); w.Code != http.StatusForbidden {
+		t.Errorf("deleting without htmx should be refused, got %d", w.Code)
+	}
+
+	w := do(t, s, "POST", "/dump/delete", url.Values{"id": {dumps[1].ID.String()}}, true, true)
+	if !strings.Contains(w.Body.String(), `class="msg ok"`) || strings.Contains(w.Body.String(), "buy plants</span>") {
+		t.Errorf("the entry should be gone with a status:\n%s", w.Body.String())
+	}
+	if left, _ := tkm.Dumps(context.Background()); len(left) != 1 || left[0].Name != "app idea" {
+		t.Errorf("dumps left = %v", left)
+	}
+
+	// an entry deleted elsewhere (stale page) is an error, not a crash
+	w = do(t, s, "POST", "/dump/delete", url.Values{"id": {dumps[1].ID.String()}}, true, true)
+	if !strings.Contains(w.Body.String(), `class="msg err"`) {
+		t.Errorf("a gone entry should show an error:\n%s", w.Body.String())
+	}
+}
+
+func TestConvertDumpToTask(t *testing.T) {
+	s, tkm := newTestServer(t)
+	ctx := context.Background()
+	dumps := addDumps(t, tkm, "learn sql")
+	id := dumps[0].ID.String()
+
+	form := do(t, s, "GET", "/dump/convert?id="+id, nil, true, true).Body.String()
+	if !strings.Contains(form, `value="learn sql"`) || !strings.Contains(form, `hx-post="/dump/convert"`) {
+		t.Errorf("the dialog should prefill the name:\n%s", form)
+	}
+
+	date := time.Now().AddDate(0, 0, 4).Format(time.DateOnly)
+	w := do(t, s, "POST", "/dump/convert", url.Values{"id": {id}, "name": {"Learn SQL indexes"}, "date": {date}, "priority": {"high"}}, true, true)
+	if !strings.Contains(w.Body.String(), `class="msg ok"`) {
+		t.Errorf("converting should show a status:\n%s", w.Body.String())
+	}
+	todo, err := tkm.FindTodo(ctx, "Learn SQL indexes")
+	if err != nil || todo.Priority != "high" || todo.ExpiresAt.Format(time.DateOnly) != date {
+		t.Errorf("task = %+v, %v; want high, due %s", todo, err, date)
+	}
+	if left, _ := tkm.Dumps(ctx); len(left) != 0 {
+		t.Errorf("the entry should leave the dump, left %v", left)
+	}
+}
+
+func TestConvertKeepsEntryWhenNameIsTaken(t *testing.T) {
+	s, tkm := newTestServer(t)
+	addTask(t, tkm, tasks.NewTodo{Name: "taxes"})
+	dumps := addDumps(t, tkm, "taxes")
+
+	w := do(t, s, "POST", "/dump/convert", url.Values{"id": {dumps[0].ID.String()}, "name": {"taxes"}}, true, true)
+	if !strings.Contains(w.Body.String(), `class="msg err"`) {
+		t.Errorf("a taken name should show an error:\n%s", w.Body.String())
+	}
+	if left, _ := tkm.Dumps(context.Background()); len(left) != 1 {
+		t.Errorf("the entry must stay when the task can't be created, left %v", left)
+	}
+}
+
+// An empty name used to be blocked by the browser's `required` check,
+// which on phones shows nothing: the bar must show the error itself.
+func TestEmptyNameShowsAMessage(t *testing.T) {
+	s, _ := newTestServer(t)
+
+	page := do(t, s, "GET", "/today", nil, true, false).Body.String()
+	if strings.Contains(page, `name="name" required`) {
+		t.Errorf("the name field must not rely on the browser's required check")
+	}
+
+	for _, kind := range []string{"task", "dump"} {
+		w := do(t, s, "POST", "/add", url.Values{"name": {"  "}, "kind": {kind}, "tab": {"today"}}, true, true)
+		body := w.Body.String()
+		bar := body[strings.Index(body, `class="add"`):]
+		if !strings.Contains(bar, `class="msg err"`) {
+			t.Errorf("%s: an empty name should show an error in the add bar:\n%s", kind, body)
+		}
 	}
 }

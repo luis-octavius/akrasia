@@ -140,9 +140,17 @@ delByName.Flags().BoolVar(&deleteYes, "yes", false, i18n.T("commands.flags.delBy
 ## Tests
 
 ```bash
+gofmt -l .          # must print nothing
+go mod tidy -diff   # must print nothing
 go vet ./...
 go test -race ./...
 ```
+
+The same checks run in GitHub Actions (`.github/workflows/ci.yml`) on every
+pull request and on pushes to `main` and `dev`: on Linux with the race
+detector, and on Windows (build and tests). A pull request should only be
+merged with both jobs green. Tests of Unix-only features (systemd install,
+the `serve` lock, file permissions) skip themselves on Windows.
 
 - Service tests use `newTestTaskManager(t)`, which creates a temporary
   database with every migration, so they never touch your real data.

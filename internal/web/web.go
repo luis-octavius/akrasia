@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
@@ -30,6 +31,9 @@ type Service interface {
 	TodayProgress(ctx context.Context) (tasks.Progress, error)
 	AddTodo(ctx context.Context, in tasks.NewTodo) (tasks.TodoView, error)
 	AddDump(ctx context.Context, name string) (tasks.DumpEntry, error)
+	Dumps(ctx context.Context) ([]tasks.DumpEntry, error)
+	DeleteDump(ctx context.Context, id uuid.UUID) error
+	PromoteDump(ctx context.Context, id uuid.UUID, in tasks.NewTodo) (tasks.TodoView, error)
 	Complete(ctx context.Context, name, notes string) (tasks.TodoView, error)
 	CompleteAll(ctx context.Context, name, notes string) (tasks.TodoView, error)
 }
@@ -81,6 +85,10 @@ func New(svc Service, token string) (*Server, error) {
 	})
 	s.mux.Handle("GET /today", s.private(s.page(tabToday)))
 	s.mux.Handle("GET /all", s.private(s.page(tabAll)))
+	s.mux.Handle("GET /dump", s.private(s.page(tabDump)))
+	s.mux.Handle("POST /dump/delete", s.private(s.mutation(s.deleteDump)))
+	s.mux.Handle("GET /dump/convert", s.private(http.HandlerFunc(s.convertForm)))
+	s.mux.Handle("POST /dump/convert", s.private(s.mutation(s.convert)))
 	s.mux.Handle("POST /add", s.private(s.mutation(s.add)))
 	s.mux.Handle("GET /complete", s.private(http.HandlerFunc(s.completeForm)))
 	s.mux.Handle("POST /complete", s.private(s.mutation(s.complete)))

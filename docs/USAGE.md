@@ -369,8 +369,12 @@ you.
 
 `akrasia serve` runs a small web app on this computer: the Today and All
 tabs, with subtasks and today's progress, a bar to add a task, a subtask
-or a dump entry, and a tap to complete a task (with notes). The database
-stays here: the phone only talks to it, so the computer has to be on.
+or a dump entry, and a tap to complete a task (with notes). The Dump tab
+lists the dump entries: `→` turns one into a task (the name can be changed
+first, and the entry leaves the dump) and `×` deletes it after a
+confirmation. Messages, like an empty name, show above the add bar. The
+database stays here: the phone only talks to it, so the computer has to be
+on.
 
 It is reached privately through [Tailscale](https://tailscale.com) (free
 for personal use), which gives it an HTTPS address only your devices can

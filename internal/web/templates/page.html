@@ -25,6 +25,7 @@
     <nav class="tabs">
       <a href="/today" hx-get="/today" hx-target="#app" hx-swap="outerHTML" hx-push-url="true"{{if eq .Tab "today"}} aria-current="page"{{end}}>{{T "tui.tabs.today"}} <span class="n">{{.Today}}</span></a>
       <a href="/all" hx-get="/all" hx-target="#app" hx-swap="outerHTML" hx-push-url="true"{{if eq .Tab "all"}} aria-current="page"{{end}}>{{T "tui.tabs.all"}} <span class="n">{{.All}}</span></a>
+      <a href="/dump" hx-get="/dump" hx-target="#app" hx-swap="outerHTML" hx-push-url="true"{{if eq .Tab "dump"}} aria-current="page"{{end}}>{{T "tui.tabs.dump"}} <span class="n">{{.Dump}}</span></a>
     </nav>
     <div class="progress">
       <span>{{if .Progress.Total}}{{printf (T "tasks.tasks.progress") .Progress.Done .Progress.Total}}{{else}}{{T "tasks.tasks.progressClear"}}{{end}}</span>
@@ -32,22 +33,26 @@
     </div>
   </header>
 
-  {{if .Error}}<p class="msg err" role="alert">{{.Error}}</p>{{else if .Status}}<p class="msg ok" role="status">{{.Status}}</p>{{end}}
-
   <section class="list">
-    {{range .Sections}}
-      {{if .Title}}<h2>{{.Title}} <span class="n">{{len .Rows}}</span></h2>{{end}}
-      <ul>{{range .Rows}}{{template "todo" .}}{{end}}</ul>
+    {{if eq .Tab "dump"}}
+      {{with .Dumps}}<ul>{{range .}}{{template "dump" .}}{{end}}</ul>{{else}}<p class="empty">{{T "tasks.info.noDump"}}</p>{{end}}
     {{else}}
-      <p class="empty">{{if eq .Tab "today"}}{{T "tasks.info.noPendingTasks"}}{{else}}{{T "tui.empty"}}{{end}}</p>
+      {{range .Sections}}
+        {{if .Title}}<h2>{{.Title}} <span class="n">{{len .Rows}}</span></h2>{{end}}
+        <ul>{{range .Rows}}{{template "todo" .}}{{end}}</ul>
+      {{else}}
+        <p class="empty">{{if eq .Tab "today"}}{{T "tasks.info.noPendingTasks"}}{{else}}{{T "tui.empty"}}{{end}}</p>
+      {{end}}
     {{end}}
   </section>
 
   <div id="overlay"></div>
 
   <form class="add" hx-post="/add" hx-target="#app" hx-swap="outerHTML">
+    {{/* messages sit in the bar, so they are on screen however far the list is scrolled */}}
+    {{if .Error}}<p class="msg err" role="alert">{{.Error}}</p>{{else if .Status}}<p class="msg ok" role="status">{{.Status}}</p>{{end}}
     <input type="hidden" name="tab" value="{{.Tab}}">
-    <input name="name" required autocomplete="off" enterkeyhint="done" placeholder="{{T "web.addPlaceholder"}}" aria-label="{{T "tui.form.name"}}">
+    <input name="name" autocomplete="off" enterkeyhint="done" placeholder="{{T "web.addPlaceholder"}}" aria-label="{{T "tui.form.name"}}">
     <details>
       <summary>{{T "web.more"}}</summary>
       <label>{{T "web.parent"}}
@@ -89,6 +94,50 @@
   {{if .Priority}}<span class="prio {{.Priority}}">{{.Priority}}</span>{{end}}
 </li>
 {{range .Subs}}{{template "todo" .}}{{end}}{{end}}
+
+{{define "dump"}}<li class="todo dump">
+  <span class="name">{{.Name}}</span>
+  {{if not .CreatedAt.IsZero}}<span class="due">{{stamp .CreatedAt}}</span>{{end}}
+  <form hx-get="/dump/convert" hx-target="#overlay">
+    <input type="hidden" name="id" value="{{.ID}}">
+    <button class="act" aria-label="{{T "web.toTask"}}: {{.Name}}" title="{{T "web.toTask"}}">→</button>
+  </form>
+  <form hx-post="/dump/delete" hx-target="#app" hx-swap="outerHTML" hx-confirm="{{printf (T "web.confirmDeleteDump") .Name}}">
+    <input type="hidden" name="id" value="{{.ID}}">
+    <button class="act del" aria-label="{{T "tui.help.delete"}}: {{.Name}}" title="{{T "tui.help.delete"}}">×</button>
+  </form>
+</li>
+{{end}}
+
+{{define "convert"}}<div class="dialog" role="dialog" aria-modal="true">
+  <form hx-post="/dump/convert" hx-target="#app" hx-swap="outerHTML">
+    <input type="hidden" name="id" value="{{.Dump.ID}}">
+    <p class="title">{{T "tui.form.fromDumpTitle"}}</p>
+    <input name="name" value="{{.Dump.Name}}" autocomplete="off" enterkeyhint="done" aria-label="{{T "tui.form.name"}}">
+    <label>{{T "web.parent"}}
+      <select name="parent">
+        <option value="">{{T "web.noParent"}}</option>
+        {{range .Parents}}<option>{{.}}</option>{{end}}
+      </select>
+    </label>
+    <label>{{T "tui.form.date"}} <input type="date" name="date" min="{{.DateMin}}"></label>
+    <label>{{T "tui.form.priority"}}
+      <select name="priority">
+        <option value="">—</option>
+        <option value="high">high</option>
+        <option value="medium">medium</option>
+        <option value="low">low</option>
+      </select>
+    </label>
+    <label class="inline"><input type="checkbox" name="daily"> {{T "tui.form.daily"}}</label>
+    <p class="hint">{{T "web.convertHint"}}</p>
+    <div class="buttons">
+      <button>{{T "web.addTask"}}</button>
+      <button type="button" class="secondary" data-close>{{T "tui.help.cancel"}}</button>
+    </div>
+  </form>
+</div>
+{{end}}
 
 {{define "complete"}}<div class="dialog" role="dialog" aria-modal="true">
   <form hx-post="/complete" hx-target="#app" hx-swap="outerHTML">
