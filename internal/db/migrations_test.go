@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/pressly/goose/v3"
 )
@@ -67,5 +68,62 @@ func TestSubtasksMigrationKeepsData(t *testing.T) {
 	}
 	if _, err := conn.Exec(insert, "c", "Run", "11111111-1111-1111-1111-111111111111"); err == nil {
 		t.Error("two subtasks with the same name under one parent were accepted")
+	}
+}
+
+// Two connections writing at once (the TUI and `serve`, say): the second
+// waits for the first instead of failing with "database is locked".
+func TestConcurrentWritersWait(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "akrasia.db")
+	if err := runMigrations(path, true); err != nil {
+		t.Fatal(err)
+	}
+
+	open := func() *sql.DB {
+		conn, err := sql.Open("sqlite", DSN(path))
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { conn.Close() })
+		return conn
+	}
+	first, second := open(), open()
+
+	var mode string
+	if err := first.QueryRow("PRAGMA journal_mode").Scan(&mode); err != nil || mode != "wal" {
+		t.Fatalf("journal_mode = %q, %v; want wal", mode, err)
+	}
+
+	tx, err := first.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(`INSERT INTO dump (id, name) VALUES ('a', 'first')`); err != nil {
+		t.Fatal(err)
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := second.Exec(`INSERT INTO dump (id, name) VALUES ('b', 'second')`)
+		done <- err
+	}()
+
+	// the second write is waiting on the first one's lock
+	select {
+	case err := <-done:
+		t.Fatalf("second write finished while the first held the lock: %v", err)
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-done; err != nil {
+		t.Fatalf("second write failed instead of waiting: %v", err)
+	}
+
+	var n int
+	if err := first.QueryRow("SELECT count(*) FROM dump").Scan(&n); err != nil || n != 2 {
+		t.Errorf("dump has %d rows, %v; want both writes", n, err)
 	}
 }

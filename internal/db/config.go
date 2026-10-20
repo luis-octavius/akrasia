@@ -21,6 +21,14 @@ var (
 	dbPath string
 )
 
+// DSN is how every connection opens the database at path. The CLI, the TUI
+// and `akrasia serve` can write at the same time: WAL lets readers work
+// while one connection writes, and busy_timeout makes a second writer wait
+// (up to 5s) instead of failing with "database is locked".
+func DSN(path string) string {
+	return path + "?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)"
+}
+
 func GetDBPath() string {
 	if dbPath != "" {
 		return dbPath
@@ -37,7 +45,7 @@ func GetDBPath() string {
 // runMigrations applies the pending migrations. quiet hides goose's log,
 // for the check every command makes on startup.
 func runMigrations(dbPath string, quiet bool) error {
-	db, err := sql.Open("sqlite", dbPath)
+	db, err := sql.Open("sqlite", DSN(dbPath))
 	if err != nil {
 		return err
 	}
@@ -67,7 +75,7 @@ func InitDB() (*sql.DB, error) {
 		return nil, err
 	}
 
-	db, err := sql.Open("sqlite", path)
+	db, err := sql.Open("sqlite", DSN(path))
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +101,7 @@ func GetQueries() (*database.Queries, error) {
 		}
 	}
 
-	db, err := sql.Open("sqlite", dbPath)
+	db, err := sql.Open("sqlite", DSN(dbPath))
 	if err != nil {
 		return nil, err
 	}

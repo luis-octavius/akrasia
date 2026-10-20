@@ -6,6 +6,13 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The database opens in WAL mode and waits up to 5 seconds for another
+  writer, so the CLI, the TUI and other processes can use it at the same
+  time without "database is locked" errors. A `-wal` and a `-shm` file may
+  appear next to `akrasia.db` while it is open.
+
 ## [2.4.0] - 2026-10-20
 
 ### Added

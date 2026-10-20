@@ -72,7 +72,9 @@ func Snapshot(ctx context.Context, dbPath, dir, profile string, now time.Time) (
 		path = copyPath(dir, profile, now)
 	}
 
-	conn, err := sql.Open("sqlite", dbPath)
+	// wait for a write in progress elsewhere (the TUI, `serve`) instead of
+	// failing on a busy database
+	conn, err := sql.Open("sqlite", dbPath+"?_pragma=busy_timeout(5000)")
 	if err != nil {
 		return "", err
 	}
