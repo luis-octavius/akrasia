@@ -288,6 +288,44 @@ akrasia restore ~/Dropbox/akrasia/akrasia-old-laptop-2026-10-19_093000.db
 `restore` checks the copy first, saves the current database to the backup
 folder, then replaces it. It asks before replacing; scripts pass `--yes`.
 
+### Discord reminders
+
+Akrasia can post reminders to a Discord channel: tasks due in the next few
+days, overdue ones and, in the evening, the daily tasks not done yet. It
+uses a channel webhook, which is free and needs no bot.
+
+1. In Discord, open the channel settings → Integrations → Webhooks → New
+   Webhook → Copy Webhook URL.
+2. To be mentioned (and get a push notification), turn on Developer Mode
+   (Settings → Advanced), then right click your name → Copy User ID.
+
+```bash
+akrasia config notify discord https://discord.com/api/webhooks/…
+akrasia config notify mention 123456789012345678   # or none
+akrasia config notify test                         # posts a message now
+akrasia config notify install                      # checks every 15 minutes
+```
+
+By default a reminder goes out at 10:00 and 19:00, with tasks due within 3
+days and overdue ones; the 19:00 one also lists the daily tasks not done
+today. Each time is sent once a day, and a day with nothing due sends
+nothing. If the computer was off at a reminder time, it goes out at the
+next check.
+
+```bash
+akrasia config notify days 5                 # 0 = only what's due today
+akrasia config notify times 9:00,13:00,19:00
+akrasia config notify daily-at 19:00         # which time lists daily tasks
+akrasia config notify show
+akrasia config notify off                    # also removes the crontab entry
+```
+
+`install` adds an entry to your crontab that runs `akrasia notify`, so it
+needs cron (on Arch: `cronie`). Run `install` again after moving the
+binary or changing `DB_PATH`. The webhook URL works like a password: anyone
+who has it can post to the channel, so `notify.json` is readable only by
+you.
+
 ### Settings
 
 ```bash

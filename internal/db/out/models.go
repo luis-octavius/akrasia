@@ -15,6 +15,12 @@ type Dump struct {
 	CreatedAt sql.NullTime
 }
 
+type NotifyLog struct {
+	Day    string
+	Slot   string
+	SentAt sql.NullTime
+}
+
 type Todo struct {
 	ID           interface{}
 	Name         string

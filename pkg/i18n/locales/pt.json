@@ -30,7 +30,7 @@
 			"debugUse": "debug <nome>",
 			"dumpShort": "guardar um item no dump, listar, apagar um ou transformar um em tarefa",
 			"dumpUse": "dump [<item>]",
-			"configShort": "gerenciar configurações (tema, idioma, keymap da TUI, backups)",
+			"configShort": "gerenciar configurações (tema, idioma, keymap da TUI, backups, lembretes)",
 			"configThemeShort": "gerenciar temas de cor",
 			"configThemeUse": "theme [list|show|<nome-do-tema>]",
 			"configLanguageShort": "gerenciar linguagens",
@@ -53,7 +53,11 @@
 			"restoreExample": "akrasia restore latest\nakrasia restore latest --profile pc-trabalho\nakrasia restore ~/Dropbox/akrasia/akrasia-casa-2026-10-19_093000.db --yes",
 			"configBackupUse": "backup [show|off|dir <caminho>|keep <n>|profile <nome>]",
 			"configBackupShort": "definir a pasta de backup, quantas cópias manter e o nome do perfil",
-			"configBackupExample": "akrasia config backup dir ~/Dropbox/akrasia\nakrasia config backup keep 30\nakrasia config backup profile pc-trabalho\nakrasia config backup show\nakrasia config backup off"
+			"configBackupExample": "akrasia config backup dir ~/Dropbox/akrasia\nakrasia config backup keep 30\nakrasia config backup profile pc-trabalho\nakrasia config backup show\nakrasia config backup off",
+			"notifyShort": "enviar os lembretes do Discord pendentes (rodado pelo cron após `config notify install`)",
+			"configNotifyUse": "notify [show|test|install|uninstall|off|discord <url>|mention <id>|days <n>|times <HH:MM,...>|daily-at <HH:MM>]",
+			"configNotifyShort": "configurar lembretes em um canal do Discord",
+			"configNotifyExample": "akrasia config notify discord https://discord.com/api/webhooks/…\nakrasia config notify mention 123456789012345678\nakrasia config notify days 3\nakrasia config notify times 10:00,19:00\nakrasia config notify daily-at 19:00\nakrasia config notify test\nakrasia config notify install"
 		},
 		"flags": {
 			"addDate": "prazo: dd, dd,mm ou dd,mm,aaaa (padrão: amanhã)",
@@ -129,7 +133,14 @@
 			"restoreConfirm": "Substituir %s por %s? O banco de dados atual é salvo antes.",
 			"restoreCancelled": "Nada foi restaurado.",
 			"restored": "%s restaurado",
-			"restoreSafety": "O banco de dados anterior foi salvo em %s"
+			"restoreSafety": "O banco de dados anterior foi salvo em %s",
+			"notifyOff": "Lembretes desligados.",
+			"notifyTestSent": "Mensagem de teste enviada. Confira o canal.",
+			"notifyInstalled": "Entrada no crontab adicionada: os lembretes são verificados a cada 15 minutos.",
+			"notifyUninstalled": "Entrada do crontab removida.",
+			"notifyNotSet": "não definido (lembretes desligados)",
+			"notifyNoMention": "ninguém",
+			"notifyConfig": "Webhook:          %s\nMenção:           %s\nDias antes:       %d\nHorários:         %s\nTarefas diárias:  às %s\n"
 		},
 		"error": {
 			"taskName": "nome da tarefa é obrigatório (use o argumento posicional ou a opção --name)",
@@ -158,11 +169,18 @@
 			"dumpTaskFlags": "--priority, --daily e --date só valem com --to-task",
 			"backupOff": "nenhuma pasta de backup definida: rode `akrasia config backup dir <caminho>`",
 			"noBackups": "nenhum backup de %q em %s",
-			"backupValue": "%s precisa de um valor",
 			"backupKeep": "número de cópias inválido: %q (use um número a partir de 1)",
 			"backupProfile": "perfil inválido: %q (use letras, números, \".\", \"_\" e \"-\")",
 			"backupAction": "opção desconhecida: %q (use show, off, dir, keep ou profile)",
-			"dailyBackup": "o backup diário falhou: %v"
+			"dailyBackup": "o backup diário falhou: %v",
+			"needsValue": "%s precisa de um valor",
+			"notifyOff": "nenhum webhook do Discord definido: rode `akrasia config notify discord <url>`",
+			"notifyWebhook": "não é uma URL de webhook do Discord (configurações do canal → Integrações → Webhooks → Copiar URL do webhook)",
+			"notifyMention": "ID de usuário inválido: %q (um número; ative o Modo Desenvolvedor e clique com o botão direito no seu nome → Copiar ID do usuário), ou none",
+			"notifyDays": "número de dias inválido: %q (use de 0 a 60)",
+			"notifyDailyAt": "%s não é um dos horários de lembrete %v; adicione-o antes com `config notify times`",
+			"notifyAction": "opção desconhecida: %q (use show, test, install, uninstall, off, discord, mention, days, times ou daily-at)",
+			"noCrontab": "crontab não encontrado: instale o cron (cronie no Arch) ou rode `akrasia notify` por outro agendador"
 		}
 	},
 	"db": {
@@ -382,5 +400,17 @@
 			"edit": "EDITAR",
 			"quote": "CITAÇÃO"
 		}
+	},
+	"notify": {
+		"title": "Akrasia: lembretes",
+		"overdue": "Atrasadas",
+		"dueSoon": "Vencem em breve",
+		"daily": "Diárias ainda não feitas",
+		"wasDue": "venceu em %s",
+		"today": "hoje",
+		"tomorrow": "amanhã",
+		"inDays": "em %d dias (%s)",
+		"more": "…e mais %d",
+		"test": "O Akrasia está conectado a este canal. Nada para lembrar agora."
 	}
 }

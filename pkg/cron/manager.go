@@ -2,6 +2,7 @@ package cron
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -76,11 +77,63 @@ func (m *Manager) getCurrentCrontab(user string) (string, error) {
 
 	output, err := cmd.Output()
 	if err != nil {
-		// crontab might not exist
-		return "", nil
+		// a user without a crontab yet; any other failure must stop the
+		// caller, or writing would wipe the jobs it couldn't read
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && strings.Contains(string(exitErr.Stderr), "no crontab for") {
+			return "", nil
+		}
+		return "", fmt.Errorf("failed to read crontab: %v", err)
 	}
 
 	return string(output), nil
+}
+
+// HasJob reports whether a job with the given name is installed.
+func (m *Manager) HasJob(name, user string) (bool, error) {
+	crontab, err := m.getCurrentCrontab(user)
+	if err != nil {
+		return false, err
+	}
+	return m.jobExists(crontab, name), nil
+}
+
+// RemoveJob deletes a job added by AddJob: its comment, name marker and
+// schedule line. A job that isn't there is not an error.
+func (m *Manager) RemoveJob(name, user string) error {
+	crontab, err := m.getCurrentCrontab(user)
+	if err != nil {
+		return err
+	}
+	if !m.jobExists(crontab, name) {
+		return nil
+	}
+
+	return m.writeCrontab(withoutJob(crontab, name))
+}
+
+// withoutJob returns crontab without the lines AddJob wrote for name.
+func withoutJob(crontab, name string) string {
+	var kept []string
+	lines := strings.Split(crontab, "\n")
+	for i := 0; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) != "# JOB_NAME="+name {
+			kept = append(kept, lines[i])
+			continue
+		}
+
+		// the comment AddJob writes above the marker
+		if n := len(kept); n > 0 && strings.HasPrefix(kept[n-1], "#") && !strings.HasPrefix(kept[n-1], "# JOB_NAME=") {
+			kept = kept[:n-1]
+		}
+		// the schedule line, and the blank line AddJob leaves after it
+		i++
+		if i+1 < len(lines) && strings.TrimSpace(lines[i+1]) == "" {
+			i++
+		}
+	}
+
+	return strings.Join(kept, "\n")
 }
 
 // writeCrontab writes the crontab content

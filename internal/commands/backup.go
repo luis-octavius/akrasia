@@ -207,7 +207,7 @@ var configBackup = &cobra.Command{
 		}
 
 		if value == "" {
-			return fmt.Errorf(i18n.T("commands.error.backupValue"), action)
+			return fmt.Errorf(i18n.T("commands.error.needsValue"), action)
 		}
 
 		switch action {

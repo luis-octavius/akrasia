@@ -903,6 +903,7 @@ func init() {
 		"config":                  config,
 		"backupCmd":               backupCmd,
 		"restoreCmd":              restoreCmd,
+		"notifyCmd":               notifyCmd,
 	}
 
 	for _, cmd := range commands {
@@ -913,7 +914,7 @@ func init() {
 	rootCmd.SetUsageFunc(UsageFunc)
 
 	// Add subcommands to config
-	config.AddCommand(configTheme, configLanguage, configKeymap, configBackup)
+	config.AddCommand(configTheme, configLanguage, configKeymap, configBackup, configNotify)
 	backupCmd.AddCommand(backupListCmd)
 
 	// flags for commands - add; getTodoByName; delByName; updateStatusToConcluded

@@ -10,6 +10,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/luis-octavius/akrasia/internal/backup"
+	"github.com/luis-octavius/akrasia/internal/notify"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
@@ -276,6 +277,21 @@ func printBackupConfig(cfg backup.Config) {
 	}
 
 	lipgloss.Printf(i18n.T("commands.info.backupConfig"), dir, cfg.KeepN(), cfg.ProfileName(), last)
+}
+
+func printNotifyConfig(cfg notify.Config) {
+	webhook := color.Muted().Render(i18n.T("commands.info.notifyNotSet"))
+	if cfg.Enabled() {
+		// the end of the URL is a secret; the start is enough to recognise it
+		webhook = cfg.Webhook[:strings.LastIndex(cfg.Webhook, "/")+1] + "…"
+	}
+	mention := color.Muted().Render(i18n.T("commands.info.notifyNoMention"))
+	if cfg.Mention != "" {
+		mention = cfg.Mention
+	}
+
+	lipgloss.Printf(i18n.T("commands.info.notifyConfig"),
+		webhook, mention, cfg.DaysAhead(), strings.Join(cfg.Slots(), ", "), cfg.DailySlot())
 }
 
 // formatSize shows a file size in B, KB or MB.
