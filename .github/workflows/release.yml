@@ -1,0 +1,78 @@
+# Runs when a version tag is pushed (v2.6.0, or the older v.2.6.0 style):
+# builds the binaries for Linux, Windows and macOS and publishes a GitHub
+# release whose notes are that version's section of CHANGELOG.md. The
+# release fails early if the changelog has no section for the tag.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Version and release notes
+        run: |
+          # v2.6.0 and v.2.6.0 both give 2.6.0
+          version=$(echo "$GITHUB_REF_NAME" | sed -E 's/^v\.?//')
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+          # the lines between "## [2.6.0]" and the next "## [" heading
+          awk -v v="$version" '
+            /^## \[/ { if (found) exit; if (index($0, "## [" v "]") == 1) { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > notes.md
+
+          if [ ! -s notes.md ]; then
+            echo "CHANGELOG.md has no section for [$version]"
+            exit 1
+          fi
+
+      - name: Tests
+        run: go test ./...
+
+      # modernc.org/sqlite is pure Go, so every target cross-compiles
+      # without cgo
+      - name: Build binaries
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          mkdir dist
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
+            os=${target%/*}
+            arch=${target#*/}
+            name="akrasia_${VERSION}_${os}_${arch}"
+            bin=akrasia
+            [ "$os" = windows ] && bin=akrasia.exe
+
+            mkdir "$name"
+            GOOS=$os GOARCH=$arch go build -trimpath -ldflags "-s -w" -o "$name/$bin" .
+            cp README.md "$name/"
+
+            if [ "$os" = windows ]; then
+              zip -qr "dist/$name.zip" "$name"
+            else
+              tar -czf "dist/$name.tar.gz" "$name"
+            fi
+            rm -r "$name"
+          done
+          (cd dist && sha256sum * > checksums.txt)
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file notes.md

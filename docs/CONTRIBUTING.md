@@ -164,6 +164,45 @@ DB_PATH=/tmp/akrasia-test.db XDG_CONFIG_HOME=/tmp/akrasia-config go run . init
 DB_PATH=/tmp/akrasia-test.db XDG_CONFIG_HOME=/tmp/akrasia-config go run .
 ```
 
+### Releasing
+
+Releases are automatic: pushing a version tag runs
+`.github/workflows/release.yml`, which builds the Linux, Windows and macOS
+binaries and publishes the GitHub release with that version's changelog
+section as its notes. The tag is not tied to the PR or branch name; it is a
+pointer to a commit that you create yourself after the merge.
+
+1. On `dev`, rename `[Unreleased]` in `CHANGELOG.md` to `## [2.6.0] - date`
+   (and leave a fresh empty `[Unreleased]` above it).
+2. Open the PR `dev` → `main`, wait for CI to be green and merge it. The PR
+   title is free; the workflow does not read it.
+3. Tag the merge commit on `main`:
+
+```bash
+git checkout main && git pull
+git tag v2.6.0
+git push origin v2.6.0
+```
+
+4. Follow the run in the Actions tab. When it finishes, the release is under
+   Releases with the binaries, `checksums.txt` and the changelog notes.
+
+Things to remember:
+
+- A plain `git push` does not send tags; push the tag by name (or use
+  `git push --tags`).
+- Tag `main` after the merge. Tagging `dev` before it releases the code of
+  `dev`.
+- The tag must match a changelog section: `v2.6.0` looks for `## [2.6.0]`.
+  If it is missing the workflow fails and publishes nothing.
+- Do not also create the release by hand on GitHub; the workflow already
+  does. To redo a failed release, delete the tag and the release, fix the
+  problem and tag again:
+
+```bash
+git tag -d v2.6.0 && git push origin :refs/tags/v2.6.0
+```
+
 ## Adding an issue 
 If you want to contribute with ideas and recommendations, just open an issue with your idea. I'll answer and will discuss it to see how, if it is a doable thing, we can achieve such thing. 
 

@@ -6,6 +6,8 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-10-20
+
 ### Added
 
 - **Dump tab in the web app.** The dump entries saved from the phone (or
@@ -37,6 +39,7 @@ All notable changes to Akrasia are documented here. The format follows
 
 - README: new "Platforms" section, covering Linux, Windows through WSL
   (recommended) and native Windows with its limits.
+- CONTRIBUTING: steps to use the CD versioning.
 
 ### Development
 
@@ -48,6 +51,11 @@ All notable changes to Akrasia are documented here. The format follows
 - `.github` was in `.gitignore`, which would have kept any workflow out of
   the repository; it no longer is.
 - Tests of Unix-only features skip themselves on Windows, with the reason.
+- **Continuous delivery** (`.github/workflows/release.yml`): pushing a
+  version tag (`v2.6.0`) builds the binaries for Linux, Windows and macOS
+  (amd64 and arm64; Windows amd64 only), with a `checksums.txt`, and
+  publishes a GitHub release whose notes are that version's section of this
+  changelog. The release fails if the section is missing.
 
 ## [2.5.0] - 2026-10-20
 
