@@ -50,7 +50,7 @@ Available Commands:
  ce  check-expired    show tasks that have passed their expiration date
  cx  check-expiring   check todos that are expiring in 5 days
      completion       Generate the autocompletion script for the specified shell
- cfg config           manage settings (theme, language, TUI keymap, backups)
+ cfg config           manage settings (theme, language, TUI keymap, backups, reminders)
  dbg debug            inspect a task's stored history and streak math (diagnostics)
  dn  delete-by-name   delete a todo by name
  dp  dump             store a dump entry, list them, delete one or turn one into a task
@@ -62,6 +62,7 @@ Available Commands:
      help             Help about any command
  sh  history          get the streak history of provided todo
      init             initialize akrasia app
+     notify           send the Discord reminders that are due (run from cron by `config notify install`)
  nt  notes            show the notes written each day a task was completed
  pg  progress         show today's progress (tasks done out of today's tasks)
      restore          replace the database with a backup (the current one is saved first)
@@ -77,6 +78,7 @@ Available Commands:
  b backup      set the backup folder, copies and profile   backup [show|off|dir <path>|keep <n>|profile <name>]
  k keymap      manage the TUI key layout        keymap [list|show|default|vim]
  l language    manage languages                 language [list|show|en|pt]
+ n notify      set up reminders in a Discord channel        notify [show|test|install|uninstall|off|discord <url>|mention <user-id>|days <n>|times <HH:MM,...>|daily-at <HH:MM>]
  t theme       manage color themes              theme [list|show|<theme-name>]
 ```
 
@@ -105,5 +107,5 @@ finds "Stendhal".
 | What | Where |
 | --- | --- |
 | Database | `$DB_PATH`, or `akrasia/akrasia.db` inside the OS config directory (`~/.config` on Linux) |
-| Theme, language, keymap, backups | `theme.json`, `lang.json`, `keymap.json`, `backup.json` in `$XDG_CONFIG_HOME/akrasia` (default `~/.config/akrasia`) |
+| Theme, language, keymap, backups, reminders | `theme.json`, `lang.json`, `keymap.json`, `backup.json`, `notify.json` (owner-only: it holds the webhook URL) in `$XDG_CONFIG_HOME/akrasia` (default `~/.config/akrasia`) |
 | Backups | `akrasia-<profile>-<yyyy-mm-dd_hhmmss>.db` in the folder set with `config backup dir` |

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/luis-octavius/akrasia/internal/backup"
+	"github.com/luis-octavius/akrasia/internal/notify"
 )
 
 func TestDailyBackupSkipsBackupCommands(t *testing.T) {
@@ -87,5 +88,46 @@ func TestRestoreLatestWithoutBackups(t *testing.T) {
 	}
 	if _, err := restoreSource(backup.Config{}, "latest"); err == nil {
 		t.Error("restoreSource(latest) with backups off: expected an error")
+	}
+}
+
+func TestConfigNotifyValidates(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Cleanup(func() { rootCmd.SetArgs(nil); rootCmd.SetOut(nil); rootCmd.SetErr(nil) })
+	rootCmd.SetOut(&bytes.Buffer{})
+	rootCmd.SetErr(&bytes.Buffer{})
+
+	for _, args := range [][]string{
+		{"config", "notify", "discord", "https://discord.com/api/webhooks/1/abc"},
+		{"config", "notify", "mention", "123456789012345678"},
+		{"config", "notify", "days", "5"},
+		{"config", "notify", "times", "9:00,18:30"},
+		{"config", "notify", "daily-at", "18:30"},
+	} {
+		rootCmd.SetArgs(args)
+		if err := rootCmd.Execute(); err != nil {
+			t.Fatalf("%v error = %v", args, err)
+		}
+	}
+
+	cfg, err := notify.LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Mention != "123456789012345678" || cfg.DaysAhead() != 5 || cfg.DailySlot() != "18:30" {
+		t.Errorf("config = %+v", cfg)
+	}
+
+	for _, args := range [][]string{
+		{"config", "notify", "discord", "https://example.com/hook"},
+		{"config", "notify", "mention", "@octavius"},
+		{"config", "notify", "days", "-1"},
+		{"config", "notify", "times", "7pm"},
+		{"config", "notify", "daily-at", "12:00"},
+	} {
+		rootCmd.SetArgs(args)
+		if err := rootCmd.Execute(); err == nil {
+			t.Errorf("%v: expected an error", args)
+		}
 	}
 }

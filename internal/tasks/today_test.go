@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"slices"
 	"testing"
 	"time"
 )
@@ -77,5 +78,47 @@ func TestApplyTodayOptionsLimit(t *testing.T) {
 
 	if len(limited.DueToday) != 2 {
 		t.Fatalf("expected 2 due-today tasks after limit, got %d", len(limited.DueToday))
+	}
+}
+
+func TestRemindersWindowAndDaily(t *testing.T) {
+	now := time.Date(2026, 10, 19, 10, 0, 0, 0, time.Local)
+	day := func(d int) time.Time { return time.Date(2026, 10, d, 0, 0, 0, 0, time.Local) }
+
+	todos := []TodoView{
+		{Name: "late", ExpiresAt: day(17)},
+		{Name: "today", ExpiresAt: day(19)},
+		{Name: "in3", ExpiresAt: day(22).Add(23 * time.Hour)},
+		{Name: "in4", ExpiresAt: day(23)},
+		{Name: "done", ExpiresAt: day(20), Concluded: true},
+		{Name: "habit", IsDaily: true},
+		{Name: "habitDone", IsDaily: true, DoneToday: true},
+	}
+
+	names := func(ts []TodoView) []string {
+		var out []string
+		for _, t := range ts {
+			out = append(out, t.Name)
+		}
+		return out
+	}
+
+	r := reminders(todos, now, 3, false)
+	if got := names(r.Overdue); !slices.Equal(got, []string{"late"}) {
+		t.Errorf("Overdue = %v", got)
+	}
+	if got := names(r.DueSoon); !slices.Equal(got, []string{"today", "in3"}) {
+		t.Errorf("DueSoon = %v, want today and the last day of the window", got)
+	}
+	if len(r.Daily) != 0 {
+		t.Errorf("Daily = %v without withDaily", names(r.Daily))
+	}
+
+	r = reminders(todos, now, 0, true)
+	if got := names(r.DueSoon); !slices.Equal(got, []string{"today"}) {
+		t.Errorf("DueSoon with 0 days = %v", got)
+	}
+	if got := names(r.Daily); !slices.Equal(got, []string{"habit"}) {
+		t.Errorf("Daily = %v", got)
 	}
 }

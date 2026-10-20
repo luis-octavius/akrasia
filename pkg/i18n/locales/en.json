@@ -30,7 +30,7 @@
 			"debugUse": "debug <name>",
 			"dumpShort": "store a dump entry, list them, delete one or turn one into a task",
 			"dumpUse": "dump [<entry>]",
-			"configShort": "manage settings (theme, language, TUI keymap, backups)",
+			"configShort": "manage settings (theme, language, TUI keymap, backups, reminders)",
 			"configThemeShort": "manage color themes",
 			"configThemeUse": "theme [list|show|<theme-name>]",
 			"configLanguageShort": "manage languages",
@@ -53,7 +53,11 @@
 			"restoreExample": "akrasia restore latest\nakrasia restore latest --profile work-pc\nakrasia restore ~/Dropbox/akrasia/akrasia-home-2026-10-19_093000.db --yes",
 			"configBackupUse": "backup [show|off|dir <path>|keep <n>|profile <name>]",
 			"configBackupShort": "set the backup folder, how many copies to keep and the profile name",
-			"configBackupExample": "akrasia config backup dir ~/Dropbox/akrasia\nakrasia config backup keep 30\nakrasia config backup profile work-pc\nakrasia config backup show\nakrasia config backup off"
+			"configBackupExample": "akrasia config backup dir ~/Dropbox/akrasia\nakrasia config backup keep 30\nakrasia config backup profile work-pc\nakrasia config backup show\nakrasia config backup off",
+			"notifyShort": "send the Discord reminders that are due (run from cron by `config notify install`)",
+			"configNotifyUse": "notify [show|test|install|uninstall|off|discord <url>|mention <user-id>|days <n>|times <HH:MM,...>|daily-at <HH:MM>]",
+			"configNotifyShort": "set up reminders in a Discord channel",
+			"configNotifyExample": "akrasia config notify discord https://discord.com/api/webhooks/…\nakrasia config notify mention 123456789012345678\nakrasia config notify days 3\nakrasia config notify times 10:00,19:00\nakrasia config notify daily-at 19:00\nakrasia config notify test\nakrasia config notify install"
 		},
 		"flags": {
 			"addDate": "due date: dd, dd,mm or dd,mm,yyyy (default: tomorrow)",
@@ -129,7 +133,14 @@
 			"restoreConfirm": "Replace %s with %s? The current database is saved first.",
 			"restoreCancelled": "Nothing was restored.",
 			"restored": "Restored %s",
-			"restoreSafety": "The previous database was saved to %s"
+			"restoreSafety": "The previous database was saved to %s",
+			"notifyOff": "Reminders turned off.",
+			"notifyTestSent": "Test message sent. Check the channel.",
+			"notifyInstalled": "Crontab entry added: reminders are checked every 15 minutes.",
+			"notifyUninstalled": "Crontab entry removed.",
+			"notifyNotSet": "not set (reminders are off)",
+			"notifyNoMention": "nobody",
+			"notifyConfig": "Webhook:      %s\nMention:      %s\nDays ahead:   %d\nTimes:        %s\nDaily tasks:  at %s\n"
 		},
 		"error": {
 			"taskName": "task name is required (use positional argument or --name flag)",
@@ -158,11 +169,18 @@
 			"dumpTaskFlags": "--priority, --daily and --date only apply with --to-task",
 			"backupOff": "no backup folder set: run `akrasia config backup dir <path>`",
 			"noBackups": "no backups of %q in %s",
-			"backupValue": "%s needs a value",
 			"backupKeep": "invalid number of copies: %q (use a number from 1 up)",
 			"backupProfile": "invalid profile: %q (use letters, numbers, \".\", \"_\" and \"-\")",
 			"backupAction": "unknown option: %q (use show, off, dir, keep or profile)",
-			"dailyBackup": "daily backup failed: %v"
+			"dailyBackup": "daily backup failed: %v",
+			"needsValue": "%s needs a value",
+			"notifyOff": "no Discord webhook set: run `akrasia config notify discord <url>`",
+			"notifyWebhook": "not a Discord webhook URL (channel settings → Integrations → Webhooks → Copy Webhook URL)",
+			"notifyMention": "invalid user ID: %q (a number; turn on Developer Mode, then right click your name → Copy User ID), or none",
+			"notifyDays": "invalid number of days: %q (use 0 to 60)",
+			"notifyDailyAt": "%s is not one of the reminder times %v; add it with `config notify times` first",
+			"notifyAction": "unknown option: %q (use show, test, install, uninstall, off, discord, mention, days, times or daily-at)",
+			"noCrontab": "crontab not found: install cron (cronie on Arch) or run `akrasia notify` from another scheduler"
 		}
 	},
 	"db": {
@@ -382,5 +400,17 @@
 			"edit": "EDIT",
 			"quote": "QUOTE"
 		}
+	},
+	"notify": {
+		"title": "Akrasia: reminders",
+		"overdue": "Overdue",
+		"dueSoon": "Due soon",
+		"daily": "Daily tasks not done yet",
+		"wasDue": "was due %s",
+		"today": "today",
+		"tomorrow": "tomorrow",
+		"inDays": "in %d days (%s)",
+		"more": "…and %d more",
+		"test": "Akrasia is connected to this channel. Nothing to remind right now."
 	}
 }

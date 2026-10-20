@@ -6,7 +6,34 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
-## [2.2.0] - 20260-10-19
+## [2.3.0] - 2026-10-20
+
+### Added
+
+- **Reminders in a Discord channel**, through a channel webhook (free, no
+  bot).
+  - Tasks due within 3 days and overdue ones at 10:00 and 19:00; the 19:00
+    reminder also lists the daily tasks not done today.
+  - Mentions you when `config notify mention <user-id>` is set; nobody else
+    can be pinged from a task name.
+  - Each time is sent once a day, a day with nothing due sends nothing, and
+    a time missed while the computer was off is sent at the next check.
+  - `akrasia config notify discord <url> | mention <id> | days <n> |
+    times <HH:MM,...> | daily-at <HH:MM> | show | test | off`.
+  - `akrasia config notify install` adds a crontab entry that runs the new
+    `akrasia notify` every 15 minutes (`uninstall` or `off` removes it).
+
+### Changed
+
+- New versions apply their database migrations on their own; `akrasia
+  init` is only needed once, to create the database.
+
+### Fixed
+
+- Reading the crontab no longer treats any error as an empty crontab,
+  which could have overwritten the user's other jobs when adding one.
+
+## [2.2.0] - 2026-10-19
 
 ### Added
 
@@ -190,7 +217,8 @@ is a major version because two behaviors that scripts may rely on changed:
 
 See the [GitHub releases and tags](https://github.com/luis-octavius/akrasia/tags).
 
-[Unreleased]: https://github.com/luis-octavius/akrasia/compare/v.2.2.0...dev
+[Unreleased]: https://github.com/luis-octavius/akrasia/compare/v.2.3.0...dev
+[2.3.0]: https://github.com/luis-octavius/akrasia/compare/v.2.2.0...v.2.3.0
 [2.2.0]: https://github.com/luis-octavius/akrasia/compare/v.2.1.0...v.2.2.0
 [2.1.0]: https://github.com/luis-octavius/akrasia/compare/v.2.0.0...v.2.1.0
 [2.0.0]: https://github.com/luis-octavius/akrasia/compare/v.1.1.1...v.2.0.0
