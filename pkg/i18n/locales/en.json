@@ -57,7 +57,11 @@
 			"notifyShort": "send the Discord reminders that are due (run from cron by `config notify install`)",
 			"configNotifyUse": "notify [show|test|install|uninstall|off|discord <url>|mention <user-id>|days <n>|times <HH:MM,...>|daily-at <HH:MM>]",
 			"configNotifyShort": "set up reminders in a Discord channel",
-			"configNotifyExample": "akrasia config notify discord https://discord.com/api/webhooks/…\nakrasia config notify mention 123456789012345678\nakrasia config notify days 3\nakrasia config notify times 10:00,19:00\nakrasia config notify daily-at 19:00\nakrasia config notify test\nakrasia config notify install"
+			"configNotifyExample": "akrasia config notify discord https://discord.com/api/webhooks/…\nakrasia config notify mention 123456789012345678\nakrasia config notify days 3\nakrasia config notify times 10:00,19:00\nakrasia config notify daily-at 19:00\nakrasia config notify test\nakrasia config notify install",
+			"serveShort": "run the web interface for your phone, plus the daily backup and the reminders",
+			"serveTokenShort": "show the token a device enters once (--new replaces it)",
+			"serveInstallShort": "run serve as a systemd user service that starts with the computer",
+			"serveUninstallShort": "stop and remove the systemd service"
 		},
 		"flags": {
 			"addDate": "due date: dd, dd,mm or dd,mm,yyyy (default: tomorrow)",
@@ -98,7 +102,9 @@
 			"backupProfile": "use another machine's backups (default: this machine's profile)",
 			"restoreYes": "restore without asking",
 			"addParent": "make it a subtask of this task (follows its daily mode; due with it unless --date is given)",
-			"updateStatusToConcludedYes": "complete a task with pending subtasks (and them) without asking"
+			"updateStatusToConcludedYes": "complete a task with pending subtasks (and them) without asking",
+			"serveAddr": "address to listen on (default: 127.0.0.1:8080, or \"addr\" in serve.json)",
+			"serveTokenNew": "replace the token; every device has to enter the new one"
 		},
 		"cobra": {
 			"usage": "Usage:",
@@ -144,7 +150,13 @@
 			"notifyNoMention": "nobody",
 			"notifyConfig": "Webhook:      %s\nMention:      %s\nDays ahead:   %d\nTimes:        %s\nDaily tasks:  at %s\n",
 			"completeAllConfirm": "%v. Complete them all?",
-			"completeCancelled": "Nothing was completed."
+			"completeCancelled": "Nothing was completed.",
+			"serving": "Akrasia is on %s\nTo reach it from your phone over Tailscale (HTTPS): tailscale serve --bg %s\n",
+			"serveTokenNew": "New token. Devices logged in with the old one have to enter this one:",
+			"serveInstalled": "Service installed and started (%s).",
+			"serveNext": "Next steps:\n  1. tailscale serve --bg %s          # HTTPS for your devices only\n  2. loginctl enable-linger $USER      # keep it running when you log out\n  3. akrasia serve token               # enter it once on each device\nReminders now run inside serve; the crontab entry, if any, was removed.\n",
+			"serveUninstalled": "Service stopped and removed.",
+			"serveNotifyHint": "Reminders ran inside serve: run `akrasia config notify install` to send them from cron again."
 		},
 		"error": {
 			"taskName": "task name is required (use positional argument or --name flag)",
@@ -185,7 +197,9 @@
 			"notifyDailyAt": "%s is not one of the reminder times %v; add it with `config notify times` first",
 			"notifyAction": "unknown option: %q (use show, test, install, uninstall, off, discord, mention, days, times or daily-at)",
 			"noCrontab": "crontab not found: install cron (cronie on Arch) or run `akrasia notify` from another scheduler",
-			"completeAllYes": "%v (pass --yes to complete them all)"
+			"completeAllYes": "%v (pass --yes to complete them all)",
+			"serveRunning": "akrasia serve is already running on this database (systemctl --user status akrasia)",
+			"restoreWhileServing": "akrasia serve is using the database: stop it first (systemctl --user stop akrasia), restore, then start it again"
 		}
 	},
 	"db": {
@@ -432,5 +446,19 @@
 		"inDays": "in %d days (%s)",
 		"more": "…and %d more",
 		"test": "Akrasia is connected to this channel. Nothing to remind right now."
+	},
+	"web": {
+		"addPlaceholder": "What needs doing?",
+		"more": "More options",
+		"parent": "Subtask of",
+		"noParent": "none",
+		"addHint": "Without a date, a task is due tomorrow and a subtask with its parent.",
+		"addTask": "Add task",
+		"addDump": "Dump",
+		"complete": "Complete",
+		"token": "Access token",
+		"wrongToken": "Wrong token.",
+		"login": "Enter",
+		"tokenHint": "On the computer, run `akrasia serve token` to see it. You only enter it once per device."
 	}
 }

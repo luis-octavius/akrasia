@@ -13,6 +13,7 @@ import (
 
 	"github.com/luis-octavius/akrasia/internal/backup"
 	"github.com/luis-octavius/akrasia/internal/db"
+	"github.com/luis-octavius/akrasia/internal/web"
 	"github.com/luis-octavius/akrasia/pkg/color"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 	"github.com/spf13/cobra"
@@ -87,6 +88,12 @@ var restoreCmd = &cobra.Command{
 	Example: i18n.T("commands.commands.restoreExample"),
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// serve keeps the database open; swapping the file under it would
+		// lose its writes or corrupt the WAL
+		if web.Running(db.GetDBPath()) {
+			return errors.New(i18n.T("commands.error.restoreWhileServing"))
+		}
+
 		cfg, err := backup.LoadConfig()
 		if err != nil {
 			return err
