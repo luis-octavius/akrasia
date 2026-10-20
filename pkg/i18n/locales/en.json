@@ -459,6 +459,10 @@
 		"token": "Access token",
 		"wrongToken": "Wrong token.",
 		"login": "Enter",
-		"tokenHint": "On the computer, run `akrasia serve token` to see it. You only enter it once per device."
+		"tokenHint": "On the computer, run `akrasia serve token` to see it. You only enter it once per device.",
+		"toTask": "Turn into a task",
+		"confirmDeleteDump": "Delete dump \"%s\"?",
+		"dumpGone": "This dump entry no longer exists; reload the page.",
+		"convertHint": "The entry leaves the dump once the task is created. Without a date, the task is due tomorrow."
 	}
 }

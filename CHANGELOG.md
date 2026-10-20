@@ -6,6 +6,24 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Dump tab in the web app.** The dump entries saved from the phone (or
+  anywhere else) can now be seen there, with their count in the tab bar.
+  - `→` opens a dialog to turn an entry into a task: the name can be
+    edited, and date, priority, daily and parent can be set. The entry
+    leaves the dump once the task is created, and stays if it can't be
+    (for example, the name is taken).
+  - `×` deletes an entry after the browser's confirmation.
+
+### Fixed
+
+- Web app: tapping a button with an empty name did nothing on phones (the
+  browser's own check shows no message there). The app now shows "name is
+  required".
+- Web app: messages (status and errors) appear in the add bar at the
+  bottom, so they are visible however far the list is scrolled.
+
 ## [2.5.0] - 2026-10-20
 
 ### Added

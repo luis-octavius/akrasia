@@ -73,7 +73,7 @@ progress::-webkit-progress-bar { background: var(--line); }
 progress::-webkit-progress-value { background: var(--accent); }
 progress::-moz-progress-bar { background: var(--accent); }
 
-.msg { padding: 10px 12px; border-radius: 10px; margin: 4px 0 8px; }
+.msg { padding: 10px 12px; border-radius: 10px; margin: 0 0 8px; }
 .msg.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); }
 .msg.err { background: color-mix(in srgb, var(--err) 18%, transparent); }
 
@@ -127,6 +127,23 @@ button.check:active { background: var(--line); }
 .prio.low { color: var(--muted); }
 
 .empty { color: var(--muted); text-align: center; padding: 32px 0; }
+
+/* dump rows: no check, two actions on the right */
+.todo.dump { padding-left: 12px; }
+.act {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--accent);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+.act:active { background: var(--line); }
+.act.del { color: var(--muted); }
+.todo.dump form { margin: 0; }
 
 /* the add bar stays at the bottom, where the thumb is */
 .add {
@@ -187,6 +204,9 @@ input[name="name"], textarea, select, input[type="date"] {
   border-radius: 16px 16px 0 0;
 }
 .dialog .title { font-weight: 600; margin-top: 0; }
+.dialog label { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0; color: var(--muted); }
+.dialog label.inline { justify-content: flex-start; }
+.dialog label select, .dialog label input[type="date"] { width: auto; flex: 1; max-width: 60%; }
 .dialog .warn { color: var(--warn); font-weight: 600; margin-top: 0; }
 
 .login { padding-top: 20vh; }

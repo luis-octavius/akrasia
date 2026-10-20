@@ -459,6 +459,10 @@
 		"token": "Token de acesso",
 		"wrongToken": "Token incorreto.",
 		"login": "Entrar",
-		"tokenHint": "No computador, rode `akrasia serve token` para vê-lo. Você só digita uma vez por dispositivo."
+		"tokenHint": "No computador, rode `akrasia serve token` para vê-lo. Você só digita uma vez por dispositivo.",
+		"toTask": "Transformar em tarefa",
+		"confirmDeleteDump": "Apagar o dump \"%s\"?",
+		"dumpGone": "Este item do dump não existe mais; recarregue a página.",
+		"convertHint": "O item sai do dump quando a tarefa é criada. Sem data, a tarefa vence amanhã."
 	}
 }
