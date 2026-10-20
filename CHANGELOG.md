@@ -38,6 +38,17 @@ All notable changes to Akrasia are documented here. The format follows
 - README: new "Platforms" section, covering Linux, Windows through WSL
   (recommended) and native Windows with its limits.
 
+### Development
+
+- **Continuous integration** (GitHub Actions, `.github/workflows/ci.yml`)
+  on every pull request and on pushes to `main` and `dev`:
+  - Linux: gofmt, `go mod tidy`, `go vet` and the tests with the race
+    detector;
+  - Windows: build and tests.
+- `.github` was in `.gitignore`, which would have kept any workflow out of
+  the repository; it no longer is.
+- Tests of Unix-only features skip themselves on Windows, with the reason.
+
 ## [2.5.0] - 2026-10-20
 
 ### Added

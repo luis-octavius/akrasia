@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -272,6 +273,9 @@ func TestIcons(t *testing.T) {
 }
 
 func TestLock(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Lock uses flock, which Windows lacks; there it does nothing")
+	}
 	dbPath := filepath.Join(t.TempDir(), "akrasia.db")
 
 	if Running(dbPath) {
@@ -306,9 +310,12 @@ func TestConfigCreatesAPrivateToken(t *testing.T) {
 		t.Error("the token changed between loads")
 	}
 
-	info, err := os.Stat(configFile())
-	if err != nil || info.Mode().Perm() != 0600 {
-		t.Errorf("serve.json mode = %v, %v; want 0600", info.Mode(), err)
+	// Windows has no Unix permission bits to check
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(configFile())
+		if err != nil || info.Mode().Perm() != 0600 {
+			t.Errorf("serve.json mode = %v, %v; want 0600", info.Mode(), err)
+		}
 	}
 }
 

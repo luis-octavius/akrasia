@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -30,6 +31,9 @@ func TestServiceUnit(t *testing.T) {
 }
 
 func TestServeInstallAndUninstall(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("serve install needs systemd; on Windows it stops with a WSL hint (see TestUnixOnlyCommandsExplainWSLOnWindows)")
+	}
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("PATH", t.TempDir()) // no crontab: nothing to remove there
 
@@ -64,6 +68,9 @@ func TestServeInstallAndUninstall(t *testing.T) {
 }
 
 func TestRestoreRefusesWhileServing(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the serve lock uses flock, which Windows lacks; restore can't tell there")
+	}
 	dbPath := filepath.Join(t.TempDir(), "akrasia.db")
 	t.Setenv("DB_PATH", dbPath)
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
