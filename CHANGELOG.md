@@ -6,7 +6,7 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
-## [2.2.0] - 20260-10-19
+## [2.2.0] - 2026-10-19
 
 ### Added
 
