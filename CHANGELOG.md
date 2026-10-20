@@ -6,6 +6,8 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-10-20
+
 ### Added
 
 - **`akrasia serve`: a web app for your phone.** Today and All tabs with
@@ -273,7 +275,8 @@ is a major version because two behaviors that scripts may rely on changed:
 
 See the [GitHub releases and tags](https://github.com/luis-octavius/akrasia/tags).
 
-[Unreleased]: https://github.com/luis-octavius/akrasia/compare/v.2.4.0...dev
+[Unreleased]: https://github.com/luis-octavius/akrasia/compare/v.2.5.0...dev
+[2.5.0]: https://github.com/luis-octavius/akrasia/compare/v.2.4.0...v.2.5.0
 [2.4.0]: https://github.com/luis-octavius/akrasia/compare/v.2.3.0...v.2.4.0
 [2.3.0]: https://github.com/luis-octavius/akrasia/compare/v.2.2.0...v.2.3.0
 [2.2.0]: https://github.com/luis-octavius/akrasia/compare/v.2.1.0...v.2.2.0
