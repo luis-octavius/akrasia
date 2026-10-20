@@ -30,7 +30,7 @@
 			"debugUse": "debug <name>",
 			"dumpShort": "store a dump entry, list them, delete one or turn one into a task",
 			"dumpUse": "dump [<entry>]",
-			"configShort": "manage settings (theme, language, TUI keymap)",
+			"configShort": "manage settings (theme, language, TUI keymap, backups)",
 			"configThemeShort": "manage color themes",
 			"configThemeUse": "theme [list|show|<theme-name>]",
 			"configLanguageShort": "manage languages",
@@ -45,7 +45,15 @@
 			"notesUse": "notes <name>",
 			"notesShort": "show the notes written each day a task was completed",
 			"notesExample": "akrasia notes \"Estudar Rust\"\nakrasia notes rust --limit 7",
-			"dumpExample": "akrasia dump \"learn about sql indexes\"\nakrasia dump                      # numbered list\nakrasia dump --delete 2\nakrasia dump --to-task 1 --priority high --date 30,11"
+			"dumpExample": "akrasia dump \"learn about sql indexes\"\nakrasia dump                      # numbered list\nakrasia dump --delete 2\nakrasia dump --to-task 1 --priority high --date 30,11",
+			"backupShort": "copy the database to the backup folder now",
+			"backupListShort": "list this machine's backups, newest first",
+			"restoreUse": "restore <file|latest>",
+			"restoreShort": "replace the database with a backup (the current one is saved first)",
+			"restoreExample": "akrasia restore latest\nakrasia restore latest --profile work-pc\nakrasia restore ~/Dropbox/akrasia/akrasia-home-2026-10-19_093000.db --yes",
+			"configBackupUse": "backup [show|off|dir <path>|keep <n>|profile <name>]",
+			"configBackupShort": "set the backup folder, how many copies to keep and the profile name",
+			"configBackupExample": "akrasia config backup dir ~/Dropbox/akrasia\nakrasia config backup keep 30\nakrasia config backup profile work-pc\nakrasia config backup show\nakrasia config backup off"
 		},
 		"flags": {
 			"addDate": "due date: dd, dd,mm or dd,mm,yyyy (default: tomorrow)",
@@ -82,7 +90,9 @@
 			"dumpToTask": "turn the dump entry with this number into a task (with --priority, --daily, --date)",
 			"dumpPriority": "priority of the task created with --to-task",
 			"dumpDaily": "make the task created with --to-task daily",
-			"dumpDate": "due date of the task created with --to-task: dd, dd,mm or dd,mm,yyyy"
+			"dumpDate": "due date of the task created with --to-task: dd, dd,mm or dd,mm,yyyy",
+			"backupProfile": "use another machine's backups (default: this machine's profile)",
+			"restoreYes": "restore without asking"
 		},
 		"cobra": {
 			"usage": "Usage:",
@@ -107,7 +117,19 @@
 			"languageSet": "Language set to: %s\n",
 			"availableKeymaps": "Available keymaps:",
 			"currentKeymap": "Current keymap: %s\n",
-			"keymapSet": "Keymap set to: %s\n"
+			"keymapSet": "Keymap set to: %s\n",
+			"backupCreated": "Backup saved to %s",
+			"backupPruned": "Removed %d old backup(s)",
+			"backupList": "Backups of %s in %s:",
+			"noBackups": "  no backups yet",
+			"backupNotSet": "not set (backups are off)",
+			"backupNever": "never",
+			"backupConfig": "Backup folder: %s\nKeep:          %d copies\nProfile:       %s\nLast backup:   %s\n",
+			"backupOff": "Backups turned off. Existing copies were kept.",
+			"restoreConfirm": "Replace %s with %s? The current database is saved first.",
+			"restoreCancelled": "Nothing was restored.",
+			"restored": "Restored %s",
+			"restoreSafety": "The previous database was saved to %s"
 		},
 		"error": {
 			"taskName": "task name is required (use positional argument or --name flag)",
@@ -133,7 +155,14 @@
 			"nothingToEdit": "nothing to change: pass at least one of --name, --desc, --priority, --daily or --date",
 			"invalidDay": "day %d does not exist in %02d/%d",
 			"dumpFlags": "use only one of --delete and --to-task, without a new entry",
-			"dumpTaskFlags": "--priority, --daily and --date only apply with --to-task"
+			"dumpTaskFlags": "--priority, --daily and --date only apply with --to-task",
+			"backupOff": "no backup folder set: run `akrasia config backup dir <path>`",
+			"noBackups": "no backups of %q in %s",
+			"backupValue": "%s needs a value",
+			"backupKeep": "invalid number of copies: %q (use a number from 1 up)",
+			"backupProfile": "invalid profile: %q (use letters, numbers, \".\", \"_\" and \"-\")",
+			"backupAction": "unknown option: %q (use show, off, dir, keep or profile)",
+			"dailyBackup": "daily backup failed: %v"
 		}
 	},
 	"db": {
@@ -324,7 +353,10 @@
 			"updated": "✔ %s updated",
 			"noteUpdated": "✔ note for %s updated",
 			"promoted": "✔ %s is now a task",
-			"dumpDeleted": "dump %s deleted"
+			"dumpDeleted": "dump %s deleted",
+			"backup": "backup %s",
+			"backupToday": "backup today",
+			"noBackup": "no backup set up"
 		},
 		"details": {
 			"expires": "Expires",

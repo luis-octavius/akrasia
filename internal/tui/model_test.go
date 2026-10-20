@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -12,8 +14,10 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/google/uuid"
+	"github.com/luis-octavius/akrasia/internal/backup"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/color"
+	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
 type fakeService struct {
@@ -946,5 +950,46 @@ func TestConvertOnlyWorksOnDumps(t *testing.T) {
 	m := send(t, start(t, svc, KeymapDefault), keyTab, runes("c"))
 	if m.mode != modeNormal {
 		t.Fatalf("c on a task should do nothing, mode %v", m.mode)
+	}
+}
+
+func TestStatusBarShowsLastBackup(t *testing.T) {
+	m := start(t, &fakeService{}, KeymapDefault)
+
+	m.backup, m.backupOn = "backup today", true
+	if bar := ansi.Strip(m.renderStatusBar(120)); !strings.Contains(bar, "backup today") {
+		t.Errorf("status bar misses the last backup:\n%s", bar)
+	}
+
+	m.backup = ""
+	if bar := ansi.Strip(m.renderStatusBar(120)); strings.Contains(bar, "backup") {
+		t.Errorf("status bar shows a backup note it wasn't given:\n%s", bar)
+	}
+}
+
+func TestLastBackup(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	now := time.Date(2026, 10, 19, 12, 0, 0, 0, time.Local)
+
+	if label, on := lastBackup(now); on || label != i18n.T("tui.status.noBackup") {
+		t.Errorf("without config: %q, %v", label, on)
+	}
+
+	dir := t.TempDir()
+	if err := backup.SaveConfig(backup.Config{Dir: dir, Profile: "home"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "akrasia-home-2026-10-18_090000.db"), nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if label, on := lastBackup(now); !on || !strings.Contains(label, "2026-10-18") {
+		t.Errorf("with a copy from yesterday: %q, %v", label, on)
+	}
+
+	if err := os.WriteFile(filepath.Join(dir, "akrasia-home-2026-10-19_090000.db"), nil, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if label, _ := lastBackup(now); label != i18n.T("tui.status.backupToday") {
+		t.Errorf("with a copy from today: %q", label)
 	}
 }

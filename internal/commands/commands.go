@@ -55,6 +55,10 @@ var rootCmd = &cobra.Command{
 	Short: i18n.T("commands.commands.rootCmdShort"),
 	Long:  i18n.T("commands.commands.rootCmdLong"),
 	Args:  cobra.NoArgs,
+	// runs before every command, the TUI included (see runDailyBackup)
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		runDailyBackup(cmd)
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// pipes and scripts get the help instead of a TUI they can't drive
 		if !isInteractive() {
@@ -897,6 +901,8 @@ func init() {
 		"editCmd":                 editCmd,
 		"notesCmd":                notesCmd,
 		"config":                  config,
+		"backupCmd":               backupCmd,
+		"restoreCmd":              restoreCmd,
 	}
 
 	for _, cmd := range commands {
@@ -907,7 +913,8 @@ func init() {
 	rootCmd.SetUsageFunc(UsageFunc)
 
 	// Add subcommands to config
-	config.AddCommand(configTheme, configLanguage, configKeymap)
+	config.AddCommand(configTheme, configLanguage, configKeymap, configBackup)
+	backupCmd.AddCommand(backupListCmd)
 
 	// flags for commands - add; getTodoByName; delByName; updateStatusToConcluded
 	add.Flags().IntSliceVar(&date, "date", []int{}, i18n.T("commands.flags.addDate"))
@@ -944,4 +951,7 @@ func init() {
 	today.Flags().StringVar(&todayOnly, "only", "", i18n.T("commands.flags.todayOnly"))
 	today.Flags().IntVar(&todayLimit, "limit", 0, i18n.T("commands.flags.todayLimit"))
 	today.Flags().BoolVar(&todayJSON, "json", false, i18n.T("commands.flags.todayJSON"))
+	backupListCmd.Flags().StringVar(&backupProfile, "profile", "", i18n.T("commands.flags.backupProfile"))
+	restoreCmd.Flags().StringVar(&backupProfile, "profile", "", i18n.T("commands.flags.backupProfile"))
+	restoreCmd.Flags().BoolVar(&restoreYes, "yes", false, i18n.T("commands.flags.restoreYes"))
 }

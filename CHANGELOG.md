@@ -6,6 +6,31 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.2.0] - 20260-10-19
+
+### Added
+
+- **Backups to a folder you already sync.** No account or server: point
+  Akrasia at a Google Drive, Dropbox, OneDrive or Syncthing folder and the
+  sync tool takes the copies off the machine.
+  - `akrasia config backup dir <path>` turns it on; `keep <n>` (default
+    14), `profile <name>` (default: the hostname), `show` and `off`.
+  - Once a day, the first command (or opening the TUI) saves a checked,
+    compacted copy and deletes the oldest ones beyond `keep`. A failure is
+    only a warning.
+  - Each machine has its own profile, so several can share one folder.
+  - `akrasia backup` (alias `bk`) saves a copy now; `akrasia backup list`
+    shows them.
+  - `akrasia restore <file|latest>` checks the copy, saves the current
+    database first, then replaces it. `--profile` restores another
+    machine's copies; `--yes` skips the question.
+  - The TUI status bar shows the date of the last backup.
+
+## [2.1.0] - 2026-10-19
+
+Merged to `main` in #55. New features on top of 2.0.0, with no breaking
+changes: `today --json` only gains a field.
+
 ### Added
 
 - **Today's progress bar**, in the theme's gradient colors: done today out
@@ -41,7 +66,6 @@ All notable changes to Akrasia are documented here. The format follows
   "✔ X completed" and a quote in the theme's quote style, the same moment
   the CLI prints one. `esc`, `enter` or `q` close it; other keys are
   ignored while it is open. `Q` shows a quote at any time.
-
 - **Dump: delete entries and turn them into tasks.** `akrasia dump` now
   numbers the list.
   - `--delete N` removes an entry.
@@ -70,7 +94,7 @@ All notable changes to Akrasia are documented here. The format follows
 - TUI: a details panel taller than the screen is cut instead of pushing
   the status bar and help out of view.
 
-## [2.0.0] - unreleased
+## [2.0.0] - 2026-10-19
 
 The headline of this release is an interactive terminal interface (TUI). It
 is a major version because two behaviors that scripts may rely on changed:
@@ -166,6 +190,8 @@ is a major version because two behaviors that scripts may rely on changed:
 
 See the [GitHub releases and tags](https://github.com/luis-octavius/akrasia/tags).
 
-[Unreleased]: https://github.com/luis-octavius/akrasia/compare/v.1.1.1...dev
-[2.0.0]: https://github.com/luis-octavius/akrasia/compare/v.1.1.1...dev
+[Unreleased]: https://github.com/luis-octavius/akrasia/compare/v.2.2.0...dev
+[2.2.0]: https://github.com/luis-octavius/akrasia/compare/v.2.1.0...v.2.2.0
+[2.1.0]: https://github.com/luis-octavius/akrasia/compare/v.2.0.0...v.2.1.0
+[2.0.0]: https://github.com/luis-octavius/akrasia/compare/v.1.1.1...v.2.0.0
 [1.1.1]: https://github.com/luis-octavius/akrasia/releases/tag/v.1.1.1

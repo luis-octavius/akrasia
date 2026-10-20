@@ -515,7 +515,7 @@ func (m Model) renderFooter(width int) string {
 }
 
 // renderStatusBar is the full-width bar: mode pill and message on the left,
-// keymap and theme on the right.
+// last backup, keymap and theme on the right.
 func (m Model) renderStatusBar(width int) string {
 	base := color.Bar()
 
@@ -534,6 +534,13 @@ func (m Model) renderStatusBar(width int) string {
 		info = "vim · " + info
 	}
 	right := base.Render(info + " ")
+	if m.backup != "" {
+		note := base
+		if !m.backupOn {
+			note = color.Muted().Inherit(base)
+		}
+		right = note.Render(m.backup) + base.Render(" · ") + right
+	}
 	return line(base, left, right, width)
 }
 
