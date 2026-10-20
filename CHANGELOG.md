@@ -6,6 +6,8 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-10-20
+
 ### Added
 
 - **Dump tab in the web app.** The dump entries saved from the phone (or
@@ -37,6 +39,7 @@ All notable changes to Akrasia are documented here. The format follows
 
 - README: new "Platforms" section, covering Linux, Windows through WSL
   (recommended) and native Windows with its limits.
+- CONTRIBUTING: steps to use the CD versioning.
 
 ### Development
 
