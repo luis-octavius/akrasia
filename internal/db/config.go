@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -33,7 +34,9 @@ func GetDBPath() string {
 	return filepath.Join(configDir, "akrasia", "akrasia.db")
 }
 
-func runMigrations(dbPath string) error {
+// runMigrations applies the pending migrations. quiet hides goose's log,
+// for the check every command makes on startup.
+func runMigrations(dbPath string, quiet bool) error {
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return err
@@ -42,6 +45,10 @@ func runMigrations(dbPath string) error {
 	defer db.Close()
 
 	goose.SetBaseFS(embedMigrations)
+	if quiet {
+		goose.SetLogger(goose.NopLogger())
+		defer goose.SetLogger(log.Default())
+	}
 
 	goose.SetDialect("sqlite3")
 
@@ -65,7 +72,7 @@ func InitDB() (*sql.DB, error) {
 		return nil, err
 	}
 
-	if err := runMigrations(path); err != nil {
+	if err := runMigrations(path, false); err != nil {
 		return nil, err
 	}
 
@@ -76,6 +83,14 @@ func GetQueries() (*database.Queries, error) {
 	dbPath := GetDBPath()
 	if dbPath == "" {
 		return nil, fmt.Errorf("%s", i18n.T("db.error.invalidDatabasePath"))
+	}
+
+	// an existing database gets the migrations of a newer version without
+	// running `init` again; a missing one is still created by `init`
+	if _, err := os.Stat(dbPath); err == nil {
+		if err := runMigrations(dbPath, true); err != nil {
+			return nil, err
+		}
 	}
 
 	db, err := sql.Open("sqlite", dbPath)
