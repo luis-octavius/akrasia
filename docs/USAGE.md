@@ -365,6 +365,40 @@ binary or changing `DB_PATH`. The webhook URL works like a password: anyone
 who has it can post to the channel, so `notify.json` is readable only by
 you.
 
+### On your phone (`akrasia serve`)
+
+`akrasia serve` runs a small web app on this computer: the Today and All
+tabs, with subtasks and today's progress, a bar to add a task, a subtask
+or a dump entry, and a tap to complete a task (with notes). The database
+stays here: the phone only talks to it, so the computer has to be on.
+
+It is reached privately through [Tailscale](https://tailscale.com) (free
+for personal use), which gives it an HTTPS address only your devices can
+see. HTTPS is what lets the phone install it as an app.
+
+```bash
+akrasia serve install            # a systemd user service, started with the computer
+tailscale serve --bg 8080        # https://<computer>.<tailnet>.ts.net for your devices
+loginctl enable-linger $USER     # keep it running when you log out
+akrasia serve token              # the access token
+```
+
+On the phone, with the Tailscale app connected, open the `ts.net` address,
+enter the token once, and use the browser's "Add to Home screen".
+
+- Every page needs the token; it is kept in the browser after the first
+  login. `akrasia serve token --new` replaces it (every device then enters
+  the new one). Scripts can send it as `Authorization: Bearer <token>`.
+- It listens on `127.0.0.1:8080` only; `serve --addr` or `"addr"` in
+  `serve.json` changes that.
+- While it runs it also makes the daily backup and sends the Discord
+  reminders, so `serve install` removes the crontab entry of
+  `config notify install`.
+- `restore` refuses to run while `serve` uses the database: stop it first
+  with `systemctl --user stop akrasia`.
+- `akrasia serve` alone runs it in the terminal (`ctrl+c` stops it), and
+  `akrasia serve uninstall` removes the service.
+
 ### Settings
 
 ```bash

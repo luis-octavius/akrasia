@@ -6,12 +6,32 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **`akrasia serve`: a web app for your phone.** Today and All tabs with
+  subtasks and today's progress, a bar to add a task, a subtask or a dump
+  entry, and a tap to complete a task with notes (and the confirmation for
+  a parent with pending subtasks). Made to install on the home screen
+  (manifest, icon and service worker), in light and dark mode, in English
+  or Portuguese.
+  - Reached over Tailscale: it listens on `127.0.0.1:8080` and
+    `tailscale serve` publishes it in HTTPS to your devices only.
+  - Every page needs an access token, entered once per device and kept in
+    an HttpOnly, SameSite=Strict cookie (`akrasia serve token`, `--new`
+    replaces it). Writes only accept htmx requests, which closes CSRF.
+  - `akrasia serve install` makes it a systemd user service; while it
+    runs, it also makes the daily backup and sends the reminders (the
+    crontab entry is removed). `serve uninstall` removes it.
+  - Built with Go templates and htmx (vendored, 0BSD): no Node, nothing
+    to build besides `go build`.
+
 ### Changed
 
 - The database opens in WAL mode and waits up to 5 seconds for another
   writer, so the CLI, the TUI and other processes can use it at the same
   time without "database is locked" errors. A `-wal` and a `-shm` file may
   appear next to `akrasia.db` while it is open.
+- `restore` refuses to run while `akrasia serve` uses the database.
 
 ## [2.4.0] - 2026-10-20
 

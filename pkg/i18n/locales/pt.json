@@ -57,7 +57,11 @@
 			"notifyShort": "enviar os lembretes do Discord pendentes (rodado pelo cron após `config notify install`)",
 			"configNotifyUse": "notify [show|test|install|uninstall|off|discord <url>|mention <id>|days <n>|times <HH:MM,...>|daily-at <HH:MM>]",
 			"configNotifyShort": "configurar lembretes em um canal do Discord",
-			"configNotifyExample": "akrasia config notify discord https://discord.com/api/webhooks/…\nakrasia config notify mention 123456789012345678\nakrasia config notify days 3\nakrasia config notify times 10:00,19:00\nakrasia config notify daily-at 19:00\nakrasia config notify test\nakrasia config notify install"
+			"configNotifyExample": "akrasia config notify discord https://discord.com/api/webhooks/…\nakrasia config notify mention 123456789012345678\nakrasia config notify days 3\nakrasia config notify times 10:00,19:00\nakrasia config notify daily-at 19:00\nakrasia config notify test\nakrasia config notify install",
+			"serveShort": "rodar a interface web para o celular, além do backup diário e dos lembretes",
+			"serveTokenShort": "mostrar o token que um dispositivo digita uma vez (--new troca)",
+			"serveInstallShort": "rodar o serve como serviço de usuário do systemd, que sobe junto com o computador",
+			"serveUninstallShort": "parar e remover o serviço do systemd"
 		},
 		"flags": {
 			"addDate": "prazo: dd, dd,mm ou dd,mm,aaaa (padrão: amanhã)",
@@ -98,7 +102,9 @@
 			"backupProfile": "usar os backups de outra máquina (padrão: o perfil desta máquina)",
 			"restoreYes": "restaurar sem perguntar",
 			"addParent": "criar como subtarefa desta tarefa (segue o modo diário dela; vence junto, a menos que --date seja passado)",
-			"updateStatusToConcludedYes": "concluir uma tarefa com subtarefas pendentes (e elas) sem perguntar"
+			"updateStatusToConcludedYes": "concluir uma tarefa com subtarefas pendentes (e elas) sem perguntar",
+			"serveAddr": "endereço em que escutar (padrão: 127.0.0.1:8080, ou \"addr\" no serve.json)",
+			"serveTokenNew": "trocar o token; todo dispositivo precisa digitar o novo"
 		},
 		"cobra": {
 			"usage": "Uso:",
@@ -144,7 +150,13 @@
 			"notifyNoMention": "ninguém",
 			"notifyConfig": "Webhook:          %s\nMenção:           %s\nDias antes:       %d\nHorários:         %s\nTarefas diárias:  às %s\n",
 			"completeAllConfirm": "%v. Concluir todas?",
-			"completeCancelled": "Nada foi concluído."
+			"completeCancelled": "Nada foi concluído.",
+			"serving": "O Akrasia está em %s\nPara acessar do celular pelo Tailscale (HTTPS): tailscale serve --bg %s\n",
+			"serveTokenNew": "Token novo. Dispositivos conectados com o antigo precisam digitar este:",
+			"serveInstalled": "Serviço instalado e iniciado (%s).",
+			"serveNext": "Próximos passos:\n  1. tailscale serve --bg %s          # HTTPS só para os seus dispositivos\n  2. loginctl enable-linger $USER      # continuar rodando quando você sair da sessão\n  3. akrasia serve token               # digite uma vez em cada dispositivo\nOs lembretes agora rodam dentro do serve; a entrada do crontab, se havia, foi removida.\n",
+			"serveUninstalled": "Serviço parado e removido.",
+			"serveNotifyHint": "Os lembretes rodavam dentro do serve: rode `akrasia config notify install` para enviá-los pelo cron de novo."
 		},
 		"error": {
 			"taskName": "nome da tarefa é obrigatório (use o argumento posicional ou a opção --name)",
@@ -185,7 +197,9 @@
 			"notifyDailyAt": "%s não é um dos horários de lembrete %v; adicione-o antes com `config notify times`",
 			"notifyAction": "opção desconhecida: %q (use show, test, install, uninstall, off, discord, mention, days, times ou daily-at)",
 			"noCrontab": "crontab não encontrado: instale o cron (cronie no Arch) ou rode `akrasia notify` por outro agendador",
-			"completeAllYes": "%v (use --yes para concluir todas)"
+			"completeAllYes": "%v (use --yes para concluir todas)",
+			"serveRunning": "o akrasia serve já está rodando com este banco (systemctl --user status akrasia)",
+			"restoreWhileServing": "o akrasia serve está usando o banco: pare-o antes (systemctl --user stop akrasia), restaure e inicie de novo"
 		}
 	},
 	"db": {
@@ -432,5 +446,19 @@
 		"inDays": "em %d dias (%s)",
 		"more": "…e mais %d",
 		"test": "O Akrasia está conectado a este canal. Nada para lembrar agora."
+	},
+	"web": {
+		"addPlaceholder": "O que precisa ser feito?",
+		"more": "Mais opções",
+		"parent": "Subtarefa de",
+		"noParent": "nenhuma",
+		"addHint": "Sem data, uma tarefa vence amanhã e uma subtarefa junto com a tarefa pai.",
+		"addTask": "Adicionar tarefa",
+		"addDump": "Dump",
+		"complete": "Concluir",
+		"token": "Token de acesso",
+		"wrongToken": "Token incorreto.",
+		"login": "Entrar",
+		"tokenHint": "No computador, rode `akrasia serve token` para vê-lo. Você só digita uma vez por dispositivo."
 	}
 }

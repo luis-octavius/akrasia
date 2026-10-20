@@ -933,6 +933,7 @@ func init() {
 		"backupCmd":               backupCmd,
 		"restoreCmd":              restoreCmd,
 		"notifyCmd":               notifyCmd,
+		"serveCmd":                serveCmd,
 	}
 
 	for _, cmd := range commands {
@@ -945,6 +946,7 @@ func init() {
 	// Add subcommands to config
 	config.AddCommand(configTheme, configLanguage, configKeymap, configBackup, configNotify)
 	backupCmd.AddCommand(backupListCmd)
+	serveCmd.AddCommand(serveTokenCmd, serveInstallCmd, serveUninstallCmd)
 
 	// flags for commands - add; getTodoByName; delByName; updateStatusToConcluded
 	add.Flags().IntSliceVar(&date, "date", []int{}, i18n.T("commands.flags.addDate"))
@@ -986,4 +988,6 @@ func init() {
 	backupListCmd.Flags().StringVar(&backupProfile, "profile", "", i18n.T("commands.flags.backupProfile"))
 	restoreCmd.Flags().StringVar(&backupProfile, "profile", "", i18n.T("commands.flags.backupProfile"))
 	restoreCmd.Flags().BoolVar(&restoreYes, "yes", false, i18n.T("commands.flags.restoreYes"))
+	serveCmd.Flags().StringVar(&serveAddr, "addr", "", i18n.T("commands.flags.serveAddr"))
+	serveTokenCmd.Flags().BoolVar(&tokenNew, "new", false, i18n.T("commands.flags.serveTokenNew"))
 }

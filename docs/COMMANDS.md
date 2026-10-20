@@ -65,6 +65,7 @@ Available Commands:
  sh  history          get the streak history of provided todo
      init             initialize akrasia app
      notify           send the Discord reminders that are due (run from cron by `config notify install`)
+     serve            run the web interface for your phone, plus the daily backup and the reminders
  nt  notes            show the notes written each day a task was completed
  pg  progress         show today's progress (tasks done out of today's tasks)
      restore          replace the database with a backup (the current one is saved first)
@@ -99,6 +100,7 @@ Available Commands:
 | `delete-by-name` | `--yes` (required) |
 | `backup list` | `--profile <name>` (another machine's copies) |
 | `restore` | `--yes` (skip the question; required in scripts), `--profile <name>` (with `latest`) |
+| `serve` | `--addr host:port` (default `127.0.0.1:8080`); subcommands `token` (`--new` replaces it), `install`, `uninstall` |
 | `backfill-history` | `--days N` (default 30), `--task <name>` (default: every daily task) |
 
 Names are matched case-insensitively and fuzzily: `akrasia get-by-name stend`
@@ -112,5 +114,5 @@ lists their full names to choose from.
 | What | Where |
 | --- | --- |
 | Database | `$DB_PATH`, or `akrasia/akrasia.db` inside the OS config directory (`~/.config` on Linux) |
-| Theme, language, keymap, backups, reminders | `theme.json`, `lang.json`, `keymap.json`, `backup.json`, `notify.json` (owner-only: it holds the webhook URL) in `$XDG_CONFIG_HOME/akrasia` (default `~/.config/akrasia`) |
+| Theme, language, keymap, backups, reminders | `theme.json`, `lang.json`, `keymap.json`, `backup.json`, `notify.json` (owner-only: it holds the webhook URL), `serve.json` (owner-only: the access token) in `$XDG_CONFIG_HOME/akrasia` (default `~/.config/akrasia`) |
 | Backups | `akrasia-<profile>-<yyyy-mm-dd_hhmmss>.db` in the folder set with `config backup dir` |

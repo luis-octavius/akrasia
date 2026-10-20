@@ -1,0 +1,14 @@
+{
+  "name": "Akrasia",
+  "short_name": "Akrasia",
+  "description": "Tasks, habits and streaks from your Akrasia",
+  "start_url": "/today",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1e1e2e",
+  "theme_color": "#1e1e2e",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

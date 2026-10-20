@@ -1,0 +1,134 @@
+{{define "page"}}<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1e1e2e">
+<meta name="htmx-config" content='{"includeIndicatorStyles": false, "historyCacheSize": 0}'>
+<title>Akrasia</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="stylesheet" href="/app.css">
+<script src="/htmx.min.js" defer></script>
+<script src="/app.js" defer></script>
+</head>
+<body>
+{{template "app" .}}
+</body>
+</html>
+{{end}}
+
+{{define "app"}}<main id="app">
+  <header class="top">
+    <h1>akrasia</h1>
+    <nav class="tabs">
+      <a href="/today" hx-get="/today" hx-target="#app" hx-swap="outerHTML" hx-push-url="true"{{if eq .Tab "today"}} aria-current="page"{{end}}>{{T "tui.tabs.today"}} <span class="n">{{.Today}}</span></a>
+      <a href="/all" hx-get="/all" hx-target="#app" hx-swap="outerHTML" hx-push-url="true"{{if eq .Tab "all"}} aria-current="page"{{end}}>{{T "tui.tabs.all"}} <span class="n">{{.All}}</span></a>
+    </nav>
+    <div class="progress">
+      <span>{{if .Progress.Total}}{{printf (T "tasks.tasks.progress") .Progress.Done .Progress.Total}}{{else}}{{T "tasks.tasks.progressClear"}}{{end}}</span>
+      <progress value="{{.Progress.Done}}" max="{{if .Progress.Total}}{{.Progress.Total}}{{else}}1{{end}}">{{.Percent}}%</progress>
+    </div>
+  </header>
+
+  {{if .Error}}<p class="msg err" role="alert">{{.Error}}</p>{{else if .Status}}<p class="msg ok" role="status">{{.Status}}</p>{{end}}
+
+  <section class="list">
+    {{range .Sections}}
+      {{if .Title}}<h2>{{.Title}} <span class="n">{{len .Rows}}</span></h2>{{end}}
+      <ul>{{range .Rows}}{{template "todo" .}}{{end}}</ul>
+    {{else}}
+      <p class="empty">{{if eq .Tab "today"}}{{T "tasks.info.noPendingTasks"}}{{else}}{{T "tui.empty"}}{{end}}</p>
+    {{end}}
+  </section>
+
+  <div id="overlay"></div>
+
+  <form class="add" hx-post="/add" hx-target="#app" hx-swap="outerHTML">
+    <input type="hidden" name="tab" value="{{.Tab}}">
+    <input name="name" required autocomplete="off" enterkeyhint="done" placeholder="{{T "web.addPlaceholder"}}" aria-label="{{T "tui.form.name"}}">
+    <details>
+      <summary>{{T "web.more"}}</summary>
+      <label>{{T "web.parent"}}
+        <select name="parent">
+          <option value="">{{T "web.noParent"}}</option>
+          {{range .Parents}}<option>{{.}}</option>{{end}}
+        </select>
+      </label>
+      <label>{{T "tui.form.date"}} <input type="date" name="date" min="{{.DateMin}}"></label>
+      <label>{{T "tui.form.priority"}}
+        <select name="priority">
+          <option value="">—</option>
+          <option value="high">high</option>
+          <option value="medium">medium</option>
+          <option value="low">low</option>
+        </select>
+      </label>
+      <label class="inline"><input type="checkbox" name="daily"> {{T "tui.form.daily"}}</label>
+      <p class="hint">{{T "web.addHint"}}</p>
+    </details>
+    <div class="buttons">
+      <button name="kind" value="task">{{T "web.addTask"}}</button>
+      <button name="kind" value="dump" class="secondary">{{T "web.addDump"}}</button>
+    </div>
+  </form>
+</main>
+{{end}}
+
+{{define "todo"}}<li class="todo{{if .IsSubtask}} sub{{end}}{{if .Done}} done{{end}}">
+  {{if .Done}}<span class="check" title="{{T "tasks.tasks.done"}}">✔</span>{{else}}
+  <form hx-get="/complete" hx-target="#overlay">
+    <input type="hidden" name="path" value="{{.Path}}">
+    <input type="hidden" name="tab" value="{{.Tab}}">
+    <button class="check" aria-label="{{T "tui.help.complete"}}: {{.Name}}">○</button>
+  </form>{{end}}
+  <span class="name">{{.Name}}{{if and .IsDaily (not .IsSubtask)}} <span class="muted">↻</span>{{end}}</span>
+  {{with .SubtaskProgress}}{{if .Total}}<span class="count">{{.Done}}/{{.Total}}</span>{{end}}{{end}}
+  {{if not .IsDaily}}<span class="due{{if .Late}} late{{end}}">{{due .ExpiresAt}}</span>{{end}}
+  {{if .Priority}}<span class="prio {{.Priority}}">{{.Priority}}</span>{{end}}
+</li>
+{{range .Subs}}{{template "todo" .}}{{end}}{{end}}
+
+{{define "complete"}}<div class="dialog" role="dialog" aria-modal="true">
+  <form hx-post="/complete" hx-target="#app" hx-swap="outerHTML">
+    <input type="hidden" name="path" value="{{.Todo.Path}}">
+    <input type="hidden" name="tab" value="{{.Tab}}">
+    {{if .Pending}}
+      <input type="hidden" name="all" value="1">
+      <p class="warn">{{printf (T "tui.prompt.completeAll") .Todo.Name .Pending}}</p>
+    {{else}}
+      <p class="title">{{printf (T "tui.prompt.notes") .Todo.Name}}</p>
+    {{end}}
+    <textarea name="notes" rows="3" aria-label="{{T "tui.help.notes"}}"></textarea>
+    <div class="buttons">
+      <button>{{T "web.complete"}}</button>
+      <button type="button" class="secondary" data-close>{{T "tui.help.cancel"}}</button>
+    </div>
+  </form>
+</div>
+{{end}}
+
+{{define "login"}}<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1e1e2e">
+<title>Akrasia</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<main class="login">
+  <h1>akrasia</h1>
+  <form method="post" action="/login">
+    <label>{{T "web.token"}} <input name="token" required autocomplete="current-password" autocapitalize="off" spellcheck="false"></label>
+    {{if .Failed}}<p class="msg err" role="alert">{{T "web.wrongToken"}}</p>{{end}}
+    <button>{{T "web.login"}}</button>
+    <p class="hint">{{T "web.tokenHint"}}</p>
+  </form>
+</main>
+</body>
+</html>
+{{end}}
