@@ -485,6 +485,7 @@
 	},
 	"notify": {
 		"title": "Akrasia: reminders",
+		"timedTitle": "Time for it",
 		"overdue": "Overdue",
 		"dueSoon": "Due soon",
 		"daily": "Daily tasks not done yet",

@@ -21,6 +21,7 @@ const maxMessage = 2000
 // Service is the part of tasks.TaskManager reminders use.
 type Service interface {
 	Reminders(ctx context.Context, now time.Time, days int, withDaily bool) (tasks.Reminders, error)
+	TimedDue(ctx context.Context, now time.Time) ([]tasks.TodoView, error)
 	SentSlots(ctx context.Context, day string) ([]string, error)
 	MarkSlotsSent(ctx context.Context, day string, slots []string) error
 }
@@ -28,8 +29,14 @@ type Service interface {
 // Sender posts a message.
 type Sender func(ctx context.Context, content string) error
 
-// Run sends the reminder of every time that has passed today and wasn't
-// handled yet. Several pending times (the machine was off) become one
+// TimedGrace is how long after its time a task's reminder is still sent.
+// A later one (the machine was off) is marked as handled without a message,
+// so turning the computer on in the evening does not bring the morning's.
+const TimedGrace = 2 * time.Hour
+
+// Run sends the reminders due now: the one of every fixed time that has
+// passed today and wasn't handled yet, and one for the tasks whose own time
+// of day has come. Several pending times (the machine was off) become one
 // message; it lists the daily tasks when one of them is the daily time.
 // A time with nothing to remind is marked as handled without a message.
 // It reports whether a message was sent.
@@ -44,6 +51,16 @@ func Run(ctx context.Context, svc Service, cfg Config, now time.Time, send Sende
 		return false, err
 	}
 
+	slotsSent, err := runSlots(ctx, svc, cfg, now, send, day, sent)
+	if err != nil {
+		return slotsSent, err
+	}
+	tasksSent, err := runTimed(ctx, svc, cfg, now, send, day, sent)
+	return slotsSent || tasksSent, err
+}
+
+// runSlots is Run for the fixed reminder times.
+func runSlots(ctx context.Context, svc Service, cfg Config, now time.Time, send Sender, day string, sent []string) (bool, error) {
 	pending := PendingSlots(cfg.Slots(), sent, now)
 	if len(pending) == 0 {
 		return false, nil
@@ -66,6 +83,64 @@ func Run(ctx context.Context, svc Service, cfg Config, now time.Time, send Sende
 		return !r.Empty(), err
 	}
 	return !r.Empty(), nil
+}
+
+// TimedSlot is the notify_log slot of a task's own reminder. It holds the
+// time, so a task moved to another time reminds again.
+func TimedSlot(todo tasks.TodoView) string {
+	return "task:" + todo.ID.String() + "@" + todo.DueTime
+}
+
+// runTimed sends one message for the tasks whose time of day has come and
+// that weren't reminded yet. Tasks past TimedGrace are marked as handled
+// without a message.
+func runTimed(ctx context.Context, svc Service, cfg Config, now time.Time, send Sender, day string, sent []string) (bool, error) {
+	due, err := svc.TimedDue(ctx, now)
+	if err != nil {
+		return false, err
+	}
+
+	var fresh []tasks.TodoView
+	var handled []string
+	for _, todo := range due {
+		slot := TimedSlot(todo)
+		if slices.Contains(sent, slot) {
+			continue
+		}
+		handled = append(handled, slot)
+		if clockTime(todo.DueTime, now).Add(TimedGrace).After(now) {
+			fresh = append(fresh, todo)
+		}
+	}
+	if len(handled) == 0 {
+		return false, nil
+	}
+
+	if len(fresh) > 0 {
+		// nothing is marked when sending fails, so the next run retries
+		if err := send(ctx, TimedMessage(fresh, cfg)); err != nil {
+			return false, err
+		}
+	}
+	return len(fresh) > 0, svc.MarkSlotsSent(ctx, day, handled)
+}
+
+// clockTime is today's date at the time "HH:MM".
+func clockTime(hhmm string, now time.Time) time.Time {
+	t, err := time.ParseInLocation("15:04", hhmm, now.Location())
+	if err != nil {
+		return now
+	}
+	return time.Date(now.Year(), now.Month(), now.Day(), t.Hour(), t.Minute(), 0, 0, now.Location())
+}
+
+// TimedMessage renders the reminder of tasks whose time has come.
+func TimedMessage(todos []tasks.TodoView, cfg Config) string {
+	lines := []string{mention(cfg) + "**" + i18n.T("notify.timedTitle") + "**", ""}
+	for _, t := range todos {
+		lines = append(lines, "• "+t.Path()+" — "+t.DueTime)
+	}
+	return fit(lines, maxMessage)
 }
 
 // Test sends what the daily reminder would say right now, or a short note
@@ -124,11 +199,19 @@ func Message(r tasks.Reminders, cfg Config, now time.Time) string {
 		return fmt.Sprintf(i18n.T("notify.wasDue"), t.ExpiresAt.Format("02/01"))
 	})
 	section(i18n.T("notify.dueSoon"), r.DueSoon, func(t tasks.TodoView) string {
-		return dueIn(t.ExpiresAt, now)
+		return dueIn(t.ExpiresAt, now) + timeSuffix(t)
 	})
-	section(i18n.T("notify.daily"), r.Daily, func(tasks.TodoView) string { return "" })
+	section(i18n.T("notify.daily"), r.Daily, func(t tasks.TodoView) string { return strings.TrimSpace(timeSuffix(t)) })
 
 	return fit(lines, maxMessage)
+}
+
+// timeSuffix is " HH:MM" for a task with a time of day.
+func timeSuffix(t tasks.TodoView) string {
+	if t.DueTime == "" {
+		return ""
+	}
+	return " " + t.DueTime
 }
 
 // dueIn says when a due date is: today, tomorrow or in N days.

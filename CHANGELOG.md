@@ -45,6 +45,13 @@ All notable changes to Akrasia are documented here. The format follows
   - Stored in a new `due_time` column (migration 010); existing tasks have
     no time.
 
+- **Discord reminder at a task's time.** A task with a time of day
+  (`--time`) is announced when it comes, on its due day (daily tasks every
+  day; weekly and monthly ones on their day), once and only if it is not
+  done. The check runs every 5 minutes under `serve` (15 with the crontab
+  entry); a reminder more than 2 hours late is dropped. The task's time
+  also shows in the fixed reminders.
+
 ### Changed
 
 - The command line and the TUI list show a one-off task's date without the

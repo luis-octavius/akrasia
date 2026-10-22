@@ -391,6 +391,15 @@ today. Each time is sent once a day, and a day with nothing due sends
 nothing. If the computer was off at a reminder time, it goes out at the
 next check.
 
+A task with a time of day (`--time 14:30`) also gets its own reminder when
+that time comes: a one-off task on its due day, a daily task every day, a
+weekly or monthly one on its day. It is sent once, in one message with the
+other tasks whose time has come, and not if the task is already done. The
+check runs every 5 minutes while `akrasia serve` runs (15 with the crontab
+entry), so it arrives a few minutes late at most. A reminder more than 2
+hours late (the computer was off) is dropped instead of sent. The times in
+the fixed reminders show next to those tasks too.
+
 ```bash
 akrasia config notify days 5                 # 0 = only what's due today
 akrasia config notify times 9:00,13:00,19:00

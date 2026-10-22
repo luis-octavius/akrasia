@@ -174,6 +174,22 @@ func IsScheduled(todo TodoView, now time.Time) bool {
 	return todo.IsDaily
 }
 
+// IsOnDay reports whether a recurring task falls exactly on now's day: a
+// daily one every day, a weekly one on its weekday, a monthly one on its
+// day of the month. IsScheduled, which stays true until the period ends,
+// is what a task is shown by; this is what a time-of-day reminder fires on.
+func IsOnDay(todo TodoView, now time.Time) bool {
+	switch todo.Recurrence {
+	case RecurDaily:
+		return true
+	case RecurWeekly:
+		return ISOWeekday(now) == max(todo.RepeatOn, 1)
+	case RecurMonthly:
+		return now.Day() == monthlyDay(max(todo.RepeatOn, 1), now)
+	}
+	return todo.IsDaily
+}
+
 // Repeat describes how a recurring task repeats ("weekly on Fri",
 // "monthly on day 5"); it is empty for a one-off task.
 func (v TodoView) Repeat() string {

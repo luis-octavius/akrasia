@@ -485,6 +485,7 @@
 	},
 	"notify": {
 		"title": "Akrasia: lembretes",
+		"timedTitle": "Chegou a hora",
 		"overdue": "Atrasadas",
 		"dueSoon": "Vencem em breve",
 		"daily": "Diárias ainda não feitas",
