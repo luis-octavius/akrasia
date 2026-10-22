@@ -14,7 +14,7 @@ This gap between available tools and my personal workflow led me to develop my o
 
 - **Interactive TUI**: run `akrasia` to see today's tasks, complete, add, delete and search them, and follow your streaks, all from the keyboard (optional vim keys).
 - **Fast CLI**: every action is also a single command, such as `akrasia add`, `akrasia today` or `akrasia update-status`, which makes it easy to script.
-- **Daily tasks and streaks**: track habits, see your current streak and its history, and backfill days you forgot to log.
+- **Daily, weekly and monthly tasks, and streaks**: track habits and routines (with an optional time of day), see your current streak and its history, and backfill days you forgot to log.
 - **Subtasks**: split a task into steps; finishing the last one completes it.
 - **On your phone**: `akrasia serve` gives a web app you can install on the home screen, reached privately over Tailscale.
 - **Backups and reminders**: daily copies to a folder you already sync, and reminders of what's due in a Discord channel.

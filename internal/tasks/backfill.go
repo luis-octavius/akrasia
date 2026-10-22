@@ -23,7 +23,6 @@ func (tkm *TaskManager) BackfillDailyHistory(ctx context.Context, daysBack int, 
 
 	// Get all daily tasks, or a specific one if taskName is provided
 	var dailyTasks []database.Todo
-	var err error
 
 	if taskName != "" {
 		todo, err := findTodoByName(ctx, tkm, taskName)
@@ -31,18 +30,24 @@ func (tkm *TaskManager) BackfillDailyHistory(ctx context.Context, daysBack int, 
 			return BackfillReport{}, fmt.Errorf(i18n.T("tasks.error.findTask"), taskName, err)
 		}
 
-		if !todo.IsDaily {
+		if recurrenceOf(todo.IsDaily, todo.Recurrence) != RecurDaily {
 			return BackfillReport{}, localizedError{
-				msg:      fmt.Sprintf(i18n.T("tasks.error.taskNotDaily"), taskName),
+				msg:      fmt.Sprintf(i18n.T("tasks.error.taskNotDailyBackfill"), taskName),
 				sentinel: ErrNotDaily,
 			}
 		}
 
 		dailyTasks = []database.Todo{{ID: todo.ID, Name: todo.Name, IsDaily: todo.IsDaily}}
 	} else {
-		dailyTasks, err = tkm.Queries.GetDailyTodos(ctx)
+		recurring, err := tkm.Queries.GetDailyTodos(ctx)
 		if err != nil {
 			return BackfillReport{}, fmt.Errorf(i18n.T("tasks.error.getDaily"), err)
+		}
+		// weekly and monthly tasks have no days to fill in
+		for _, task := range recurring {
+			if recurrenceOf(task.IsDaily, task.Recurrence) == RecurDaily {
+				dailyTasks = append(dailyTasks, task)
+			}
 		}
 	}
 

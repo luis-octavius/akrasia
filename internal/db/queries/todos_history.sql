@@ -13,15 +13,36 @@ ON CONFLICT(todo_id, date) DO UPDATE SET
     notes = excluded.notes
 RETURNING *;
 
--- name: DeleteTodayHistory :exec
+-- name: DeleteCurrentPeriodHistory :exec
+-- Undoes a recurring task's completion: removes the rows of its current
+-- period (today, this week or this month).
 DELETE FROM todos_history
-WHERE todo_id = ? AND date = date('now', 'localtime');
+WHERE todo_id = sqlc.arg(id)
+  AND date >= CASE (SELECT recurrence FROM todos WHERE id = sqlc.arg(id))
+    WHEN 'weekly' THEN date('now', 'localtime', 'weekday 0', '-6 days')
+    WHEN 'monthly' THEN date('now', 'localtime', 'start of month')
+    ELSE date('now', 'localtime')
+  END;
 
 -- name: IsDoneToday :one
 SELECT EXISTS(
     SELECT 1 FROM todos_history
     WHERE todo_id = ? AND date = date('now', 'localtime') AND completed = 1
 ) AS done_today;
+
+-- name: IsDoneThisPeriod :one
+-- Like IsDoneToday, but for a weekly or monthly task a completion
+-- anywhere in the current week or month counts.
+SELECT EXISTS(
+    SELECT 1 FROM todos_history p
+    JOIN todos t ON t.id = p.todo_id
+    WHERE p.todo_id = ? AND p.completed = 1
+      AND p.date >= CASE t.recurrence
+        WHEN 'weekly' THEN date('now', 'localtime', 'weekday 0', '-6 days')
+        WHEN 'monthly' THEN date('now', 'localtime', 'start of month')
+        ELSE date('now', 'localtime')
+      END
+) AS done_period;
 
 -- name: GetDoneTodayIDs :many
 -- IDs of every task (daily or not) already completed today. Used to

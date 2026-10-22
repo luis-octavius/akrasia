@@ -1,7 +1,7 @@
 -- name: AddTodo :one 
-INSERT INTO todos (id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, parent_id, due_time)
+INSERT INTO todos (id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, parent_id, due_time, recurrence, repeat_on)
 VALUES (
-  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 )
 RETURNING *;
 
@@ -72,6 +72,8 @@ SET name = sqlc.arg(name),
     is_daily = sqlc.arg(is_daily),
     expires_at = sqlc.arg(expires_at),
     due_time = sqlc.arg(due_time),
+    recurrence = sqlc.arg(recurrence),
+    repeat_on = sqlc.arg(repeat_on),
     history_since = COALESCE(history_since, date('now', 'localtime')),
     updated_at = sqlc.arg(updated_at)
 WHERE id = sqlc.arg(id)
@@ -92,10 +94,12 @@ UPDATE todos
 SET concluded = 0, updated_at = datetime('now', 'localtime')
 WHERE id = ?;
 
--- name: SetSubtasksDaily :exec
--- Subtasks follow their parent's daily mode.
+-- name: SetSubtasksRecurrence :exec
+-- Subtasks follow their parent's recurrence.
 UPDATE todos
 SET is_daily = sqlc.arg(is_daily),
+    recurrence = sqlc.arg(recurrence),
+    repeat_on = sqlc.arg(repeat_on),
     history_since = COALESCE(history_since, date('now', 'localtime'))
 WHERE parent_id = sqlc.arg(parent_id);
 
@@ -115,8 +119,22 @@ SELECT name FROM todos
 WHERE NAME LIKE ? || '%'
 ORDER BY NAME LIMIT 5;
 
--- name: ListTodosWithTodayStatus :many 
-SELECT t.*, CAST(COALESCE(h.completed, 0) AS BOOLEAN) AS done_today
+-- name: ListTodosWithTodayStatus :many
+-- done_today: completed today. done_period: completed in the task's
+-- current period (this week for a weekly task starting Monday, this month
+-- for a monthly one, today for any other), which is what makes a recurring
+-- task done.
+SELECT t.*,
+  CAST(COALESCE(h.completed, 0) AS BOOLEAN) AS done_today,
+  CAST(EXISTS (
+    SELECT 1 FROM todos_history p
+    WHERE p.todo_id = t.id AND p.completed = 1
+      AND p.date >= CASE t.recurrence
+        WHEN 'weekly' THEN date('now', 'localtime', 'weekday 0', '-6 days')
+        WHEN 'monthly' THEN date('now', 'localtime', 'start of month')
+        ELSE date('now', 'localtime')
+      END
+  ) AS BOOLEAN) AS done_period
 FROM todos t 
 LEFT JOIN todos_history h 
 ON h.todo_id = t.id AND h.date = date('now', 'localtime')

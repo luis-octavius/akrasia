@@ -217,6 +217,27 @@ func TestAdd(t *testing.T) {
 		t.Errorf("an invalid time should show an error:\n%s", w.Body.String())
 	}
 
+	w = do(t, s, "POST", "/add", url.Values{"name": {"Review"}, "kind": {"task"}, "repeat": {"weekly"}, "on": {"fri"}}, true, true)
+	if review, err := tkm.FindTodo(ctx, "Review"); err != nil || review.Recurrence != tasks.RecurWeekly || review.RepeatOn != 5 {
+		t.Errorf("Review = %+v, %v; want weekly on Friday", review, err)
+	}
+	do(t, s, "POST", "/add", url.Values{"name": {"Rent"}, "kind": {"task"}, "repeat": {"monthly"}, "on": {"5"}}, true, true)
+	if rent, err := tkm.FindTodo(ctx, "Rent"); err != nil || rent.Recurrence != tasks.RecurMonthly || rent.RepeatOn != 5 {
+		t.Errorf("Rent = %+v, %v; want monthly on day 5", rent, err)
+	}
+	do(t, s, "POST", "/add", url.Values{"name": {"Old client"}, "kind": {"task"}, "daily": {"on"}}, true, true)
+	if old, err := tkm.FindTodo(ctx, "Old client"); err != nil || old.Recurrence != tasks.RecurDaily {
+		t.Errorf("a form with only the daily checkbox should still make a daily task, got %+v, %v", old, err)
+	}
+	w = do(t, s, "POST", "/add", url.Values{"name": {"Wrong day"}, "kind": {"task"}, "repeat": {"weekly"}, "on": {"15"}}, true, true)
+	if !strings.Contains(w.Body.String(), `class="msg err"`) {
+		t.Errorf("a weekly task on day 15 should show an error:\n%s", w.Body.String())
+	}
+	w = do(t, s, "GET", "/all", nil, true, false)
+	if !strings.Contains(w.Body.String(), "weekly on Fri") {
+		t.Errorf("a weekly task should show how it repeats:\n%s", w.Body.String())
+	}
+
 	do(t, s, "POST", "/add", url.Values{"name": {"Idea"}, "kind": {"dump"}}, true, true)
 	if dumps, _ := tkm.Dumps(ctx); len(dumps) != 1 || dumps[0].Name != "Idea" {
 		t.Errorf("dumps = %v", dumps)

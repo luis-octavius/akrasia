@@ -29,8 +29,8 @@ func IsExpiringSoon(expiresAt time.Time) bool {
 }
 
 // buildTodayView classifies pending tasks into today-oriented sections.
-// Daily tasks are judged by DoneToday instead of Concluded, because that
-// flag is never set for daily tasks.
+// Recurring tasks are judged by DonePeriod instead of Concluded, because
+// that flag is never set for them, and only show on the days they are due.
 func buildTodayView(todos []TodoView, now time.Time) TodayView {
 	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	dayEnd := dayStart.Add(24 * time.Hour)
@@ -39,7 +39,7 @@ func buildTodayView(todos []TodoView, now time.Time) TodayView {
 
 	for _, todo := range todos {
 		if todo.IsDaily {
-			if todo.DoneToday {
+			if todo.DonePeriod || !IsScheduled(todo, now) {
 				continue
 			}
 			view.Daily = append(view.Daily, todo)
@@ -231,6 +231,8 @@ func findSubtaskByPath(ctx context.Context, tkm *TaskManager, name string) (data
 			IsDaily:      row.IsDaily,
 			HistorySince: since,
 			DueTime:      row.DueTime,
+			Recurrence:   row.Recurrence,
+			RepeatOn:     row.RepeatOn,
 			ParentID:     row.ParentID,
 			ParentName:   row.ParentName,
 			Relevance:    1,
@@ -253,7 +255,10 @@ func newTodoView(todoStatus database.ListTodosWithTodayStatusRow) (TodoView, err
 		ExpiresAt:   todoStatus.ExpiresAt,
 		Priority:    todoStatus.Priority,
 		IsDaily:     todoStatus.IsDaily,
+		Recurrence:  recurrenceOf(todoStatus.IsDaily, todoStatus.Recurrence),
+		RepeatOn:    int(todoStatus.RepeatOn.Int64),
 		DoneToday:   todoStatus.DoneToday,
+		DonePeriod:  todoStatus.DonePeriod,
 		DueTime:     todoStatus.DueTime.String,
 		ParentID:    nullUUID(todoStatus.ParentID),
 	}, nil
@@ -275,6 +280,8 @@ func viewFromTodo(todo database.Todo) (TodoView, error) {
 		ExpiresAt:   todo.ExpiresAt,
 		Priority:    todo.Priority,
 		IsDaily:     todo.IsDaily,
+		Recurrence:  recurrenceOf(todo.IsDaily, todo.Recurrence),
+		RepeatOn:    int(todo.RepeatOn.Int64),
 		DueTime:     todo.DueTime.String,
 		ParentID:    nullUUID(todo.ParentID),
 	}, nil
@@ -295,6 +302,8 @@ func viewFromNameRow(todo database.GetTodoByNameRow) (TodoView, error) {
 		Priority:    todo.Priority,
 		IsDaily:     todo.IsDaily,
 		DueTime:     todo.DueTime,
+		Recurrence:  todo.Recurrence,
+		RepeatOn:    todo.RepeatOn,
 	})
 	view.ParentID, view.Parent = parentID, todo.ParentName
 	return view, err

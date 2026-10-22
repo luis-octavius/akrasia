@@ -71,7 +71,15 @@
           <option value="low">low</option>
         </select>
       </label>
-      <label class="inline"><input type="checkbox" name="daily"> {{T "tui.form.daily"}}</label>
+      <label>{{T "tui.form.daily"}}
+        <select name="repeat">
+          <option value="">—</option>
+          <option value="daily">{{T "tasks.tasks.repeatDaily"}}</option>
+          <option value="weekly">{{T "tasks.tasks.repeatWeeklyAny"}}</option>
+          <option value="monthly">{{T "tasks.tasks.repeatMonthlyAny"}}</option>
+        </select>
+      </label>
+      <label>{{T "web.onLabel"}} <input name="on" autocomplete="off" placeholder="{{T "web.onHint"}}"></label>
       <p class="hint">{{T "web.addHint"}}</p>
     </details>
     <div class="buttons">
@@ -89,7 +97,7 @@
     <input type="hidden" name="tab" value="{{.Tab}}">
     <button class="check" aria-label="{{T "tui.help.complete"}}: {{.Name}}">○</button>
   </form>{{end}}
-  <span class="name">{{.Name}}{{if and .IsDaily (not .IsSubtask)}} <span class="muted">↻</span>{{end}}</span>
+  <span class="name">{{.Name}}{{if and .IsDaily (not .IsSubtask)}} <span class="muted">↻{{if or (eq .Recurrence "weekly") (eq .Recurrence "monthly")}} {{.Repeat}}{{end}}</span>{{end}}</span>
   {{with .SubtaskProgress}}{{if .Total}}<span class="count">{{.Done}}/{{.Total}}</span>{{end}}{{end}}
   {{if not .IsDaily}}<span class="due{{if .Late}} late{{end}}">{{due .ExpiresAt}}{{if .DueTime}} {{.DueTime}}{{end}}</span>{{else if .DueTime}}<span class="due">{{.DueTime}}</span>{{end}}
   {{if .Priority}}<span class="prio {{.Priority}}">{{.Priority}}</span>{{end}}
@@ -131,7 +139,15 @@
         <option value="low">low</option>
       </select>
     </label>
-    <label class="inline"><input type="checkbox" name="daily"> {{T "tui.form.daily"}}</label>
+    <label>{{T "tui.form.daily"}}
+        <select name="repeat">
+          <option value="">—</option>
+          <option value="daily">{{T "tasks.tasks.repeatDaily"}}</option>
+          <option value="weekly">{{T "tasks.tasks.repeatWeeklyAny"}}</option>
+          <option value="monthly">{{T "tasks.tasks.repeatMonthlyAny"}}</option>
+        </select>
+      </label>
+      <label>{{T "web.onLabel"}} <input name="on" autocomplete="off" placeholder="{{T "web.onHint"}}"></label>
     <p class="hint">{{T "web.convertHint"}}</p>
     <div class="buttons">
       <button>{{T "web.addTask"}}</button>

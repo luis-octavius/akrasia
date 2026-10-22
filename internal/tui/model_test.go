@@ -379,7 +379,7 @@ func TestAddTodoForm(t *testing.T) {
 		t.Fatalf("expected one task added, got %v (form err %v)", svc.added, m.form.err)
 	}
 	got := svc.added[0]
-	if got.Name != "write" || got.Priority != "high" || !got.IsDaily || got.ExpiresAt.Before(time.Now()) {
+	if got.Name != "write" || got.Priority != "high" || got.Recurrence != tasks.RecurDaily || got.ExpiresAt.Before(time.Now()) {
 		t.Fatalf("unexpected task: %+v", got)
 	}
 	if m.mode != modeNormal {
@@ -681,7 +681,7 @@ func TestEditSendsOnlyChangedFields(t *testing.T) {
 	if got.name != "taxes" || got.patch.Priority == nil || *got.patch.Priority != "low" {
 		t.Fatalf("expected priority low for taxes, got %+v", got)
 	}
-	if got.patch.Name != nil || got.patch.Description != nil || got.patch.IsDaily != nil || got.patch.ExpiresAt != nil {
+	if got.patch.Name != nil || got.patch.Description != nil || got.patch.IsDaily != nil || got.patch.Recurrence != nil || got.patch.RepeatOn != nil || got.patch.ExpiresAt != nil {
 		t.Fatalf("only the priority should change, got %+v", got.patch)
 	}
 	if !strings.Contains(m.status, "taxes") {
@@ -713,8 +713,8 @@ func TestEditDailyToggle(t *testing.T) {
 	// daily field: y -> n
 	m := send(t, start(t, svc, KeymapDefault), keyTab, runes("e"), keyDown, keyDown, keyDown, keyBackspace(), runes("n"), keyEnter, keyEnter, keyEnter)
 
-	if len(svc.edited) != 1 || svc.edited[0].patch.IsDaily == nil || *svc.edited[0].patch.IsDaily {
-		t.Fatalf("expected daily=false, got %+v (form err %v)", svc.edited, m.form.err)
+	if len(svc.edited) != 1 || svc.edited[0].patch.Recurrence == nil || *svc.edited[0].patch.Recurrence != tasks.RecurNone {
+		t.Fatalf("expected a one-off task (recurrence none), got %+v (form err %v)", svc.edited, m.form.err)
 	}
 }
 
@@ -860,7 +860,7 @@ func TestQuoteOnDemandAndOnlyForCompletions(t *testing.T) {
 
 func TestSpaceOnTaskDoneTodayReplacesNote(t *testing.T) {
 	read := todo("read")
-	read.IsDaily, read.DoneToday = true, true
+	read.IsDaily, read.DoneToday, read.DonePeriod = true, true, true
 	today := time.Now().Format(time.DateOnly)
 	svc := &fakeService{
 		daily: []tasks.TodoView{read},
@@ -890,7 +890,7 @@ func TestSpaceOnTaskDoneTodayReplacesNote(t *testing.T) {
 
 func TestReplacePromptStartsEmptyWithoutNoteToday(t *testing.T) {
 	read := todo("read")
-	read.IsDaily, read.DoneToday = true, true
+	read.IsDaily, read.DoneToday, read.DonePeriod = true, true, true
 	svc := &fakeService{
 		daily: []tasks.TodoView{read},
 		notes: []tasks.NoteEntry{{Date: "2026-01-01", Notes: "old"}},
@@ -1137,5 +1137,54 @@ func TestEditFormShowsAndChangesTime(t *testing.T) {
 
 	if len(svc.edited) != 1 || svc.edited[0].patch.DueTime == nil || *svc.edited[0].patch.DueTime != "" {
 		t.Fatalf("expected the time removed, got %+v", svc.edited)
+	}
+}
+
+func TestFormRepeatField(t *testing.T) {
+	// name, description, priority, repeat "w fri", date, time
+	svc := &fakeService{}
+	m := send(t, start(t, svc, KeymapDefault), runes("a"))
+	m = send(t, m, runes("review"), keyEnter, keyEnter, keyEnter, runes("w fri"), keyEnter, keyEnter, keyEnter)
+	if len(svc.added) != 1 || svc.added[0].Recurrence != tasks.RecurWeekly || svc.added[0].RepeatOn != 5 {
+		t.Fatalf("expected a weekly task on Friday, got %+v (form err %v)", svc.added, m.form.err)
+	}
+
+	svc = &fakeService{}
+	m = send(t, start(t, svc, KeymapDefault), runes("a"))
+	m = send(t, m, runes("rent"), keyEnter, keyEnter, keyEnter, runes("m 5"), keyEnter, keyEnter, keyEnter)
+	if len(svc.added) != 1 || svc.added[0].Recurrence != tasks.RecurMonthly || svc.added[0].RepeatOn != 5 {
+		t.Fatalf("expected a monthly task on day 5, got %+v (form err %v)", svc.added, m.form.err)
+	}
+
+	// a day that doesn't fit the kind keeps the form open
+	svc = &fakeService{}
+	m = send(t, start(t, svc, KeymapDefault), runes("a"))
+	m = send(t, m, runes("bad"), keyEnter, keyEnter, keyEnter, runes("w 15"), keyEnter, keyEnter, keyEnter)
+	if m.form.err == nil || len(svc.added) != 0 {
+		t.Fatalf("w 15 should be rejected, got %+v", svc.added)
+	}
+}
+
+func TestEditFormRepeatField(t *testing.T) {
+	weekly := todo("review")
+	weekly.IsDaily, weekly.Recurrence, weekly.RepeatOn = true, tasks.RecurWeekly, 5
+	svc := &fakeService{all: []tasks.TodoView{weekly}}
+
+	m := send(t, start(t, svc, KeymapDefault), keyTab, runes("e"))
+	if got := m.form.fields[fieldDaily].Value(); got != "w fri" {
+		t.Fatalf("the repeat field should be prefilled with %q, got %q", "w fri", got)
+	}
+
+	// move it to Monday
+	for range 3 {
+		m = send(t, m, keyDown)
+	}
+	for range "w fri" {
+		m = send(t, m, keyBackspace())
+	}
+	m = send(t, m, runes("w mon"), keyEnter, keyEnter, keyEnter)
+	if len(svc.edited) != 1 || svc.edited[0].patch.Recurrence == nil || *svc.edited[0].patch.Recurrence != tasks.RecurWeekly ||
+		svc.edited[0].patch.RepeatOn == nil || *svc.edited[0].patch.RepeatOn != 1 {
+		t.Fatalf("expected weekly on Monday, got %+v (form err %v)", svc.edited, m.form.err)
 	}
 }

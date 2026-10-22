@@ -59,8 +59,8 @@ func renderTodo(todo tasks.TodoView) string {
 	if !todo.IsDaily {
 		expires := fmt.Sprintf("%s · %s\n", dueLabel(todo), status)
 		fmt.Fprintf(&b, "  %s\n", color.Muted().Render(expires))
-	} else if todo.DueTime != "" {
-		fmt.Fprintf(&b, "  %s\n", color.Muted().Render(fmt.Sprintf(i18n.T("tasks.tasks.atTime"), todo.DueTime)))
+	} else if schedule := scheduleLabel(todo); schedule != "" {
+		fmt.Fprintf(&b, "  %s\n", color.Muted().Render(schedule))
 	}
 
 	if priority := todo.Priority; priority != "" {
@@ -89,6 +89,32 @@ func renderSubtask(sub tasks.TodoView) string {
 		line += color.Muted().Render(" · " + sub.DueTime)
 	}
 	return line + "\n"
+}
+
+// scheduleLabel is how a recurring task repeats and its time of day, as
+// "weekly on Fri · at 18:00". A plain daily task without a time has none:
+// it is already under the daily heading.
+func scheduleLabel(todo tasks.TodoView) string {
+	var parts []string
+	if todo.Recurrence == tasks.RecurWeekly || todo.Recurrence == tasks.RecurMonthly {
+		parts = append(parts, todo.Repeat())
+	}
+	if todo.DueTime != "" {
+		parts = append(parts, fmt.Sprintf(i18n.T("tasks.tasks.atTime"), todo.DueTime))
+	}
+	return strings.Join(parts, " · ")
+}
+
+// streakUnit names what a streak counts for a weekly or monthly task; it
+// is empty for a daily one, whose streaks print as before.
+func streakUnit(todo tasks.TodoView) string {
+	switch todo.Recurrence {
+	case tasks.RecurWeekly:
+		return i18n.T("tasks.tasks.streakUnitWeekly")
+	case tasks.RecurMonthly:
+		return i18n.T("tasks.tasks.streakUnitMonthly")
+	}
+	return ""
 }
 
 // dueLabel is a one-off task's due date, with its time of day when it has one.
@@ -145,7 +171,7 @@ func printTodayView(view tasks.TodayView, progress tasks.Progress, asJSON bool) 
 
 	printTodaySection(i18n.T("tasks.tasks.overdue"), view.Overdue)
 	printTodaySection(i18n.T("tasks.tasks.dueToday"), view.DueToday)
-	printTodaySection(i18n.T("tasks.tasks.dailyPending"), view.Daily)
+	printTodaySection(tasks.RecurringTitle(view.Daily), view.Daily)
 	printTodaySection(i18n.T("tasks.tasks.expiringSoon"), view.ExpiringSoon)
 
 	return nil
@@ -205,8 +231,13 @@ func printExpiring(todos []tasks.TodoView) {
 	printTodos(todos)
 }
 
-func printStreakHistory(periods []tasks.StreakPeriod) {
+func printStreakHistory(todo tasks.TodoView, periods []tasks.StreakPeriod) {
+	unit := streakUnit(todo)
 	for i, p := range periods {
+		if unit != "" {
+			fmt.Printf(i18n.T("tasks.tasks.getStreakHistoryPeriods"), i+1, p.StartDate, p.EndDate, unit, p.Days)
+			continue
+		}
 		fmt.Printf(i18n.T("tasks.tasks.getStreakHistory"), i+1, p.StartDate, p.EndDate, p.Days)
 	}
 }
@@ -262,7 +293,11 @@ func printBackfillReport(r tasks.BackfillReport, taskName string) {
 func printNotes(todo tasks.TodoView, streak int64, entries []tasks.NoteEntry) {
 	title := fmt.Sprintf(i18n.T("tasks.tasks.notesTitle"), todo.Name)
 	if todo.IsDaily {
-		title += color.Muted().Render(" (" + fmt.Sprintf(i18n.T("tasks.tasks.notesStreak"), streak) + ")")
+		label := fmt.Sprintf(i18n.T("tasks.tasks.notesStreak"), streak)
+		if unit := streakUnit(todo); unit != "" {
+			label = fmt.Sprintf(i18n.T("tasks.tasks.notesStreakPeriods"), streak, unit)
+		}
+		title += color.Muted().Render(" (" + label + ")")
 	}
 	lipgloss.Println(color.Title().Render(title))
 

@@ -36,6 +36,19 @@ func (tkm *TaskManager) Expiring(ctx context.Context) ([]TodoView, error) {
 	})
 }
 
+// doneStatus tells whether the task was completed today and whether it is
+// done for its current period (the same, but for a weekly or monthly task).
+func (tkm *TaskManager) doneStatus(ctx context.Context, id interface{}) (today, period bool, err error) {
+	if today, err = tkm.isDoneToday(ctx, id); err != nil {
+		return false, false, err
+	}
+	n, err := tkm.Queries.IsDoneThisPeriod(ctx, id)
+	if err != nil {
+		return false, false, fmt.Errorf(i18n.T("tasks.error.findTask"), id, err)
+	}
+	return today, n == 1, nil
+}
+
 func (tkm *TaskManager) isDoneToday(ctx context.Context, id interface{}) (bool, error) {
 	isDoneToday, err := tkm.Queries.IsDoneToday(ctx, id)
 	if err != nil {

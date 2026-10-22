@@ -164,3 +164,56 @@ func TestDueTimeMigrationKeepsData(t *testing.T) {
 		t.Fatalf("task after the migration = %q, %v, %v; want Run without a time", name, dueTime, err)
 	}
 }
+
+// The recurrence migration turns the old is_daily flag into recurrence =
+// 'daily' and leaves one-off tasks alone.
+func TestRecurrenceMigration(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "akrasia.db")
+	conn, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	goose.SetBaseFS(embedMigrations)
+	goose.SetLogger(goose.NopLogger())
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		t.Fatal(err)
+	}
+	if err := goose.UpTo(conn, "schema", 10); err != nil {
+		t.Fatalf("migrating to 10: %v", err)
+	}
+	_, err = conn.Exec(`
+		INSERT INTO todos (id, name, created_at, updated_at, concluded, expires_at, priority, is_daily)
+		VALUES ('11111111-1111-1111-1111-111111111111', 'Run', '2026-10-01', '2026-10-01 08:00:00', 0, '2026-10-02 00:00:00', 'high', 1),
+		       ('22222222-2222-2222-2222-222222222222', 'Taxes', '2026-10-01', '2026-10-01 08:00:00', 0, '2026-10-30 00:00:00', 'high', 0)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := runMigrations(path, true); err != nil {
+		t.Fatalf("migrating to 11: %v", err)
+	}
+
+	rows, err := conn.Query(`SELECT name, recurrence, repeat_on FROM todos ORDER BY name`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	want := map[string]string{"Run": "daily", "Taxes": "none"}
+	for rows.Next() {
+		var name, recurrence string
+		var repeatOn sql.NullInt64
+		if err := rows.Scan(&name, &recurrence, &repeatOn); err != nil {
+			t.Fatal(err)
+		}
+		if recurrence != want[name] || repeatOn.Valid {
+			t.Errorf("%s = %q, %v; want %q without a day", name, recurrence, repeatOn, want[name])
+		}
+		delete(want, name)
+	}
+	if len(want) != 0 {
+		t.Errorf("tasks missing after the migration: %v", want)
+	}
+}

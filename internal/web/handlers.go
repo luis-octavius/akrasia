@@ -125,7 +125,7 @@ func (s *Server) load(r *http.Request, t tab) (pageData, error) {
 	todaySections := []section{
 		{i18n.T("tasks.tasks.overdue"), rows(t, view.Overdue)},
 		{i18n.T("tasks.tasks.dueToday"), rows(t, view.DueToday)},
-		{i18n.T("tasks.tasks.dailyPending"), rows(t, view.Daily)},
+		{tasks.RecurringTitle(view.Daily), rows(t, view.Daily)},
 		{i18n.T("tasks.tasks.expiringSoon"), rows(t, view.ExpiringSoon)},
 	}
 	for _, sec := range todaySections {
@@ -204,8 +204,12 @@ func (s *Server) add(w http.ResponseWriter, r *http.Request) {
 		Name:     name,
 		Parent:   strings.TrimSpace(r.FormValue("parent")),
 		Priority: r.FormValue("priority"),
-		IsDaily:  r.FormValue("daily") != "",
 		DueTime:  r.FormValue("time"),
+	}
+	var err error
+	if in.Recurrence, in.RepeatOn, err = repeatFromForm(r); err != nil {
+		s.reply(w, r, t, "", err)
+		return
 	}
 
 	due, err := parseDate(r.FormValue("date"), in.Parent != "", s.now())
@@ -217,6 +221,23 @@ func (s *Server) add(w http.ResponseWriter, r *http.Request) {
 
 	todo, err := s.svc.AddTodo(r.Context(), in)
 	s.reply(w, r, t, fmt.Sprintf(i18n.T("tui.status.created"), todo.Path()), err)
+}
+
+// repeatFromForm reads how the form says the task repeats: the repeat
+// select (none, daily, weekly, monthly), the older daily checkbox, and the
+// day of a weekly or monthly one.
+func repeatFromForm(r *http.Request) (string, int, error) {
+	repeat := r.FormValue("repeat")
+	if repeat == "" && r.FormValue("daily") != "" {
+		repeat = tasks.RecurDaily
+	}
+
+	on := strings.TrimSpace(r.FormValue("on"))
+	if on == "" {
+		return repeat, 0, nil
+	}
+	repeatOn, err := tasks.ParseRepeatOn(repeat, on)
+	return repeat, repeatOn, err
 }
 
 // parseDate reads the form's yyyy-mm-dd date with the rules of
@@ -356,8 +377,11 @@ func (s *Server) convert(w http.ResponseWriter, r *http.Request) {
 		Name:     strings.TrimSpace(r.FormValue("name")),
 		Parent:   strings.TrimSpace(r.FormValue("parent")),
 		Priority: r.FormValue("priority"),
-		IsDaily:  r.FormValue("daily") != "",
 		DueTime:  r.FormValue("time"),
+	}
+	if in.Recurrence, in.RepeatOn, err = repeatFromForm(r); err != nil {
+		s.reply(w, r, tabDump, "", err)
+		return
 	}
 	if in.Name == "" {
 		s.reply(w, r, tabDump, "", errors.New(i18n.T("tui.form.nameRequired")))

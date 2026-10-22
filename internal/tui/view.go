@@ -256,11 +256,9 @@ func (m Model) renderDetails(r row) string {
 	}
 
 	todo := r.todo
-	yesNo := func(b bool) string {
-		if b {
-			return i18n.T("tui.details.yes")
-		}
-		return i18n.T("tui.details.no")
+	repeat := todo.Repeat()
+	if repeat == "" {
+		repeat = i18n.T("tui.details.no")
 	}
 
 	status := color.Warning().Render(i18n.T("tasks.tasks.notDone"))
@@ -285,7 +283,7 @@ func (m Model) renderDetails(r row) string {
 		lines = append(lines, field(i18n.T("tui.details.priority"), priorityBadge(todo.Priority)))
 	}
 	lines = append(lines,
-		field(i18n.T("tui.details.daily"), yesNo(todo.IsDaily)),
+		field(i18n.T("tui.details.daily"), repeat),
 		field(i18n.T("tui.details.status"), status),
 	)
 	if len(todo.Subtasks) > 0 {
@@ -294,13 +292,13 @@ func (m Model) renderDetails(r row) string {
 	}
 
 	if todo.IsDaily && m.streakKnown && m.detailsName == todo.Path() {
-		days := color.Accent().Render(fmt.Sprintf(i18n.T("tui.details.days"), m.streakDays))
+		days := color.Accent().Render(fmt.Sprintf(i18n.T(streakKey(todo.Recurrence, "days", "weeks", "months")), m.streakDays))
 		lines = append(lines, field(i18n.T("tui.details.streak"), days))
 
 		if len(m.streakHistory) > 0 {
 			lines = append(lines, "", color.Title().Render(i18n.T("tui.details.history")))
 			for _, p := range m.streakHistory[:min(len(m.streakHistory), historyLimit)] {
-				lines = append(lines, color.Muted().Render("• ")+fmt.Sprintf(i18n.T("tui.details.period"), p.StartDate, p.EndDate, p.Days))
+				lines = append(lines, color.Muted().Render("• ")+fmt.Sprintf(i18n.T(streakKey(todo.Recurrence, "period", "periodWeeks", "periodMonths")), p.StartDate, p.EndDate, p.Days))
 			}
 		}
 	}
@@ -309,6 +307,18 @@ func (m Model) renderDetails(r row) string {
 		lines = append(lines, noteLines(m.detailNotes, detailsTextWidth)...)
 	}
 	return strings.Join(lines, "\n")
+}
+
+// streakKey picks the detail text that counts days, weeks or months for a
+// task's recurrence.
+func streakKey(recurrence, days, weeks, months string) string {
+	switch recurrence {
+	case tasks.RecurWeekly:
+		return "tui.details." + weeks
+	case tasks.RecurMonthly:
+		return "tui.details." + months
+	}
+	return "tui.details." + days
 }
 
 // visibleRange scrolls just enough to keep the cursor on screen; height 0
@@ -420,7 +430,11 @@ func renderTodoLine(todo tasks.TodoView, selected, folded bool, width int) strin
 	left += iconStyle.Inherit(base).Render(icon) + base.Render(" ") +
 		nameStyle.Inherit(base).Render(todo.Name)
 	if todo.IsDaily && !todo.IsSubtask() {
-		left += color.Muted().Inherit(base).Render(" ↻")
+		mark := " ↻"
+		if todo.Recurrence == tasks.RecurWeekly || todo.Recurrence == tasks.RecurMonthly {
+			mark += " " + todo.Repeat()
+		}
+		left += color.Muted().Inherit(base).Render(mark)
 	}
 	if len(todo.Subtasks) > 0 {
 		p := todo.SubtaskProgress()

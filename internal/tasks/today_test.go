@@ -15,7 +15,7 @@ func TestBuildTodayView(t *testing.T) {
 		{Name: "due-today-low", Priority: "low", ExpiresAt: now.Add(3 * time.Hour)},
 		{Name: "expiring-soon", Priority: "medium", ExpiresAt: now.Add(48 * time.Hour)},
 		{Name: "daily-pending", IsDaily: true, Priority: "high", ExpiresAt: now.Add(24 * time.Hour)},
-		{Name: "daily-done", IsDaily: true, DoneToday: true, Priority: "high", ExpiresAt: now.Add(24 * time.Hour)},
+		{Name: "daily-done", IsDaily: true, DoneToday: true, DonePeriod: true, Priority: "high", ExpiresAt: now.Add(24 * time.Hour)},
 		{Name: "done-ignored", Concluded: true, ExpiresAt: now.Add(24 * time.Hour)},
 		{Name: "far-future", ExpiresAt: now.Add(10 * 24 * time.Hour)},
 	}
@@ -92,7 +92,7 @@ func TestRemindersWindowAndDaily(t *testing.T) {
 		{Name: "in4", ExpiresAt: day(23)},
 		{Name: "done", ExpiresAt: day(20), Concluded: true},
 		{Name: "habit", IsDaily: true},
-		{Name: "habitDone", IsDaily: true, DoneToday: true},
+		{Name: "habitDone", IsDaily: true, DoneToday: true, DonePeriod: true},
 	}
 
 	names := func(ts []TodoView) []string {

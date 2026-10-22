@@ -49,7 +49,6 @@ func newTodoForm(width int) todoForm {
 		in.Prompt = ""
 		f.fields[i] = in
 	}
-	f.fields[fieldDaily].CharLimit = 1
 	f.fields[fieldPriority].Placeholder = i18n.T("tui.form.priorityHint")
 	f.fields[fieldDaily].Placeholder = i18n.T("tui.form.dailyHint")
 	f.fields[fieldDate].Placeholder = i18n.T("tui.form.dateHint")
@@ -74,7 +73,7 @@ func newSubtaskForm(width int, parent tasks.TodoView) todoForm {
 	f := newTodoForm(width)
 	f.parent = &parent
 	if parent.IsDaily {
-		f.fields[fieldDaily].SetValue("y")
+		f.fields[fieldDaily].SetValue(parent.RepeatField())
 	}
 	f.fields[fieldDate].Placeholder = i18n.T("tui.form.subtaskDateHint")
 	return f
@@ -86,9 +85,9 @@ func newEditForm(width int, todo tasks.TodoView) todoForm {
 	f := newTodoForm(width)
 	f.editing = &todo
 
-	daily, date := "n", todo.ExpiresAt.Format("02/01/2006")
+	daily, date := todo.RepeatField(), todo.ExpiresAt.Format("02/01/2006")
 	if todo.IsDaily {
-		daily, date = "y", ""
+		date = ""
 	}
 	f.initial = [fieldCount]string{todo.Name, todo.Description.String, todo.Priority, daily, date, todo.DueTime}
 	for i, v := range f.initial {
@@ -166,7 +165,7 @@ func (f todoForm) value() (tasks.NewTodo, error) {
 	if in.Priority, err = parsePriority(f.fields[fieldPriority].Value()); err != nil {
 		return in, err
 	}
-	if in.IsDaily, err = parseDaily(f.fields[fieldDaily].Value()); err != nil {
+	if in.Recurrence, in.RepeatOn, err = tasks.ParseRepeatField(f.fields[fieldDaily].Value()); err != nil {
 		return in, err
 	}
 	if in.DueTime, err = tasks.ParseClock(f.fields[fieldTime].Value()); err != nil {
@@ -208,12 +207,17 @@ func (f todoForm) patch() (tasks.TodoPatch, error) {
 		}
 		p.Priority = &priority
 	}
-	daily, err := parseDaily(f.fields[fieldDaily].Value())
-	if err != nil {
-		return p, err
-	}
-	if daily != f.editing.IsDaily {
-		p.IsDaily = &daily
+	if v, ok := changed(fieldDaily); ok {
+		recurrence, repeatOn, err := tasks.ParseRepeatField(v)
+		if err != nil {
+			return p, err
+		}
+		p.Recurrence = &recurrence
+		// a day is only sent when given: the task keeps its day otherwise
+		// unless the kind changes, which resets it
+		if repeatOn != 0 {
+			p.RepeatOn = &repeatOn
+		}
 	}
 	if v, ok := changed(fieldDate); ok {
 		date, err := parseDueDate(v)
@@ -239,17 +243,6 @@ func parsePriority(s string) (string, error) {
 		return p, nil
 	}
 	return "", errors.New(i18n.T("tui.form.invalidPriority"))
-}
-
-// parseDaily accepts y/s ("sim") or n; empty means no.
-func parseDaily(s string) (bool, error) {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "", "n":
-		return false, nil
-	case "y", "s":
-		return true, nil
-	}
-	return false, errors.New(i18n.T("tui.form.invalidDaily"))
 }
 
 func parseDueDate(s string) (time.Time, error) {

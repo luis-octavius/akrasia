@@ -90,13 +90,20 @@ func (q *Queries) BackfillDailyDone(ctx context.Context, arg BackfillDailyDonePa
 	return i, err
 }
 
-const deleteTodayHistory = `-- name: DeleteTodayHistory :exec
+const deleteCurrentPeriodHistory = `-- name: DeleteCurrentPeriodHistory :exec
 DELETE FROM todos_history
-WHERE todo_id = ? AND date = date('now', 'localtime')
+WHERE todo_id = ?1
+  AND date >= CASE (SELECT recurrence FROM todos WHERE id = ?1)
+    WHEN 'weekly' THEN date('now', 'localtime', 'weekday 0', '-6 days')
+    WHEN 'monthly' THEN date('now', 'localtime', 'start of month')
+    ELSE date('now', 'localtime')
+  END
 `
 
-func (q *Queries) DeleteTodayHistory(ctx context.Context, todoID interface{}) error {
-	_, err := q.db.ExecContext(ctx, deleteTodayHistory, todoID)
+// Undoes a recurring task's completion: removes the rows of its current
+// period (today, this week or this month).
+func (q *Queries) DeleteCurrentPeriodHistory(ctx context.Context, id interface{}) error {
+	_, err := q.db.ExecContext(ctx, deleteCurrentPeriodHistory, id)
 	return err
 }
 
@@ -297,6 +304,28 @@ func (q *Queries) GetStreakHistory(ctx context.Context, arg GetStreakHistoryPara
 		return nil, err
 	}
 	return items, nil
+}
+
+const isDoneThisPeriod = `-- name: IsDoneThisPeriod :one
+SELECT EXISTS(
+    SELECT 1 FROM todos_history p
+    JOIN todos t ON t.id = p.todo_id
+    WHERE p.todo_id = ? AND p.completed = 1
+      AND p.date >= CASE t.recurrence
+        WHEN 'weekly' THEN date('now', 'localtime', 'weekday 0', '-6 days')
+        WHEN 'monthly' THEN date('now', 'localtime', 'start of month')
+        ELSE date('now', 'localtime')
+      END
+) AS done_period
+`
+
+// Like IsDoneToday, but for a weekly or monthly task a completion
+// anywhere in the current week or month counts.
+func (q *Queries) IsDoneThisPeriod(ctx context.Context, todoID interface{}) (int64, error) {
+	row := q.db.QueryRowContext(ctx, isDoneThisPeriod, todoID)
+	var done_period int64
+	err := row.Scan(&done_period)
+	return done_period, err
 }
 
 const isDoneToday = `-- name: IsDoneToday :one

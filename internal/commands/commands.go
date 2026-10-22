@@ -25,6 +25,9 @@ var (
 	priority       string
 	date           []int
 	addTime        string
+	addWeekly      bool
+	addMonthly     bool
+	addOn          string
 	daysBackfill   int
 	todayOnly      string
 	todayLimit     int
@@ -42,6 +45,9 @@ var (
 	editDaily       bool
 	editDate        []int
 	editTime        string
+	editWeekly      bool
+	editMonthly     bool
+	editOn          string
 
 	notesLimit int
 
@@ -52,6 +58,9 @@ var (
 	dumpDaily    bool
 	dumpDate     []int
 	dumpTime     string
+	dumpWeekly   bool
+	dumpMonthly  bool
+	dumpOn       string
 )
 
 // rootCmd is the CLI entrypoint that registers all Akrasia subcommands.
@@ -144,12 +153,18 @@ var add = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		recurrence, repeatOn, err := repeatFromFlags(isDaily, addWeekly, addMonthly, addOn, len(date) > 0, expiresAt)
+		if err != nil {
+			return err
+		}
 
 		todo, err := tkm.AddTodo(cmd.Context(), tasks.NewTodo{
 			Name:        taskName,
 			Description: taskDesc,
 			Priority:    priority,
 			IsDaily:     isDaily,
+			Recurrence:  recurrence,
+			RepeatOn:    repeatOn,
 			ExpiresAt:   expiresAt,
 			DueTime:     addTime,
 			Parent:      parentName,
@@ -484,6 +499,10 @@ var getTodoCurrentStreak = &cobra.Command{
 			return err
 		}
 
+		if unit := streakUnit(todo); unit != "" {
+			fmt.Printf(i18n.T("tasks.info.currentStreakPeriods"), todo.Name, streak, unit)
+			return nil
+		}
 		fmt.Printf(i18n.T("tasks.info.currentStreak"), todo.Name, streak)
 		return nil
 	},
@@ -506,12 +525,12 @@ var getTodoStreakHistory = &cobra.Command{
 			taskName = args[0]
 		}
 
-		_, periods, err := tkm.StreakHistory(cmd.Context(), taskName)
+		todo, periods, err := tkm.StreakHistory(cmd.Context(), taskName)
 		if err != nil {
 			return err
 		}
 
-		printStreakHistory(periods)
+		printStreakHistory(todo, periods)
 		return nil
 	},
 }
@@ -590,7 +609,8 @@ var dumpCmd = &cobra.Command{
 
 		flags := cmd.Flags()
 		deleting, promoting := flags.Changed("delete"), flags.Changed("to-task")
-		taskFlags := flags.Changed("priority") || flags.Changed("daily") || flags.Changed("date") || flags.Changed("time")
+		taskFlags := flags.Changed("priority") || flags.Changed("daily") || flags.Changed("weekly") ||
+			flags.Changed("monthly") || flags.Changed("on") || flags.Changed("date") || flags.Changed("time")
 
 		switch {
 		case (deleting && promoting) || ((deleting || promoting) && dumpName != ""):
@@ -618,12 +638,18 @@ var dumpCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
+			recurrence, repeatOn, err := repeatFromFlags(dumpDaily, dumpWeekly, dumpMonthly, dumpOn, len(dumpDate) > 0, expiresAt)
+			if err != nil {
+				return err
+			}
 			todo, err := tkm.PromoteDump(cmd.Context(), entry.ID, tasks.NewTodo{
-				Name:      entry.Name,
-				Priority:  dumpPriority,
-				IsDaily:   dumpDaily,
-				DueTime:   dumpTime,
-				ExpiresAt: expiresAt,
+				Name:       entry.Name,
+				Priority:   dumpPriority,
+				IsDaily:    dumpDaily,
+				Recurrence: recurrence,
+				RepeatOn:   repeatOn,
+				DueTime:    dumpTime,
+				ExpiresAt:  expiresAt,
 			})
 			if err != nil {
 				return err
@@ -696,8 +722,8 @@ func editPatch(cmd *cobra.Command) (tasks.TodoPatch, error) {
 	if flags.Changed("priority") {
 		patch.Priority = &editPriority
 	}
-	if flags.Changed("daily") {
-		patch.IsDaily = &editDaily
+	if err := editRecurrence(cmd, &patch); err != nil {
+		return patch, err
 	}
 	if flags.Changed("date") {
 		expiresAt, err := tasks.ParseDate(editDate)
@@ -710,6 +736,82 @@ func editPatch(cmd *cobra.Command) (tasks.TodoPatch, error) {
 		patch.DueTime = &editTime
 	}
 	return patch, nil
+}
+
+// repeatFromFlags reads the recurrence flags of add and dump --to-task: at
+// most one of --daily, --weekly and --monthly, and --on for the weekday or
+// day of the month. Without --on, a weekly or monthly task falls on the
+// weekday or day of --date when it is given, otherwise of today.
+func repeatFromFlags(daily, weekly, monthly bool, on string, dateGiven bool, date time.Time) (string, int, error) {
+	recurrence, n := "", 0
+	for _, kind := range []struct {
+		set  bool
+		name string
+	}{{daily, tasks.RecurDaily}, {weekly, tasks.RecurWeekly}, {monthly, tasks.RecurMonthly}} {
+		if kind.set {
+			recurrence, n = kind.name, n+1
+		}
+	}
+	if n > 1 {
+		return "", 0, errors.New(i18n.T("commands.error.repeatExclusive"))
+	}
+
+	repeatOn := 0
+	switch {
+	case on != "":
+		if recurrence != tasks.RecurWeekly && recurrence != tasks.RecurMonthly {
+			return "", 0, errors.New(i18n.T("tasks.error.repeatOnNeedsWeeklyOrMonthly"))
+		}
+		var err error
+		if repeatOn, err = tasks.ParseRepeatOn(recurrence, on); err != nil {
+			return "", 0, err
+		}
+	case dateGiven && recurrence == tasks.RecurWeekly:
+		repeatOn = tasks.ISOWeekday(date)
+	case dateGiven && recurrence == tasks.RecurMonthly:
+		repeatOn = date.Day()
+	}
+	return recurrence, repeatOn, nil
+}
+
+// editRecurrence fills the recurrence part of an edit patch from the flags
+// that were passed. --weekly and --monthly switch the kind; --daily and
+// the false forms (--daily=false) switch to daily or to a one-off task;
+// --on alone moves a weekly or monthly task to another day.
+func editRecurrence(cmd *cobra.Command, patch *tasks.TodoPatch) error {
+	flags := cmd.Flags()
+
+	var kinds []string
+	if flags.Changed("daily") && editDaily {
+		kinds = append(kinds, tasks.RecurDaily)
+	}
+	if flags.Changed("weekly") && editWeekly {
+		kinds = append(kinds, tasks.RecurWeekly)
+	}
+	if flags.Changed("monthly") && editMonthly {
+		kinds = append(kinds, tasks.RecurMonthly)
+	}
+	if len(kinds) > 1 {
+		return errors.New(i18n.T("commands.error.repeatExclusive"))
+	}
+
+	switch {
+	case len(kinds) == 1:
+		patch.Recurrence = &kinds[0]
+	case flags.Changed("daily") || flags.Changed("weekly") || flags.Changed("monthly"):
+		// every flag passed was false: not recurring any more
+		off := false
+		patch.IsDaily = &off
+	}
+
+	if flags.Changed("on") {
+		on, err := tasks.ParseDay(editOn)
+		if err != nil {
+			return err
+		}
+		patch.RepeatOn = &on
+	}
+	return nil
 }
 
 // notesCmd shows what was written each day a task was completed.
@@ -962,6 +1064,9 @@ func init() {
 	add.Flags().StringVar(&priority, "priority", "", i18n.T("commands.flags.addPriority"))
 	add.Flags().StringVar(&addTime, "time", "", i18n.T("commands.flags.addTime"))
 	add.Flags().Bool("daily", false, i18n.T("commands.flags.addDaily"))
+	add.Flags().BoolVar(&addWeekly, "weekly", false, i18n.T("commands.flags.addWeekly"))
+	add.Flags().BoolVar(&addMonthly, "monthly", false, i18n.T("commands.flags.addMonthly"))
+	add.Flags().StringVar(&addOn, "on", "", i18n.T("commands.flags.addOn"))
 	add.Flags().StringVar(&description, "desc", "", i18n.T("commands.flags.addDescription"))
 	add.Flags().StringVar(&parentName, "parent", "", i18n.T("commands.flags.addParent"))
 	getAll.Flags().StringVar(&filterPriority, "priority", "", i18n.T("commands.flags.getAllPriority"))
@@ -984,6 +1089,9 @@ func init() {
 	dumpCmd.Flags().IntVar(&dumpToTask, "to-task", 0, i18n.T("commands.flags.dumpToTask"))
 	dumpCmd.Flags().StringVar(&dumpPriority, "priority", "", i18n.T("commands.flags.dumpPriority"))
 	dumpCmd.Flags().BoolVar(&dumpDaily, "daily", false, i18n.T("commands.flags.dumpDaily"))
+	dumpCmd.Flags().BoolVar(&dumpWeekly, "weekly", false, i18n.T("commands.flags.dumpWeekly"))
+	dumpCmd.Flags().BoolVar(&dumpMonthly, "monthly", false, i18n.T("commands.flags.dumpMonthly"))
+	dumpCmd.Flags().StringVar(&dumpOn, "on", "", i18n.T("commands.flags.dumpOn"))
 	dumpCmd.Flags().IntSliceVar(&dumpDate, "date", nil, i18n.T("commands.flags.dumpDate"))
 	dumpCmd.Flags().StringVar(&dumpTime, "time", "", i18n.T("commands.flags.dumpTime"))
 	notesCmd.Flags().IntVar(&notesLimit, "limit", 30, i18n.T("commands.flags.notesLimit"))
@@ -991,6 +1099,9 @@ func init() {
 	editCmd.Flags().StringVar(&editDescription, "desc", "", i18n.T("commands.flags.editDescription"))
 	editCmd.Flags().StringVar(&editPriority, "priority", "", i18n.T("commands.flags.editPriority"))
 	editCmd.Flags().BoolVar(&editDaily, "daily", false, i18n.T("commands.flags.editDaily"))
+	editCmd.Flags().BoolVar(&editWeekly, "weekly", false, i18n.T("commands.flags.editWeekly"))
+	editCmd.Flags().BoolVar(&editMonthly, "monthly", false, i18n.T("commands.flags.editMonthly"))
+	editCmd.Flags().StringVar(&editOn, "on", "", i18n.T("commands.flags.editOn"))
 	editCmd.Flags().IntSliceVar(&editDate, "date", nil, i18n.T("commands.flags.editDate"))
 	editCmd.Flags().StringVar(&editTime, "time", "", i18n.T("commands.flags.editTime"))
 	today.Flags().StringVar(&todayOnly, "only", "", i18n.T("commands.flags.todayOnly"))

@@ -40,7 +40,7 @@ func reminders(todos []TodoView, now time.Time, days int, withDaily bool) Remind
 	for _, todo := range todos {
 		switch {
 		case todo.IsDaily:
-			if withDaily && !todo.DoneToday {
+			if withDaily && IsScheduled(todo, now) && !todo.DonePeriod {
 				r.Daily = append(r.Daily, todo)
 			}
 		case todo.Concluded:
