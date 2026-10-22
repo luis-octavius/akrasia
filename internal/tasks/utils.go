@@ -29,8 +29,8 @@ func IsExpiringSoon(expiresAt time.Time) bool {
 }
 
 // buildTodayView classifies pending tasks into today-oriented sections.
-// Daily tasks are judged by DoneToday instead of Concluded, because that
-// flag is never set for daily tasks.
+// Recurring tasks are judged by DonePeriod instead of Concluded, because
+// that flag is never set for them, and only show on the days they are due.
 func buildTodayView(todos []TodoView, now time.Time) TodayView {
 	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	dayEnd := dayStart.Add(24 * time.Hour)
@@ -39,7 +39,7 @@ func buildTodayView(todos []TodoView, now time.Time) TodayView {
 
 	for _, todo := range todos {
 		if todo.IsDaily {
-			if todo.DoneToday {
+			if todo.DonePeriod || !IsScheduled(todo, now) {
 				continue
 			}
 			view.Daily = append(view.Daily, todo)
@@ -113,9 +113,10 @@ func limitTodos(todos []TodoView, limit int) []TodoView {
 	return todos[:limit]
 }
 
-// sortTodayTodos orders tasks by priority first, then expiration date.
+// sortTodayTodos orders tasks by priority first, then expiration date,
+// then time of day (untimed last).
 func sortTodayTodos(todos []TodoView) {
-	sort.Slice(todos, func(i, j int) bool {
+	sort.SliceStable(todos, func(i, j int) bool {
 		leftPriority := priorityRank(todos[i].Priority)
 		rightPriority := priorityRank(todos[j].Priority)
 
@@ -123,8 +124,21 @@ func sortTodayTodos(todos []TodoView) {
 			return leftPriority < rightPriority
 		}
 
-		return todos[i].ExpiresAt.Before(todos[j].ExpiresAt)
+		// a recurring task's date means nothing: only its time orders it
+		if !(todos[i].IsDaily && todos[j].IsDaily) && !todos[i].ExpiresAt.Equal(todos[j].ExpiresAt) {
+			return todos[i].ExpiresAt.Before(todos[j].ExpiresAt)
+		}
+
+		return timeBefore(todos[i].DueTime, todos[j].DueTime)
 	})
+}
+
+// timeBefore orders "HH:MM" strings with the untimed ones last.
+func timeBefore(a, b string) bool {
+	if a == "" || b == "" {
+		return a != "" && b == ""
+	}
+	return a < b
 }
 
 // priorityRank maps textual priority to a sortable numeric value.
@@ -216,6 +230,9 @@ func findSubtaskByPath(ctx context.Context, tkm *TaskManager, name string) (data
 			Priority:     row.Priority,
 			IsDaily:      row.IsDaily,
 			HistorySince: since,
+			DueTime:      row.DueTime,
+			Recurrence:   row.Recurrence,
+			RepeatOn:     row.RepeatOn,
 			ParentID:     row.ParentID,
 			ParentName:   row.ParentName,
 			Relevance:    1,
@@ -238,7 +255,11 @@ func newTodoView(todoStatus database.ListTodosWithTodayStatusRow) (TodoView, err
 		ExpiresAt:   todoStatus.ExpiresAt,
 		Priority:    todoStatus.Priority,
 		IsDaily:     todoStatus.IsDaily,
+		Recurrence:  recurrenceOf(todoStatus.IsDaily, todoStatus.Recurrence),
+		RepeatOn:    int(todoStatus.RepeatOn.Int64),
 		DoneToday:   todoStatus.DoneToday,
+		DonePeriod:  todoStatus.DonePeriod,
+		DueTime:     todoStatus.DueTime.String,
 		ParentID:    nullUUID(todoStatus.ParentID),
 	}, nil
 }
@@ -259,6 +280,9 @@ func viewFromTodo(todo database.Todo) (TodoView, error) {
 		ExpiresAt:   todo.ExpiresAt,
 		Priority:    todo.Priority,
 		IsDaily:     todo.IsDaily,
+		Recurrence:  recurrenceOf(todo.IsDaily, todo.Recurrence),
+		RepeatOn:    int(todo.RepeatOn.Int64),
+		DueTime:     todo.DueTime.String,
 		ParentID:    nullUUID(todo.ParentID),
 	}, nil
 }
@@ -277,6 +301,9 @@ func viewFromNameRow(todo database.GetTodoByNameRow) (TodoView, error) {
 		ExpiresAt:   todo.ExpiresAt,
 		Priority:    todo.Priority,
 		IsDaily:     todo.IsDaily,
+		DueTime:     todo.DueTime,
+		Recurrence:  todo.Recurrence,
+		RepeatOn:    todo.RepeatOn,
 	})
 	view.ParentID, view.Parent = parentID, todo.ParentName
 	return view, err

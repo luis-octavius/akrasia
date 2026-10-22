@@ -13,7 +13,7 @@ import (
 
 // Subtasks are one level deep: a top-level task can have subtasks, a
 // subtask can't. The rules that keep a parent in step with them:
-//   - a subtask follows its parent's daily mode and is due no later than it;
+//   - a subtask follows its parent's recurrence and is due no later than it;
 //   - when every subtask is done, the parent is done too (for a daily
 //     parent: each day, once that day's subtasks are all done);
 //   - a parent with a pending subtask is not done: adding one reopens it;
@@ -125,10 +125,10 @@ func (tkm *TaskManager) markDone(ctx context.Context, id uuid.UUID, daily bool, 
 }
 
 // reopen undoes a parent's completion: a one-off task is no longer
-// concluded, a daily one loses today's history row.
+// concluded, a recurring one loses the history rows of its current period.
 func (tkm *TaskManager) reopen(ctx context.Context, parent TodoView) error {
 	if parent.IsDaily {
-		return tkm.Queries.DeleteTodayHistory(ctx, parent.ID)
+		return tkm.Queries.DeleteCurrentPeriodHistory(ctx, parent.ID)
 	}
 	return tkm.Queries.ReopenTodo(ctx, parent.ID)
 }
@@ -155,9 +155,10 @@ func pendingSubtasksError(parent TodoView) error {
 }
 
 // subtaskRules checks a new or edited subtask against its parent: it
-// follows the parent's daily mode and is due no later than it.
-func subtaskRules(parent TodoView, isDaily bool, expiresAt time.Time) error {
-	if isDaily != parent.IsDaily {
+// follows the parent's recurrence (kind and day) and is due no later than
+// it.
+func subtaskRules(parent TodoView, recurrence string, repeatOn sql.NullInt64, expiresAt time.Time) error {
+	if recurrence != parent.Recurrence || int(repeatOn.Int64) != parent.RepeatOn {
 		return localizedError{
 			msg:      fmt.Sprintf(i18n.T("tasks.error.subtaskDaily"), parent.Name),
 			sentinel: ErrInvalidInput,

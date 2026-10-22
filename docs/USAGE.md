@@ -29,6 +29,15 @@ to master your pleasures and appetites." - Aristotle, Nicomachean Ethics
 akrasia add "Morning run" --daily --priority high
 Task Morning run created successfully!
 
+# a weekly task falls on a weekday (mon..sun, or seg..dom, or 1-7 with
+# Monday = 1), a monthly one on a day of the month (1-31). Without --on it
+# takes the weekday or day of --date, or today's
+akrasia add "Review the week" --weekly --on fri --time 18:00
+Task Review the week created successfully!
+
+akrasia add "Pay the rent" --monthly --on 5
+Task Pay the rent created successfully!
+
 # flags instead of positional arguments
 akrasia add --name "Read 30min" --daily
 Task Read 30min created successfully!
@@ -41,6 +50,14 @@ Task Pay electricity bill created successfully!
 
 akrasia add "Trip to Lisbon" --date 5,1,2027
 Task Trip to Lisbon created successfully!
+
+# --time sets an optional time of day (HH:MM, 24 hours). It is shown next
+# to the task and, within the same priority, timed tasks come first
+akrasia add "Call the bank" --date 21,10 --time 14:30
+Task Call the bank created successfully!
+
+# a daily task can have a time too
+akrasia add "Morning run" --daily --time 07:00
 ```
 
 ### Completing tasks
@@ -51,8 +68,15 @@ akrasia update-status "Morning run" --notes "5km in 28 minutes"
 Updated successfully
 ```
 
-Daily tasks count as done only for the day you complete them. One-off tasks stay
-done.
+Daily tasks count as done only for the day you complete them. A weekly task is
+done for the whole week (Monday to Sunday) once you complete it, and a monthly
+one for the whole month; they come back on the next week or month. One-off
+tasks stay done.
+
+A weekly or monthly task shows on `today` and `focus` from its day until it is
+done or the week or month ends (it is missed after that, and breaks its
+streak). Before its day it only appears in `get-all` and `get-daily`. A
+monthly task on the 29th, 30th or 31st falls on the last day of shorter months.
 
 ### Notes
 
@@ -88,6 +112,16 @@ Task Morning walk updated
 akrasia edit stend --priority low --desc "" --date 30,11
 Task Stendhal updated
 
+# set, change or remove the time of day (--time "" removes it)
+akrasia edit "Call the bank" --time 15:00
+akrasia edit "Call the bank" --time ""
+
+# change how a task repeats: --daily, --weekly or --monthly (one at a time),
+# --on moves a weekly or monthly task to another day, and --daily=false
+# (or --weekly=false, --monthly=false) makes it a one-off task again
+akrasia edit "Review the week" --on mon
+akrasia edit "Review the week" --monthly --on 1
+
 # turn a one-off task into a daily one, or back with --daily=false
 akrasia edit Stendhal --daily
 Task Stendhal updated
@@ -118,13 +152,15 @@ akrasia get-all
     ○ Invite friends · 22 Oct
 ```
 
-- A subtask follows its parent's daily mode and can't be due after it.
+- A subtask follows its parent's recurrence (daily, weekly or monthly, and the
+  day) and can't be due after it.
   Moving the parent's date earlier brings later subtasks along.
 - Completing the parent itself while subtasks are pending completes them
   too, after a confirmation (`--yes` skips it, and scripts need it).
 - Adding a subtask to a finished parent makes it pending again.
-- Daily parent (a routine): each subtask is done once a day, and the parent
-  closes the day, and its streak, when all of them are done.
+- Recurring parent (a routine): each subtask is done once per day, week or
+  month, and the parent closes that period, and its streak, when all of them
+  are done.
 - Subtasks have names unique within their parent. When the same name exists
   elsewhere, use `"Parent/Subtask"`: a bare name picks the top-level task,
   and a name shared by subtasks of several parents is refused with the
@@ -150,7 +186,7 @@ Tasks:
   13 Nov 26 00:00 · Not done
   Priority: high
 
-akrasia get-daily
+akrasia get-daily    # every recurring task: daily, weekly and monthly
 ✔ Morning run
   Priority: high
 
@@ -165,8 +201,9 @@ Expires: Fri, 13 Nov 2026 00:00:00 UTC
 ### What needs attention now
 
 ```bash
-# today's progress: every daily task, plus one-off tasks that are overdue,
-# due today or completed today
+# today's progress: every daily task, the weekly and monthly ones that are due
+# (or were completed today), plus one-off tasks that are overdue, due today or
+# completed today
 akrasia progress
 Today 1/2  ▌▌▌▌▌▌▌▌▌▌▌▌▌░░░░░░░░░░░░  50%
 
@@ -198,7 +235,10 @@ akrasia today --only daily --json
       "ExpiresAt": "2026-10-20T14:38:24.665519395-03:00",
       "Priority": "",
       "IsDaily": true,
-      "DoneToday": false
+      "Recurrence": "daily",
+      "DoneToday": false,
+      "DonePeriod": false,
+      "DueTime": "07:00"
     }
   ],
   "ExpiringSoon": null,
@@ -269,8 +309,8 @@ akrasia dump
 akrasia dump --delete 3
 Dump 'buy plants' deleted
 
-# turn an entry into a task (it leaves the dump); --priority, --daily and
-# --date work like in `add`
+# turn an entry into a task (it leaves the dump); --priority, --daily,
+# --weekly, --monthly, --on, --date and --time work like in `add`
 akrasia dump --to-task 2 --priority high --date 30,11
 Dump 'learn about sql indexes' is now a task
 ```
@@ -350,6 +390,15 @@ days and overdue ones; the 19:00 one also lists the daily tasks not done
 today. Each time is sent once a day, and a day with nothing due sends
 nothing. If the computer was off at a reminder time, it goes out at the
 next check.
+
+A task with a time of day (`--time 14:30`) also gets its own reminder when
+that time comes: a one-off task on its due day, a daily task every day, a
+weekly or monthly one on its day. It is sent once, in one message with the
+other tasks whose time has come, and not if the task is already done. The
+check runs every 5 minutes while `akrasia serve` runs (15 with the crontab
+entry), so it arrives a few minutes late at most. A reminder more than 2
+hours late (the computer was off) is dropped instead of sent. The times in
+the fixed reminders show next to those tasks too.
 
 ```bash
 akrasia config notify days 5                 # 0 = only what's due today

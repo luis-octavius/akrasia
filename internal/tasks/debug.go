@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	database "github.com/luis-octavius/akrasia/internal/db/out"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
@@ -25,12 +24,9 @@ func (tkm *TaskManager) Debug(ctx context.Context, name string) (DebugReport, er
 		return DebugReport{}, fmt.Errorf("%s: %w", i18n.T("tasks.error.getStreakHistory"), err)
 	}
 
-	streak, err := tkm.Queries.GetCurrentStreak(ctx, database.GetCurrentStreakParams{
-		TodoID: todo.ID,
-		ID:     todo.ID,
-	})
+	streak, err := tkm.currentStreak(ctx, todo, time.Now())
 	if err != nil {
-		return DebugReport{}, fmt.Errorf("%s: %w", i18n.T("tasks.error.getCurrentStreak"), err)
+		return DebugReport{}, err
 	}
 
 	view, err := viewFromNameRow(todo)

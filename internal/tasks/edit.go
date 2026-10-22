@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"time"
@@ -17,14 +18,27 @@ type TodoPatch struct {
 	Name        *string
 	Description *string
 	Priority    *string
-	IsDaily     *bool
-	ExpiresAt   *time.Time
+	// IsDaily true makes the task daily and false makes it a one-off task
+	// (it clears any recurrence); Recurrence and RepeatOn are the general
+	// form and win over it.
+	IsDaily    *bool
+	Recurrence *string
+	RepeatOn   *int
+	ExpiresAt  *time.Time
+	// DueTime is the time of day as "HH:MM"; a pointer to "" removes it
+	DueTime *string
 }
 
 // Empty reports whether the patch changes nothing.
 func (p TodoPatch) Empty() bool {
 	return p.Name == nil && p.Description == nil && p.Priority == nil &&
-		p.IsDaily == nil && p.ExpiresAt == nil
+		p.IsDaily == nil && p.Recurrence == nil && p.RepeatOn == nil &&
+		p.ExpiresAt == nil && p.DueTime == nil
+}
+
+// changesRecurrence reports whether the patch touches how the task recurs.
+func (p TodoPatch) changesRecurrence() bool {
+	return p.IsDaily != nil || p.Recurrence != nil || p.RepeatOn != nil
 }
 
 // EditTodo applies patch to the task that best matches name and returns
@@ -43,7 +57,10 @@ func (tkm *TaskManager) EditTodo(ctx context.Context, name string, patch TodoPat
 		Description: row.Description,
 		Priority:    row.Priority,
 		IsDaily:     row.IsDaily,
+		Recurrence:  recurrenceOf(row.IsDaily, row.Recurrence),
+		RepeatOn:    row.RepeatOn,
 		ExpiresAt:   row.ExpiresAt,
+		DueTime:     row.DueTime,
 		UpdatedAt:   time.Now(),
 	}
 
@@ -65,23 +82,32 @@ func (tkm *TaskManager) EditTodo(ctx context.Context, name string, patch TodoPat
 			}
 		}
 	}
-	if patch.IsDaily != nil {
-		params.IsDaily = *patch.IsDaily
+	if patch.changesRecurrence() {
+		if err := applyRecurrence(&params, patch); err != nil {
+			return TodoView{}, err
+		}
 	}
 	if patch.ExpiresAt != nil {
 		params.ExpiresAt = *patch.ExpiresAt
+	}
+	if patch.DueTime != nil {
+		dueTime, err := ParseClock(*patch.DueTime)
+		if err != nil {
+			return TodoView{}, localizedError{msg: err.Error(), sentinel: ErrInvalidInput}
+		}
+		params.DueTime = sql.NullString{String: dueTime, Valid: dueTime != ""}
 	}
 
 	parentID, err := optionalUUID(row.ParentID)
 	if err != nil {
 		return TodoView{}, err
 	}
-	if parentID != uuid.Nil && (patch.IsDaily != nil || patch.ExpiresAt != nil) {
+	if parentID != uuid.Nil && (patch.changesRecurrence() || patch.ExpiresAt != nil) {
 		parent, err := tkm.family(ctx, parentID)
 		if err != nil {
 			return TodoView{}, err
 		}
-		if err := subtaskRules(parent, params.IsDaily, params.ExpiresAt); err != nil {
+		if err := subtaskRules(parent, params.Recurrence, params.RepeatOn, params.ExpiresAt); err != nil {
 			return TodoView{}, err
 		}
 	}
@@ -109,8 +135,37 @@ func (tkm *TaskManager) EditTodo(ctx context.Context, name string, patch TodoPat
 		}
 	}
 
-	view.DoneToday, err = tkm.isDoneToday(ctx, updated.ID)
+	view.DoneToday, view.DonePeriod, err = tkm.doneStatus(ctx, updated.ID)
 	return view, err
+}
+
+// applyRecurrence sets the recurrence columns of params from the patch.
+// Changing the kind without giving a day resets the day to today's.
+func applyRecurrence(params *database.UpdateTodoParams, patch TodoPatch) error {
+	recurrence, repeatOn := params.Recurrence, int(params.RepeatOn.Int64)
+
+	switch {
+	case patch.Recurrence != nil:
+		recurrence = *patch.Recurrence
+	case patch.IsDaily != nil && *patch.IsDaily:
+		recurrence = RecurDaily
+	case patch.IsDaily != nil:
+		recurrence = RecurNone
+	}
+	if recurrence != params.Recurrence {
+		repeatOn = 0
+	}
+	if patch.RepeatOn != nil {
+		repeatOn = *patch.RepeatOn
+	}
+
+	var err error
+	params.Recurrence, params.RepeatOn, err = normalizeRecurrence(false, recurrence, repeatOn, time.Now())
+	if err != nil {
+		return err
+	}
+	params.IsDaily = params.Recurrence != RecurNone
+	return nil
 }
 
 // carrySubtasks applies a parent's new daily mode and date to its
@@ -118,8 +173,13 @@ func (tkm *TaskManager) EditTodo(ctx context.Context, name string, patch TodoPat
 func (tkm *TaskManager) carrySubtasks(ctx context.Context, parent TodoView, patch TodoPatch) error {
 	id := uuid.NullUUID{UUID: parent.ID, Valid: true}
 
-	if patch.IsDaily != nil {
-		err := tkm.Queries.SetSubtasksDaily(ctx, database.SetSubtasksDailyParams{IsDaily: parent.IsDaily, ParentID: id})
+	if patch.changesRecurrence() {
+		err := tkm.Queries.SetSubtasksRecurrence(ctx, database.SetSubtasksRecurrenceParams{
+			IsDaily:    parent.IsDaily,
+			Recurrence: parent.Recurrence,
+			RepeatOn:   sql.NullInt64{Int64: int64(parent.RepeatOn), Valid: parent.RepeatOn != 0},
+			ParentID:   id,
+		})
 		if err != nil {
 			return fmt.Errorf(i18n.T("tasks.error.updateTask"), err)
 		}
@@ -130,7 +190,7 @@ func (tkm *TaskManager) carrySubtasks(ctx context.Context, parent TodoView, patc
 			return fmt.Errorf(i18n.T("tasks.error.updateTask"), err)
 		}
 	}
-	if patch.IsDaily != nil {
+	if patch.changesRecurrence() {
 		return tkm.syncParent(ctx, parent.ID)
 	}
 	return nil

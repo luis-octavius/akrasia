@@ -39,8 +39,19 @@ type TodoView struct {
 	Concluded   bool
 	ExpiresAt   time.Time
 	Priority    string
-	IsDaily     bool
-	DoneToday   bool
+	// IsDaily is true for every recurring task: daily, weekly and monthly
+	IsDaily bool
+	// Recurrence is none, daily, weekly or monthly; RepeatOn is the weekday
+	// (Monday = 1) of a weekly task or the day of the month of a monthly one
+	Recurrence string
+	RepeatOn   int `json:",omitempty"`
+	// DoneToday: completed today. DonePeriod: completed in the current
+	// period (today, this week or this month), which is what makes a
+	// recurring task done.
+	DoneToday  bool
+	DonePeriod bool
+	// DueTime is the optional time of day, "HH:MM"; empty when not set
+	DueTime string `json:",omitempty"`
 
 	// ParentID is uuid.Nil for a top-level task; Parent is the parent's name.
 	ParentID uuid.UUID `json:"-"`
@@ -74,11 +85,12 @@ func path(parent, name string) string {
 	return parent + "/" + name
 }
 
-// Done reports whether the task counts as done right now: daily tasks are
-// judged by today's history, the rest by their concluded flag.
+// Done reports whether the task counts as done right now: recurring tasks
+// are judged by the history of the current period, the rest by their
+// concluded flag.
 func (v TodoView) Done() bool {
 	if v.IsDaily {
-		return v.DoneToday
+		return v.DonePeriod
 	}
 	return v.Concluded
 }
@@ -89,13 +101,22 @@ type NewTodo struct {
 	Description string
 	Priority    string
 	IsDaily     bool
+	// Recurrence (none, daily, weekly or monthly) wins over IsDaily when
+	// set; RepeatOn is the weekday (Monday = 1, or 0 for today's) of a
+	// weekly task or the day of the month (0 for today's) of a monthly one
+	Recurrence string
+	RepeatOn   int
+	// DueTime is an optional "HH:MM"; empty means no time of day
+	DueTime string
 	// ExpiresAt zero takes the parent's date for a subtask
 	ExpiresAt time.Time
 	// Parent is the name of the task this one is a subtask of, if any
 	Parent string
 }
 
-// StreakPeriod is one completed run of consecutive days.
+// StreakPeriod is one completed run of consecutive days (weeks, for a
+// weekly task; months, for a monthly one: Days counts those and the dates
+// are the first day of the first and last one).
 type StreakPeriod struct {
 	StartDate string
 	EndDate   string

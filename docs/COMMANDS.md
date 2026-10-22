@@ -56,11 +56,11 @@ Available Commands:
  dbg debug            inspect a task's stored history and streak math (diagnostics)
  dn  delete-by-name   delete a todo by name
  dp  dump             store a dump entry, list them, delete one or turn one into a task
- e   edit             change the name, description, priority, daily mode or date of a task
+ e   edit             change the name, description, priority, recurrence, date or time of a task
  fc  focus            show top 1-3 priority items to focus on right now
  ga  get-all          returns all the todos saved in storage
  gn  get-by-name      search for a task by name (case-insensitive, fuzzy match)
- gd  get-daily        show all daily tasks
+ gd  get-daily        show all recurring tasks (daily, weekly, monthly)
      help             Help about any command
  sh  history          get the streak history of provided todo
      init             initialize akrasia app
@@ -70,7 +70,7 @@ Available Commands:
  pg  progress         show today's progress (tasks done out of today's tasks)
      restore          replace the database with a backup (the current one is saved first)
  cs  streak           get the current streak of provided todo
- td  today            show a daily focus dashboard (overdue, due today, daily pending, expiring soon)
+ td  today            show a daily focus dashboard (overdue, due today, recurring pending, expiring soon)
      tui              open the interactive terminal interface
  us  update-status    mark a task as completed and record it in history with optional notes
 ```
@@ -89,13 +89,13 @@ Available Commands:
 
 | Command | Flags |
 | --- | --- |
-| `add` | `--parent <name>` (make it a subtask), `--desc`, `--priority high\|medium\|low`, `--daily`, `--date dd`, `--date dd,mm` or `--date dd,mm,yyyy` (default: tomorrow), `--name` (instead of the positional name) |
-| `edit` | `--name`, `--desc` (`""` clears it), `--priority` (`""` clears it), `--daily=true\|false`, `--date dd`, `dd,mm` or `dd,mm,yyyy`; only the flags you pass are changed |
+| `add` | `--parent <name>` (make it a subtask), `--desc`, `--priority high\|medium\|low`, `--daily`, `--weekly`, `--monthly` (one of them), `--on <weekday\|day>` (the day of a weekly or monthly task), `--date dd`, `--date dd,mm` or `--date dd,mm,yyyy` (default: tomorrow), `--time HH:MM` (optional time of day), `--name` (instead of the positional name) |
+| `edit` | `--name`, `--desc` (`""` clears it), `--priority` (`""` clears it), `--daily`, `--weekly`, `--monthly` (`=false` makes it a one-off task), `--on <weekday\|day>`, `--date dd`, `dd,mm` or `dd,mm,yyyy`, `--time HH:MM` (`""` removes it); only the flags you pass are changed |
 | `today` | `--only overdue\|today\|daily\|soon`, `--limit N`, `--priority`, `--json` |
 | `focus` | `--limit 1-3` (default 3), `--priority` |
 | `get-all` | `--priority` |
 | `update-status` | `--notes "text"` (saved in the task's history for today; completing again the same day replaces it), `--yes` (complete a task with pending subtasks, and them, without asking) |
-| `dump` | `--delete N`, `--to-task N` (with optional `--priority`, `--daily`, `--date`); `N` is the number `akrasia dump` prints |
+| `dump` | `--delete N`, `--to-task N` (with optional `--priority`, `--daily`, `--weekly`, `--monthly`, `--on`, `--date`, `--time`); `N` is the number `akrasia dump` prints |
 | `notes` | `--limit N` days (default 30, `0` = all) |
 | `delete-by-name` | `--yes` (required) |
 | `backup list` | `--profile <name>` (another machine's copies) |

@@ -385,7 +385,7 @@ func fetchRows(ctx context.Context, svc Service, t tab) ([]row, error) {
 		var rows []row
 		rows = appendSection(rows, i18n.T("tasks.tasks.overdue"), view.Overdue)
 		rows = appendSection(rows, i18n.T("tasks.tasks.dueToday"), view.DueToday)
-		rows = appendSection(rows, i18n.T("tasks.tasks.dailyPending"), view.Daily)
+		rows = appendSection(rows, tasks.RecurringTitle(view.Daily), view.Daily)
 		rows = appendSection(rows, i18n.T("tasks.tasks.expiringSoon"), view.ExpiringSoon)
 		return rows, nil
 

@@ -24,15 +24,28 @@ func (tkm *TaskManager) AddTodo(ctx context.Context, in NewTodo) (TodoView, erro
 		if parent, err = tkm.parentFor(ctx, in.Parent); err != nil {
 			return TodoView{}, err
 		}
-		if parent.IsDaily {
-			in.IsDaily = true
+		// without a recurrence of its own, a subtask takes its parent's
+		if parent.IsDaily && !in.IsDaily && (in.Recurrence == "" || in.Recurrence == RecurNone) {
+			in.IsDaily, in.Recurrence, in.RepeatOn = true, parent.Recurrence, parent.RepeatOn
 		}
 		if in.ExpiresAt.IsZero() {
 			in.ExpiresAt = parent.ExpiresAt
 		}
-		if err := subtaskRules(parent, in.IsDaily, in.ExpiresAt); err != nil {
+	}
+
+	recurrence, repeatOn, err := normalizeRecurrence(in.IsDaily, in.Recurrence, in.RepeatOn, now)
+	if err != nil {
+		return TodoView{}, err
+	}
+	if in.Parent != "" {
+		if err := subtaskRules(parent, recurrence, repeatOn, in.ExpiresAt); err != nil {
 			return TodoView{}, err
 		}
+	}
+
+	dueTime, err := ParseClock(in.DueTime)
+	if err != nil {
+		return TodoView{}, localizedError{msg: err.Error(), sentinel: ErrInvalidInput}
 	}
 
 	todo, err := tkm.Queries.AddTodo(ctx, database.AddTodoParams{
@@ -44,9 +57,12 @@ func (tkm *TaskManager) AddTodo(ctx context.Context, in NewTodo) (TodoView, erro
 		Concluded:    false,
 		ExpiresAt:    in.ExpiresAt,
 		Priority:     in.Priority,
-		IsDaily:      in.IsDaily,
+		IsDaily:      recurrence != RecurNone,
+		Recurrence:   recurrence,
+		RepeatOn:     repeatOn,
 		HistorySince: sql.NullString{String: now.Format(time.DateOnly), Valid: true},
 		ParentID:     uuid.NullUUID{UUID: parent.ID, Valid: in.Parent != ""},
+		DueTime:      sql.NullString{String: dueTime, Valid: dueTime != ""},
 	})
 	if isUniqueViolation(err) {
 		return TodoView{}, localizedError{
@@ -130,8 +146,7 @@ func (tkm *TaskManager) FindTodo(ctx context.Context, name string) (TodoView, er
 		return TodoView{}, err
 	}
 
-	view.DoneToday, err = tkm.isDoneToday(ctx, row.ID)
-	if err != nil {
+	if view.DoneToday, view.DonePeriod, err = tkm.doneStatus(ctx, row.ID); err != nil {
 		return TodoView{}, err
 	}
 
@@ -145,7 +160,8 @@ func (tkm *TaskManager) FindTodo(ctx context.Context, name string) (TodoView, er
 	return view, nil
 }
 
-// DailyTodos returns every daily task with whether it was done today.
+// DailyTodos returns every recurring task (daily, weekly and monthly) with
+// whether it is done for its current period.
 func (tkm *TaskManager) DailyTodos(ctx context.Context) ([]TodoView, error) {
 	todos, err := tkm.listTodoViews(ctx, func(v TodoView) bool { return v.IsDaily })
 	if err != nil {

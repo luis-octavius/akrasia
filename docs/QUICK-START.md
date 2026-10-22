@@ -24,7 +24,7 @@ akrasia init
 akrasia
 ```
 
-Press `a` to add your first task and `?` to see every key. Prefer commands? `akrasia add "Morning run" --daily` works too, and `akrasia help` lists all of them.
+Press `a` to add your first task and `?` to see every key. Prefer commands? `akrasia add "Morning run" --daily` (or `--weekly --on fri`, `--monthly --on 5`) works too, and `akrasia help` lists all of them.
 
 5. (Optional) Create a shorter alias:
 

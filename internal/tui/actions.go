@@ -245,7 +245,11 @@ func (m Model) startAddSubtask() (tea.Model, tea.Cmd) {
 
 	parent := *r.todo
 	if parent.IsSubtask() {
-		parent = tasks.TodoView{ID: parent.ParentID, Name: parent.Parent, IsDaily: parent.IsDaily}
+		// a subtask follows its parent's recurrence, which it shares
+		parent = tasks.TodoView{
+			ID: parent.ParentID, Name: parent.Parent, IsDaily: parent.IsDaily,
+			Recurrence: parent.Recurrence, RepeatOn: parent.RepeatOn,
+		}
 	}
 
 	m.mode = modeAddTodo

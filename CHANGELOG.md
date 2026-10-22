@@ -6,6 +6,60 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.7.0] - 22-10-2026
+
+### Added
+
+- **Weekly and monthly tasks**, next to daily ones.
+  - `add`, `edit` and `dump --to-task` take `--weekly` or `--monthly`
+    (only one of the three kinds at a time), and `--on` for the day: a weekday
+    (`mon`..`sun`, `seg`..`dom` or 1-7, Monday = 1) for a weekly task, a day
+    of the month (1-31) for a monthly one. Without `--on` the day comes from
+    `--date`, or is today's. A monthly task on the 29th-31st falls on the
+    last day of shorter months.
+  - A weekly task is done for the whole week (Monday to Sunday) once you
+    complete it, a monthly one for the whole month. It shows in `today`,
+    `focus`, the progress line and the reminders from its day until it is
+    done or the period ends; before that it is only in `get-all` and
+    `get-daily` (and the Daily tab). When there is one, the section is
+    titled "RECURRING PENDING".
+  - Streaks count weeks or months in a row, and the period in progress
+    does not break them. `streak`, `his`, `notes` and the TUI details say
+    which. `backfill-history` stays daily-only.
+  - `edit --daily/--weekly/--monthly` change the kind, `--on` moves the day,
+    and `--daily=false` (or the other two) makes it a one-off task again.
+  - Subtasks follow their parent's kind and day.
+  - TUI: the form's "Repeat" field takes `n`, `d`, `w fri`, `m 5`; the list
+    and details show how a task repeats. Web: a repeat select and a day
+    input replace the daily checkbox (a form that only sends `daily` still
+    works).
+  - `--json` gains `Recurrence`, `RepeatOn` and `DonePeriod`.
+  - Migration 011 adds `recurrence` and `repeat_on`; `is_daily` now means
+    "recurs", and existing daily tasks become `recurrence = 'daily'`.
+
+- **Optional time of day on a task.** `add`, `edit` and `dump --to-task`
+  take `--time HH:MM` (24 hours); `edit --time ""` removes it.
+  - It is shown on the task in the command line (`today`, `get-all`,
+    subtasks, `--json` as `DueTime`), the TUI (list, details and the new
+    Time field of the form) and the web app (a time input next to the date
+    in the add form and the dump dialog).
+  - Within the same priority, timed tasks come first, by time.
+  - Stored in a new `due_time` column (migration 010); existing tasks have
+    no time.
+
+- **Discord reminder at a task's time.** A task with a time of day
+  (`--time`) is announced when it comes, on its due day (daily tasks every
+  day; weekly and monthly ones on their day), once and only if it is not
+  done. The check runs every 5 minutes under `serve` (15 with the crontab
+  entry); a reminder more than 2 hours late is dropped. The task's time
+  also shows in the fixed reminders.
+
+### Changed
+
+- The command line and the TUI list show a one-off task's date without the
+  hour it was created at (an undated task used to show the creation time as
+  if it were a time of day); only a time you set is shown.
+
 ## [2.6.0] - 2026-10-20
 
 ### Added
@@ -326,7 +380,10 @@ is a major version because two behaviors that scripts may rely on changed:
 
 See the [GitHub releases and tags](https://github.com/luis-octavius/akrasia/tags).
 
-[Unreleased]: https://github.com/luis-octavius/akrasia/compare/v.2.5.0...dev
+
+[Unreleased]: https://github.com/luis-octavius/akrasia/compare/v.2.7.0...dev
+[2.7.0]: https://github.com/luis-octavius/akrasia/compare/v.2.6.0...v.2.7.0
+[2.6.0]: https://github.com/luis-octavius/akrasia/compare/v.2.5.0...v.2.6.0
 [2.5.0]: https://github.com/luis-octavius/akrasia/compare/v.2.4.0...v.2.5.0
 [2.4.0]: https://github.com/luis-octavius/akrasia/compare/v.2.3.0...v.2.4.0
 [2.3.0]: https://github.com/luis-octavius/akrasia/compare/v.2.2.0...v.2.3.0

@@ -19,7 +19,8 @@ func (p Progress) Ratio() float64 {
 	return float64(p.Done) / float64(p.Total)
 }
 
-// TodayProgress measures today's tasks: every daily task, plus every
+// TodayProgress measures today's tasks: every daily task, every weekly or
+// monthly one that is due and pending (or was completed today), plus every
 // one-off task that is overdue, due today or was completed today.
 func (tkm *TaskManager) TodayProgress(ctx context.Context) (Progress, error) {
 	todos, err := tkm.ListTodos(ctx, "")
@@ -38,7 +39,10 @@ func todayProgress(todos []TodoView, now time.Time) Progress {
 		// a one-off task concluded on another day, or due after today, is
 		// not part of today
 		pendingToday := !todo.Concluded && todo.ExpiresAt.Before(dayEnd)
-		if !todo.IsDaily && !todo.DoneToday && !pendingToday {
+		if todo.IsDaily {
+			pendingToday = IsScheduled(todo, now) && !todo.DonePeriod
+		}
+		if !todo.DoneToday && !pendingToday {
 			continue
 		}
 

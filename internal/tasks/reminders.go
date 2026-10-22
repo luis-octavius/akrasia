@@ -3,6 +3,7 @@ package tasks
 import (
 	"context"
 	"slices"
+	"strings"
 	"time"
 
 	database "github.com/luis-octavius/akrasia/internal/db/out"
@@ -40,7 +41,7 @@ func reminders(todos []TodoView, now time.Time, days int, withDaily bool) Remind
 	for _, todo := range todos {
 		switch {
 		case todo.IsDaily:
-			if withDaily && !todo.DoneToday {
+			if withDaily && IsScheduled(todo, now) && !todo.DonePeriod {
 				r.Daily = append(r.Daily, todo)
 			}
 		case todo.Concluded:
@@ -61,6 +62,44 @@ func reminders(todos []TodoView, now time.Time, days int, withDaily bool) Remind
 	})
 	sortTodayTodos(r.Daily)
 	return r
+}
+
+// TimedDue returns the tasks with a time of day that has passed today and
+// that are not done: a one-off task due today, or a recurring one on its
+// day. Subtasks are included, each with its own time.
+func (tkm *TaskManager) TimedDue(ctx context.Context, now time.Time) ([]TodoView, error) {
+	todos, err := tkm.ListTodos(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	return timedDue(todos, now), nil
+}
+
+func timedDue(todos []TodoView, now time.Time) []TodoView {
+	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	clock := now.Format("15:04")
+
+	var due []TodoView
+	var visit func(TodoView)
+	visit = func(todo TodoView) {
+		onDay := !todo.Concluded && !todo.ExpiresAt.Before(dayStart) && todo.ExpiresAt.Before(dayStart.AddDate(0, 0, 1))
+		if todo.IsDaily {
+			onDay = IsOnDay(todo, now)
+		}
+		// HH:MM strings compare like the times they stand for
+		if todo.DueTime != "" && todo.DueTime <= clock && onDay && !todo.Done() {
+			due = append(due, todo)
+		}
+		for _, sub := range todo.Subtasks {
+			visit(sub)
+		}
+	}
+	for _, todo := range todos {
+		visit(todo)
+	}
+
+	slices.SortStableFunc(due, func(a, b TodoView) int { return strings.Compare(a.DueTime, b.DueTime) })
+	return due
 }
 
 // SentSlots returns the reminder times already handled on day (yyyy-mm-dd).

@@ -12,12 +12,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/luis-octavius/akrasia/internal/tasks"
 	"github.com/luis-octavius/akrasia/pkg/i18n"
 )
 
 type fakeService struct {
 	reminders tasks.Reminders
+	timed     []tasks.TodoView
 	withDaily []bool
 	sent      map[string][]string
 }
@@ -29,6 +31,10 @@ func (f *fakeService) Reminders(_ context.Context, _ time.Time, _ int, withDaily
 		r.Daily = nil
 	}
 	return r, nil
+}
+
+func (f *fakeService) TimedDue(context.Context, time.Time) ([]tasks.TodoView, error) {
+	return f.timed, nil
 }
 
 func (f *fakeService) SentSlots(_ context.Context, day string) ([]string, error) {
@@ -286,5 +292,111 @@ func TestConfig(t *testing.T) {
 		if ValidWebhook(url) != ok {
 			t.Errorf("ValidWebhook(%q) = %v", url, !ok)
 		}
+	}
+}
+
+// loggedTasks are the task reminders written to the log.
+func loggedTasks(svc *fakeService) []string {
+	var got []string
+	for _, slot := range svc.sent["2026-10-19"] {
+		if strings.HasPrefix(slot, "task:") {
+			got = append(got, slot)
+		}
+	}
+	return got
+}
+
+func timedTask(name, clock string) tasks.TodoView {
+	return tasks.TodoView{ID: uuid.New(), Name: name, DueTime: clock, ExpiresAt: at(0, 0)}
+}
+
+func TestRunRemindsAtTheTaskTime(t *testing.T) {
+	call := timedTask("Call the bank", "14:30")
+	svc := &fakeService{timed: []tasks.TodoView{call}}
+	rec := &recorder{}
+	ctx := context.Background()
+
+	// before its time the service returns nothing; here it has come
+	sentNow, err := Run(ctx, svc, testCfg, at(14, 31), rec.send)
+	if err != nil || !sentNow || len(rec.messages) != 1 {
+		t.Fatalf("Run = %v, %v, messages %d; want a reminder", sentNow, err, len(rec.messages))
+	}
+	if msg := rec.messages[0]; !strings.Contains(msg, "Call the bank — 14:30") || !strings.Contains(msg, "<@123456789012345678>") {
+		t.Errorf("message = %q; want the task, its time and the mention", msg)
+	}
+	if !slices.Contains(svc.sent["2026-10-19"], TimedSlot(call)) {
+		t.Errorf("the reminder should be logged, got %v", svc.sent)
+	}
+
+	// the next run does not repeat it
+	if sentNow, _ := Run(ctx, svc, testCfg, at(14, 36), rec.send); sentNow || len(rec.messages) != 1 {
+		t.Fatalf("a task is reminded once, got %d messages", len(rec.messages))
+	}
+
+	// moved to another time, it reminds again
+	svc.timed[0].DueTime = "15:00"
+	if sentNow, _ := Run(ctx, svc, testCfg, at(15, 1), rec.send); !sentNow || len(rec.messages) != 2 {
+		t.Fatalf("a task moved to another time reminds again, got %d messages", len(rec.messages))
+	}
+}
+
+func TestRunSkipsTaskRemindersThatAreTooLate(t *testing.T) {
+	svc := &fakeService{timed: []tasks.TodoView{timedTask("Breakfast", "08:00")}}
+	rec := &recorder{}
+
+	// the computer was off all morning
+	sentNow, err := Run(context.Background(), svc, testCfg, at(8, 0).Add(TimedGrace+time.Minute), rec.send)
+	if err != nil || sentNow || len(rec.messages) != 0 {
+		t.Fatalf("a late reminder should be dropped, got %v, %v, %v", sentNow, err, rec.messages)
+	}
+	if got := loggedTasks(svc); len(got) != 1 {
+		t.Errorf("but it is marked as handled, got %v", svc.sent)
+	}
+}
+
+func TestRunGroupsTaskRemindersAndKeepsThemWhenSendingFails(t *testing.T) {
+	svc := &fakeService{timed: []tasks.TodoView{timedTask("A", "14:00"), timedTask("B", "14:10")}}
+	rec := &recorder{err: errors.New("discord is down")}
+	ctx := context.Background()
+
+	if _, err := Run(ctx, svc, testCfg, at(14, 15), rec.send); err == nil {
+		t.Fatal("a failed send should be reported")
+	}
+	if got := loggedTasks(svc); len(got) != 0 {
+		t.Fatalf("nothing is logged when sending fails, got %v", svc.sent)
+	}
+
+	rec.err = nil
+	if sentNow, err := Run(ctx, svc, testCfg, at(14, 20), rec.send); err != nil || !sentNow || len(rec.messages) != 1 {
+		t.Fatalf("the retry should send one message, got %v, %v, %d", sentNow, err, len(rec.messages))
+	}
+	if msg := rec.messages[0]; !strings.Contains(msg, "A — 14:00") || !strings.Contains(msg, "B — 14:10") {
+		t.Errorf("both tasks go in one message, got %q", msg)
+	}
+}
+
+func TestTaskRemindersWorkWithoutFixedTimesPending(t *testing.T) {
+	// 14:31 is after 10:00 and before 19:00; both fixed times are already handled
+	svc := &fakeService{
+		reminders: pending(),
+		timed:     []tasks.TodoView{timedTask("Call", "14:30")},
+		sent:      map[string][]string{"2026-10-19": {"10:00", "19:00"}},
+	}
+	rec := &recorder{}
+
+	sentNow, err := Run(context.Background(), svc, testCfg, at(14, 31), rec.send)
+	if err != nil || !sentNow || len(rec.messages) != 1 || !strings.Contains(rec.messages[0], "Call — 14:30") {
+		t.Fatalf("got %v, %v, %v", sentNow, err, rec.messages)
+	}
+}
+
+func TestMessageShowsTheTime(t *testing.T) {
+	r := tasks.Reminders{
+		DueSoon: []tasks.TodoView{{Name: "Call", ExpiresAt: at(0, 0), DueTime: "14:30"}},
+		Daily:   []tasks.TodoView{{Name: "Run", IsDaily: true, DueTime: "07:00"}},
+	}
+	msg := Message(r, testCfg, at(9, 0))
+	if !strings.Contains(msg, "Call — today 14:30") || !strings.Contains(msg, "Run — 07:00") {
+		t.Errorf("message = %q; want the times", msg)
 	}
 }

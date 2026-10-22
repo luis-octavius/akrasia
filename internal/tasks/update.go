@@ -56,7 +56,7 @@ func (tkm *TaskManager) complete(ctx context.Context, row database.GetTodoByName
 	if !view.IsDaily {
 		view.Concluded = true
 	}
-	view.DoneToday = true
+	view.DoneToday, view.DonePeriod = true, true
 
 	if view.IsSubtask() {
 		if err := tkm.syncParent(ctx, view.ParentID); err != nil {
