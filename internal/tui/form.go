@@ -19,6 +19,7 @@ const (
 	fieldPriority
 	fieldDaily
 	fieldDate
+	fieldTime
 	fieldCount
 )
 
@@ -52,6 +53,7 @@ func newTodoForm(width int) todoForm {
 	f.fields[fieldPriority].Placeholder = i18n.T("tui.form.priorityHint")
 	f.fields[fieldDaily].Placeholder = i18n.T("tui.form.dailyHint")
 	f.fields[fieldDate].Placeholder = i18n.T("tui.form.dateHint")
+	f.fields[fieldTime].Placeholder = i18n.T("tui.form.timeHint")
 	f.setWidth(width)
 	f.fields[fieldName].Focus()
 	return f
@@ -88,7 +90,7 @@ func newEditForm(width int, todo tasks.TodoView) todoForm {
 	if todo.IsDaily {
 		daily, date = "y", ""
 	}
-	f.initial = [fieldCount]string{todo.Name, todo.Description.String, todo.Priority, daily, date}
+	f.initial = [fieldCount]string{todo.Name, todo.Description.String, todo.Priority, daily, date, todo.DueTime}
 	for i, v := range f.initial {
 		f.fields[i].SetValue(v)
 		f.fields[i].CursorEnd()
@@ -106,6 +108,8 @@ func fieldLabel(i int) string {
 		return i18n.T("tui.form.priority")
 	case fieldDaily:
 		return i18n.T("tui.form.daily")
+	case fieldTime:
+		return i18n.T("tui.form.time")
 	default:
 		return i18n.T("tui.form.date")
 	}
@@ -165,6 +169,9 @@ func (f todoForm) value() (tasks.NewTodo, error) {
 	if in.IsDaily, err = parseDaily(f.fields[fieldDaily].Value()); err != nil {
 		return in, err
 	}
+	if in.DueTime, err = tasks.ParseClock(f.fields[fieldTime].Value()); err != nil {
+		return in, err
+	}
 	if f.parent != nil {
 		in.Parent = f.parent.Name
 		// no date: due with the parent (a zero date tells AddTodo so)
@@ -214,6 +221,13 @@ func (f todoForm) patch() (tasks.TodoPatch, error) {
 			return p, err
 		}
 		p.ExpiresAt = &date
+	}
+	if v, ok := changed(fieldTime); ok {
+		clock, err := tasks.ParseClock(v)
+		if err != nil {
+			return p, err
+		}
+		p.DueTime = &clock
 	}
 	return p, nil
 }

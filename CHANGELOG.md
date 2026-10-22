@@ -6,6 +6,24 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Optional time of day on a task.** `add`, `edit` and `dump --to-task`
+  take `--time HH:MM` (24 hours); `edit --time ""` removes it.
+  - It is shown on the task in the command line (`today`, `get-all`,
+    subtasks, `--json` as `DueTime`), the TUI (list, details and the new
+    Time field of the form) and the web app (a time input next to the date
+    in the add form and the dump dialog).
+  - Within the same priority, timed tasks come first, by time.
+  - Stored in a new `due_time` column (migration 010); existing tasks have
+    no time.
+
+### Changed
+
+- The command line and the TUI list show a one-off task's date without the
+  hour it was created at (an undated task used to show the creation time as
+  if it were a time of day); only a time you set is shown.
+
 ## [2.6.0] - 2026-10-20
 
 ### Added

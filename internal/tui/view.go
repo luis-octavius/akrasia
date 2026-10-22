@@ -276,7 +276,10 @@ func (m Model) renderDetails(r row) string {
 		lines = append(lines, todo.Description.String, "")
 	}
 	if !todo.IsDaily {
-		lines = append(lines, field(i18n.T("tui.details.expires"), todo.ExpiresAt.Format("Mon 02 Jan 2006 15:04")))
+		lines = append(lines, field(i18n.T("tui.details.expires"), todo.ExpiresAt.Format("Mon 02 Jan 2006")))
+	}
+	if todo.DueTime != "" {
+		lines = append(lines, field(i18n.T("tui.details.time"), todo.DueTime))
 	}
 	if todo.Priority != "" {
 		lines = append(lines, field(i18n.T("tui.details.priority"), priorityBadge(todo.Priority)))
@@ -430,7 +433,13 @@ func renderTodoLine(todo tasks.TodoView, selected, folded bool, width int) strin
 
 	var right string
 	if !todo.IsDaily {
-		right = color.Muted().Inherit(base).Render(todo.ExpiresAt.Format("02 Jan 15:04"))
+		due := todo.ExpiresAt.Format("02 Jan")
+		if todo.DueTime != "" {
+			due += " " + todo.DueTime
+		}
+		right = color.Muted().Inherit(base).Render(due)
+	} else if todo.DueTime != "" {
+		right = color.Muted().Inherit(base).Render(todo.DueTime)
 	}
 	if badge := priorityBadge(todo.Priority); badge != "" {
 		if right != "" {

@@ -35,6 +35,7 @@ type Todo struct {
 	IsDaily      bool
 	HistorySince sql.NullString
 	ParentID     uuid.NullUUID
+	DueTime      sql.NullString
 }
 
 type TodosHistory struct {

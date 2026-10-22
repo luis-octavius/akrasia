@@ -127,3 +127,40 @@ func TestConcurrentWritersWait(t *testing.T) {
 		t.Errorf("dump has %d rows, %v; want both writes", n, err)
 	}
 }
+
+// The due_time migration only adds a nullable column: tasks keep their data
+// and have no time until one is set.
+func TestDueTimeMigrationKeepsData(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "akrasia.db")
+	conn, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	goose.SetBaseFS(embedMigrations)
+	goose.SetLogger(goose.NopLogger())
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		t.Fatal(err)
+	}
+	if err := goose.UpTo(conn, "schema", 9); err != nil {
+		t.Fatalf("migrating to 9: %v", err)
+	}
+	_, err = conn.Exec(`
+		INSERT INTO todos (id, name, created_at, updated_at, concluded, expires_at, priority, is_daily)
+		VALUES ('11111111-1111-1111-1111-111111111111', 'Run', '2026-10-01', '2026-10-01 08:00:00', 0, '2026-10-02 00:00:00', 'high', 1)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := runMigrations(path, true); err != nil {
+		t.Fatalf("migrating to 10: %v", err)
+	}
+
+	var name string
+	var dueTime sql.NullString
+	err = conn.QueryRow(`SELECT name, due_time FROM todos`).Scan(&name, &dueTime)
+	if err != nil || name != "Run" || dueTime.Valid {
+		t.Fatalf("task after the migration = %q, %v, %v; want Run without a time", name, dueTime, err)
+	}
+}

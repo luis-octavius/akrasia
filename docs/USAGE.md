@@ -41,6 +41,14 @@ Task Pay electricity bill created successfully!
 
 akrasia add "Trip to Lisbon" --date 5,1,2027
 Task Trip to Lisbon created successfully!
+
+# --time sets an optional time of day (HH:MM, 24 hours). It is shown next
+# to the task and, within the same priority, timed tasks come first
+akrasia add "Call the bank" --date 21,10 --time 14:30
+Task Call the bank created successfully!
+
+# a daily task can have a time too
+akrasia add "Morning run" --daily --time 07:00
 ```
 
 ### Completing tasks
@@ -87,6 +95,10 @@ Task Morning walk updated
 
 akrasia edit stend --priority low --desc "" --date 30,11
 Task Stendhal updated
+
+# set, change or remove the time of day (--time "" removes it)
+akrasia edit "Call the bank" --time 15:00
+akrasia edit "Call the bank" --time ""
 
 # turn a one-off task into a daily one, or back with --daily=false
 akrasia edit Stendhal --daily
@@ -198,7 +210,8 @@ akrasia today --only daily --json
       "ExpiresAt": "2026-10-20T14:38:24.665519395-03:00",
       "Priority": "",
       "IsDaily": true,
-      "DoneToday": false
+      "DoneToday": false,
+      "DueTime": "07:00"
     }
   ],
   "ExpiringSoon": null,

@@ -41,6 +41,8 @@ type TodoView struct {
 	Priority    string
 	IsDaily     bool
 	DoneToday   bool
+	// DueTime is the optional time of day, "HH:MM"; empty when not set
+	DueTime string `json:",omitempty"`
 
 	// ParentID is uuid.Nil for a top-level task; Parent is the parent's name.
 	ParentID uuid.UUID `json:"-"`
@@ -89,6 +91,8 @@ type NewTodo struct {
 	Description string
 	Priority    string
 	IsDaily     bool
+	// DueTime is an optional "HH:MM"; empty means no time of day
+	DueTime string
 	// ExpiresAt zero takes the parent's date for a subtask
 	ExpiresAt time.Time
 	// Parent is the name of the task this one is a subtask of, if any

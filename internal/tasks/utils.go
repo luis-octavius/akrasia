@@ -113,9 +113,10 @@ func limitTodos(todos []TodoView, limit int) []TodoView {
 	return todos[:limit]
 }
 
-// sortTodayTodos orders tasks by priority first, then expiration date.
+// sortTodayTodos orders tasks by priority first, then expiration date,
+// then time of day (untimed last).
 func sortTodayTodos(todos []TodoView) {
-	sort.Slice(todos, func(i, j int) bool {
+	sort.SliceStable(todos, func(i, j int) bool {
 		leftPriority := priorityRank(todos[i].Priority)
 		rightPriority := priorityRank(todos[j].Priority)
 
@@ -123,8 +124,21 @@ func sortTodayTodos(todos []TodoView) {
 			return leftPriority < rightPriority
 		}
 
-		return todos[i].ExpiresAt.Before(todos[j].ExpiresAt)
+		// a recurring task's date means nothing: only its time orders it
+		if !(todos[i].IsDaily && todos[j].IsDaily) && !todos[i].ExpiresAt.Equal(todos[j].ExpiresAt) {
+			return todos[i].ExpiresAt.Before(todos[j].ExpiresAt)
+		}
+
+		return timeBefore(todos[i].DueTime, todos[j].DueTime)
 	})
+}
+
+// timeBefore orders "HH:MM" strings with the untimed ones last.
+func timeBefore(a, b string) bool {
+	if a == "" || b == "" {
+		return a != "" && b == ""
+	}
+	return a < b
 }
 
 // priorityRank maps textual priority to a sortable numeric value.
@@ -216,6 +230,7 @@ func findSubtaskByPath(ctx context.Context, tkm *TaskManager, name string) (data
 			Priority:     row.Priority,
 			IsDaily:      row.IsDaily,
 			HistorySince: since,
+			DueTime:      row.DueTime,
 			ParentID:     row.ParentID,
 			ParentName:   row.ParentName,
 			Relevance:    1,
@@ -239,6 +254,7 @@ func newTodoView(todoStatus database.ListTodosWithTodayStatusRow) (TodoView, err
 		Priority:    todoStatus.Priority,
 		IsDaily:     todoStatus.IsDaily,
 		DoneToday:   todoStatus.DoneToday,
+		DueTime:     todoStatus.DueTime.String,
 		ParentID:    nullUUID(todoStatus.ParentID),
 	}, nil
 }
@@ -259,6 +275,7 @@ func viewFromTodo(todo database.Todo) (TodoView, error) {
 		ExpiresAt:   todo.ExpiresAt,
 		Priority:    todo.Priority,
 		IsDaily:     todo.IsDaily,
+		DueTime:     todo.DueTime.String,
 		ParentID:    nullUUID(todo.ParentID),
 	}, nil
 }
@@ -277,6 +294,7 @@ func viewFromNameRow(todo database.GetTodoByNameRow) (TodoView, error) {
 		ExpiresAt:   todo.ExpiresAt,
 		Priority:    todo.Priority,
 		IsDaily:     todo.IsDaily,
+		DueTime:     todo.DueTime,
 	})
 	view.ParentID, view.Parent = parentID, todo.ParentName
 	return view, err

@@ -62,6 +62,7 @@
         </select>
       </label>
       <label>{{T "tui.form.date"}} <input type="date" name="date" min="{{.DateMin}}"></label>
+      <label>{{T "tui.form.time"}} <input type="time" name="time"></label>
       <label>{{T "tui.form.priority"}}
         <select name="priority">
           <option value="">—</option>
@@ -90,7 +91,7 @@
   </form>{{end}}
   <span class="name">{{.Name}}{{if and .IsDaily (not .IsSubtask)}} <span class="muted">↻</span>{{end}}</span>
   {{with .SubtaskProgress}}{{if .Total}}<span class="count">{{.Done}}/{{.Total}}</span>{{end}}{{end}}
-  {{if not .IsDaily}}<span class="due{{if .Late}} late{{end}}">{{due .ExpiresAt}}</span>{{end}}
+  {{if not .IsDaily}}<span class="due{{if .Late}} late{{end}}">{{due .ExpiresAt}}{{if .DueTime}} {{.DueTime}}{{end}}</span>{{else if .DueTime}}<span class="due">{{.DueTime}}</span>{{end}}
   {{if .Priority}}<span class="prio {{.Priority}}">{{.Priority}}</span>{{end}}
 </li>
 {{range .Subs}}{{template "todo" .}}{{end}}{{end}}
@@ -121,6 +122,7 @@
       </select>
     </label>
     <label>{{T "tui.form.date"}} <input type="date" name="date" min="{{.DateMin}}"></label>
+      <label>{{T "tui.form.time"}} <input type="time" name="time"></label>
     <label>{{T "tui.form.priority"}}
       <select name="priority">
         <option value="">—</option>

@@ -205,6 +205,7 @@ func (s *Server) add(w http.ResponseWriter, r *http.Request) {
 		Parent:   strings.TrimSpace(r.FormValue("parent")),
 		Priority: r.FormValue("priority"),
 		IsDaily:  r.FormValue("daily") != "",
+		DueTime:  r.FormValue("time"),
 	}
 
 	due, err := parseDate(r.FormValue("date"), in.Parent != "", s.now())
@@ -356,6 +357,7 @@ func (s *Server) convert(w http.ResponseWriter, r *http.Request) {
 		Parent:   strings.TrimSpace(r.FormValue("parent")),
 		Priority: r.FormValue("priority"),
 		IsDaily:  r.FormValue("daily") != "",
+		DueTime:  r.FormValue("time"),
 	}
 	if in.Name == "" {
 		s.reply(w, r, tabDump, "", errors.New(i18n.T("tui.form.nameRequired")))

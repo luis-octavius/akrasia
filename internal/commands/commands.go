@@ -24,6 +24,7 @@ var (
 	description    string
 	priority       string
 	date           []int
+	addTime        string
 	daysBackfill   int
 	todayOnly      string
 	todayLimit     int
@@ -40,6 +41,7 @@ var (
 	editPriority    string
 	editDaily       bool
 	editDate        []int
+	editTime        string
 
 	notesLimit int
 
@@ -49,6 +51,7 @@ var (
 	dumpPriority string
 	dumpDaily    bool
 	dumpDate     []int
+	dumpTime     string
 )
 
 // rootCmd is the CLI entrypoint that registers all Akrasia subcommands.
@@ -148,6 +151,7 @@ var add = &cobra.Command{
 			Priority:    priority,
 			IsDaily:     isDaily,
 			ExpiresAt:   expiresAt,
+			DueTime:     addTime,
 			Parent:      parentName,
 		})
 		if err != nil {
@@ -586,7 +590,7 @@ var dumpCmd = &cobra.Command{
 
 		flags := cmd.Flags()
 		deleting, promoting := flags.Changed("delete"), flags.Changed("to-task")
-		taskFlags := flags.Changed("priority") || flags.Changed("daily") || flags.Changed("date")
+		taskFlags := flags.Changed("priority") || flags.Changed("daily") || flags.Changed("date") || flags.Changed("time")
 
 		switch {
 		case (deleting && promoting) || ((deleting || promoting) && dumpName != ""):
@@ -618,6 +622,7 @@ var dumpCmd = &cobra.Command{
 				Name:      entry.Name,
 				Priority:  dumpPriority,
 				IsDaily:   dumpDaily,
+				DueTime:   dumpTime,
 				ExpiresAt: expiresAt,
 			})
 			if err != nil {
@@ -700,6 +705,9 @@ func editPatch(cmd *cobra.Command) (tasks.TodoPatch, error) {
 			return patch, err
 		}
 		patch.ExpiresAt = &expiresAt
+	}
+	if flags.Changed("time") {
+		patch.DueTime = &editTime
 	}
 	return patch, nil
 }
@@ -952,6 +960,7 @@ func init() {
 	add.Flags().IntSliceVar(&date, "date", []int{}, i18n.T("commands.flags.addDate"))
 	add.Flags().StringVar(&name, "name", "", i18n.T("commands.flags.addName"))
 	add.Flags().StringVar(&priority, "priority", "", i18n.T("commands.flags.addPriority"))
+	add.Flags().StringVar(&addTime, "time", "", i18n.T("commands.flags.addTime"))
 	add.Flags().Bool("daily", false, i18n.T("commands.flags.addDaily"))
 	add.Flags().StringVar(&description, "desc", "", i18n.T("commands.flags.addDescription"))
 	add.Flags().StringVar(&parentName, "parent", "", i18n.T("commands.flags.addParent"))
@@ -976,12 +985,14 @@ func init() {
 	dumpCmd.Flags().StringVar(&dumpPriority, "priority", "", i18n.T("commands.flags.dumpPriority"))
 	dumpCmd.Flags().BoolVar(&dumpDaily, "daily", false, i18n.T("commands.flags.dumpDaily"))
 	dumpCmd.Flags().IntSliceVar(&dumpDate, "date", nil, i18n.T("commands.flags.dumpDate"))
+	dumpCmd.Flags().StringVar(&dumpTime, "time", "", i18n.T("commands.flags.dumpTime"))
 	notesCmd.Flags().IntVar(&notesLimit, "limit", 30, i18n.T("commands.flags.notesLimit"))
 	editCmd.Flags().StringVar(&editName, "name", "", i18n.T("commands.flags.editName"))
 	editCmd.Flags().StringVar(&editDescription, "desc", "", i18n.T("commands.flags.editDescription"))
 	editCmd.Flags().StringVar(&editPriority, "priority", "", i18n.T("commands.flags.editPriority"))
 	editCmd.Flags().BoolVar(&editDaily, "daily", false, i18n.T("commands.flags.editDaily"))
 	editCmd.Flags().IntSliceVar(&editDate, "date", nil, i18n.T("commands.flags.editDate"))
+	editCmd.Flags().StringVar(&editTime, "time", "", i18n.T("commands.flags.editTime"))
 	today.Flags().StringVar(&todayOnly, "only", "", i18n.T("commands.flags.todayOnly"))
 	today.Flags().IntVar(&todayLimit, "limit", 0, i18n.T("commands.flags.todayLimit"))
 	today.Flags().BoolVar(&todayJSON, "json", false, i18n.T("commands.flags.todayJSON"))

@@ -362,18 +362,18 @@ func TestAddTodoForm(t *testing.T) {
 		t.Fatalf("a should open the form, mode %v", m.mode)
 	}
 
-	// name, description, priority (invalid), daily, date
-	m = send(t, m, runes("write"), keyEnter, keyEnter, runes("urgent"), keyEnter, runes("y"), keyEnter, keyEnter)
+	// name, description, priority (invalid), daily, date, time
+	m = send(t, m, runes("write"), keyEnter, keyEnter, runes("urgent"), keyEnter, runes("y"), keyEnter, keyEnter, keyEnter)
 	if m.form.err == nil || len(svc.added) != 0 {
 		t.Fatalf("invalid priority should keep the form open with an error")
 	}
 
-	// fix the priority: back up three fields, clear it, type a valid one
-	m = send(t, m, keyUp, keyUp)
+	// fix the priority: back up four fields, clear it, type a valid one
+	m = send(t, m, keyUp, keyUp, keyUp)
 	for range "urgent" {
 		m = send(t, m, tea.KeyPressMsg{Code: tea.KeyBackspace})
 	}
-	m = send(t, m, runes("high"), keyDown, keyDown, keyEnter)
+	m = send(t, m, runes("high"), keyDown, keyDown, keyDown, keyEnter)
 
 	if len(svc.added) != 1 {
 		t.Fatalf("expected one task added, got %v (form err %v)", svc.added, m.form.err)
@@ -672,7 +672,7 @@ func TestEditSendsOnlyChangedFields(t *testing.T) {
 	for range "high" {
 		m = send(t, m, keyBackspace())
 	}
-	m = send(t, m, runes("low"), keyEnter, keyEnter, keyEnter)
+	m = send(t, m, runes("low"), keyEnter, keyEnter, keyEnter, keyEnter)
 
 	if len(svc.edited) != 1 {
 		t.Fatalf("expected one edit, got %d (form err %v)", len(svc.edited), m.form.err)
@@ -695,7 +695,7 @@ func TestEditWithoutChangesSavesNothing(t *testing.T) {
 	late := tasks.TodoView{Name: "late", ExpiresAt: time.Now().AddDate(0, 0, -3)}
 	svc := &fakeService{all: []tasks.TodoView{late}}
 
-	m := send(t, start(t, svc, KeymapDefault), keyTab, runes("e"), keyEnter, keyEnter, keyEnter, keyEnter, keyEnter)
+	m := send(t, start(t, svc, KeymapDefault), keyTab, runes("e"), keyEnter, keyEnter, keyEnter, keyEnter, keyEnter, keyEnter)
 
 	if m.form.err != nil {
 		t.Fatalf("untouched form should not fail validation: %v", m.form.err)
@@ -711,7 +711,7 @@ func TestEditDailyToggle(t *testing.T) {
 	svc := &fakeService{all: []tasks.TodoView{daily}}
 
 	// daily field: y -> n
-	m := send(t, start(t, svc, KeymapDefault), keyTab, runes("e"), keyDown, keyDown, keyDown, keyBackspace(), runes("n"), keyEnter, keyEnter)
+	m := send(t, start(t, svc, KeymapDefault), keyTab, runes("e"), keyDown, keyDown, keyDown, keyBackspace(), runes("n"), keyEnter, keyEnter, keyEnter)
 
 	if len(svc.edited) != 1 || svc.edited[0].patch.IsDaily == nil || *svc.edited[0].patch.IsDaily {
 		t.Fatalf("expected daily=false, got %+v (form err %v)", svc.edited, m.form.err)
@@ -940,8 +940,8 @@ func TestConvertDumpToTask(t *testing.T) {
 		t.Fatalf("form should be titled and prefilled from the dump:\n%s", view)
 	}
 
-	// name, description, priority "high", daily, date
-	m = send(t, m, keyEnter, keyEnter, runes("high"), keyEnter, keyEnter, keyEnter)
+	// name, description, priority "high", daily, date, time
+	m = send(t, m, keyEnter, keyEnter, runes("high"), keyEnter, keyEnter, keyEnter, keyEnter)
 	if len(svc.promoted) != 1 || svc.promoted[0].Name != "learn sql" || svc.promoted[0].Priority != "high" {
 		t.Fatalf("expected learn sql promoted with high priority, got %+v (form err %v)", svc.promoted, m.form.err)
 	}
@@ -1094,5 +1094,48 @@ func TestAddSubtask(t *testing.T) {
 	in := svc.added[0]
 	if in.Name != "balls" || in.Parent != "party" || !in.ExpiresAt.IsZero() {
 		t.Errorf("added %+v; want balls under party with the parent's date", in)
+	}
+}
+
+func TestFormTimeField(t *testing.T) {
+	svc := &fakeService{}
+	m := send(t, start(t, svc, KeymapDefault), runes("a"))
+
+	// name, then straight to the time (last) field
+	m = send(t, m, runes("call"), keyEnter, keyEnter, keyEnter, keyEnter, keyEnter, runes("9:30"), keyEnter)
+	if len(svc.added) != 1 || svc.added[0].DueTime != "09:30" {
+		t.Fatalf("expected the task added with time 09:30, got %+v (form err %v)", svc.added, m.form.err)
+	}
+
+	// an invalid time keeps the form open
+	svc = &fakeService{}
+	m = send(t, start(t, svc, KeymapDefault), runes("a"))
+	m = send(t, m, runes("call"), keyEnter, keyEnter, keyEnter, keyEnter, keyEnter, runes("25:00"), keyEnter)
+	if m.form.err == nil || len(svc.added) != 0 {
+		t.Fatalf("an invalid time should keep the form open with an error, got %+v", svc.added)
+	}
+}
+
+func TestEditFormShowsAndChangesTime(t *testing.T) {
+	timed := todo("call")
+	timed.DueTime = "14:30"
+	svc := &fakeService{all: []tasks.TodoView{timed}}
+
+	m := send(t, start(t, svc, KeymapDefault), keyTab, runes("e"))
+	if m.form.fields[fieldTime].Value() != "14:30" {
+		t.Fatalf("the edit form should be prefilled with the time, got %q", m.form.fields[fieldTime].Value())
+	}
+
+	// clear the time (last field) and save
+	for range fieldCount - 1 {
+		m = send(t, m, keyDown)
+	}
+	for range "14:30" {
+		m = send(t, m, keyBackspace())
+	}
+	send(t, m, keyEnter)
+
+	if len(svc.edited) != 1 || svc.edited[0].patch.DueTime == nil || *svc.edited[0].patch.DueTime != "" {
+		t.Fatalf("expected the time removed, got %+v", svc.edited)
 	}
 }

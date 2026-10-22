@@ -57,8 +57,10 @@ func renderTodo(todo tasks.TodoView) string {
 	}
 
 	if !todo.IsDaily {
-		expires := fmt.Sprintf("%s · %s\n", todo.ExpiresAt.Format("02 Jan 06 15:04"), status)
+		expires := fmt.Sprintf("%s · %s\n", dueLabel(todo), status)
 		fmt.Fprintf(&b, "  %s\n", color.Muted().Render(expires))
+	} else if todo.DueTime != "" {
+		fmt.Fprintf(&b, "  %s\n", color.Muted().Render(fmt.Sprintf(i18n.T("tasks.tasks.atTime"), todo.DueTime)))
 	}
 
 	if priority := todo.Priority; priority != "" {
@@ -82,9 +84,23 @@ func renderSubtask(sub tasks.TodoView) string {
 
 	line := "    " + state.Render(icon) + " " + sub.Name
 	if !sub.IsDaily {
-		line += color.Muted().Render(" · " + sub.ExpiresAt.Format("02 Jan"))
+		line += color.Muted().Render(" · " + sub.ExpiresAt.Format("02 Jan") + timeSuffix(sub))
+	} else if sub.DueTime != "" {
+		line += color.Muted().Render(" · " + sub.DueTime)
 	}
 	return line + "\n"
+}
+
+// dueLabel is a one-off task's due date, with its time of day when it has one.
+func dueLabel(todo tasks.TodoView) string {
+	return todo.ExpiresAt.Format("02 Jan 06") + timeSuffix(todo)
+}
+
+func timeSuffix(todo tasks.TodoView) string {
+	if todo.DueTime == "" {
+		return ""
+	}
+	return " " + todo.DueTime
 }
 
 // progressBarWidth is the width of the CLI progress bar, percentage included.

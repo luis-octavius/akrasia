@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"time"
@@ -19,12 +20,14 @@ type TodoPatch struct {
 	Priority    *string
 	IsDaily     *bool
 	ExpiresAt   *time.Time
+	// DueTime is the time of day as "HH:MM"; a pointer to "" removes it
+	DueTime *string
 }
 
 // Empty reports whether the patch changes nothing.
 func (p TodoPatch) Empty() bool {
 	return p.Name == nil && p.Description == nil && p.Priority == nil &&
-		p.IsDaily == nil && p.ExpiresAt == nil
+		p.IsDaily == nil && p.ExpiresAt == nil && p.DueTime == nil
 }
 
 // EditTodo applies patch to the task that best matches name and returns
@@ -44,6 +47,7 @@ func (tkm *TaskManager) EditTodo(ctx context.Context, name string, patch TodoPat
 		Priority:    row.Priority,
 		IsDaily:     row.IsDaily,
 		ExpiresAt:   row.ExpiresAt,
+		DueTime:     row.DueTime,
 		UpdatedAt:   time.Now(),
 	}
 
@@ -70,6 +74,13 @@ func (tkm *TaskManager) EditTodo(ctx context.Context, name string, patch TodoPat
 	}
 	if patch.ExpiresAt != nil {
 		params.ExpiresAt = *patch.ExpiresAt
+	}
+	if patch.DueTime != nil {
+		dueTime, err := ParseClock(*patch.DueTime)
+		if err != nil {
+			return TodoView{}, localizedError{msg: err.Error(), sentinel: ErrInvalidInput}
+		}
+		params.DueTime = sql.NullString{String: dueTime, Valid: dueTime != ""}
 	}
 
 	parentID, err := optionalUUID(row.ParentID)

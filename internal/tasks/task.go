@@ -35,6 +35,11 @@ func (tkm *TaskManager) AddTodo(ctx context.Context, in NewTodo) (TodoView, erro
 		}
 	}
 
+	dueTime, err := ParseClock(in.DueTime)
+	if err != nil {
+		return TodoView{}, localizedError{msg: err.Error(), sentinel: ErrInvalidInput}
+	}
+
 	todo, err := tkm.Queries.AddTodo(ctx, database.AddTodoParams{
 		ID:           uuid.New(),
 		Name:         in.Name,
@@ -47,6 +52,7 @@ func (tkm *TaskManager) AddTodo(ctx context.Context, in NewTodo) (TodoView, erro
 		IsDaily:      in.IsDaily,
 		HistorySince: sql.NullString{String: now.Format(time.DateOnly), Valid: true},
 		ParentID:     uuid.NullUUID{UUID: parent.ID, Valid: in.Parent != ""},
+		DueTime:      sql.NullString{String: dueTime, Valid: dueTime != ""},
 	})
 	if isUniqueViolation(err) {
 		return TodoView{}, localizedError{

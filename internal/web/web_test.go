@@ -205,6 +205,18 @@ func TestAdd(t *testing.T) {
 		t.Errorf("Dentist = %+v, %v; want due %s, high", dentist, err, date)
 	}
 
+	w = do(t, s, "POST", "/add", url.Values{"name": {"Call bank"}, "kind": {"task"}, "date": {date}, "time": {"14:30"}}, true, true)
+	if bank, err := tkm.FindTodo(ctx, "Call bank"); err != nil || bank.DueTime != "14:30" {
+		t.Errorf("Call bank = %+v, %v; want time 14:30", bank, err)
+	}
+	if !strings.Contains(w.Body.String(), "14:30") {
+		t.Errorf("the time should show on the task row:\n%s", w.Body.String())
+	}
+	w = do(t, s, "POST", "/add", url.Values{"name": {"Bad time"}, "kind": {"task"}, "time": {"99:99"}}, true, true)
+	if !strings.Contains(w.Body.String(), `class="msg err"`) {
+		t.Errorf("an invalid time should show an error:\n%s", w.Body.String())
+	}
+
 	do(t, s, "POST", "/add", url.Values{"name": {"Idea"}, "kind": {"dump"}}, true, true)
 	if dumps, _ := tkm.Dumps(ctx); len(dumps) != 1 || dumps[0].Name != "Idea" {
 		t.Errorf("dumps = %v", dumps)

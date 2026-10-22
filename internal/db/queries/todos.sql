@@ -1,7 +1,7 @@
 -- name: AddTodo :one 
-INSERT INTO todos (id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, parent_id)
+INSERT INTO todos (id, name, description, created_at, updated_at, concluded, expires_at, priority, is_daily, history_since, parent_id, due_time)
 VALUES (
-  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 )
 RETURNING *;
 
@@ -71,6 +71,7 @@ SET name = sqlc.arg(name),
     priority = sqlc.arg(priority),
     is_daily = sqlc.arg(is_daily),
     expires_at = sqlc.arg(expires_at),
+    due_time = sqlc.arg(due_time),
     history_since = COALESCE(history_since, date('now', 'localtime')),
     updated_at = sqlc.arg(updated_at)
 WHERE id = sqlc.arg(id)

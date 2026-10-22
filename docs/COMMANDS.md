@@ -89,13 +89,13 @@ Available Commands:
 
 | Command | Flags |
 | --- | --- |
-| `add` | `--parent <name>` (make it a subtask), `--desc`, `--priority high\|medium\|low`, `--daily`, `--date dd`, `--date dd,mm` or `--date dd,mm,yyyy` (default: tomorrow), `--name` (instead of the positional name) |
-| `edit` | `--name`, `--desc` (`""` clears it), `--priority` (`""` clears it), `--daily=true\|false`, `--date dd`, `dd,mm` or `dd,mm,yyyy`; only the flags you pass are changed |
+| `add` | `--parent <name>` (make it a subtask), `--desc`, `--priority high\|medium\|low`, `--daily`, `--date dd`, `--date dd,mm` or `--date dd,mm,yyyy` (default: tomorrow), `--time HH:MM` (optional time of day), `--name` (instead of the positional name) |
+| `edit` | `--name`, `--desc` (`""` clears it), `--priority` (`""` clears it), `--daily=true\|false`, `--date dd`, `dd,mm` or `dd,mm,yyyy`, `--time HH:MM` (`""` removes it); only the flags you pass are changed |
 | `today` | `--only overdue\|today\|daily\|soon`, `--limit N`, `--priority`, `--json` |
 | `focus` | `--limit 1-3` (default 3), `--priority` |
 | `get-all` | `--priority` |
 | `update-status` | `--notes "text"` (saved in the task's history for today; completing again the same day replaces it), `--yes` (complete a task with pending subtasks, and them, without asking) |
-| `dump` | `--delete N`, `--to-task N` (with optional `--priority`, `--daily`, `--date`); `N` is the number `akrasia dump` prints |
+| `dump` | `--delete N`, `--to-task N` (with optional `--priority`, `--daily`, `--date`, `--time`); `N` is the number `akrasia dump` prints |
 | `notes` | `--limit N` days (default 30, `0` = all) |
 | `delete-by-name` | `--yes` (required) |
 | `backup list` | `--profile <name>` (another machine's copies) |

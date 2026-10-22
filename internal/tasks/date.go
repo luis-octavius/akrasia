@@ -3,6 +3,7 @@ package tasks
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/luis-octavius/akrasia/pkg/i18n"
@@ -55,6 +56,21 @@ func ParseDateAt(parts []int, now time.Time) (time.Time, error) {
 		return time.Time{}, err
 	}
 	return date, nil
+}
+
+// ParseClock validates a time of day written as H:MM or HH:MM (24 hours)
+// and returns it as HH:MM. An empty string means no time and is returned
+// as is.
+func ParseClock(s string) (string, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", nil
+	}
+	t, err := time.Parse("15:04", s)
+	if err != nil {
+		return "", fmt.Errorf(i18n.T("commands.error.invalidTime"), s)
+	}
+	return t.Format("15:04"), nil
 }
 
 // isDateBefore reports whether date falls on a day before now's day.
