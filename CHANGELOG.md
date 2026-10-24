@@ -5,6 +5,7 @@ All notable changes to Akrasia are documented here. The format follows
 [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+## [2.7.1] - 2026-10-24
 
 ### Changed
 
@@ -13,7 +14,7 @@ All notable changes to Akrasia are documented here. The format follows
   has no header. Daily tasks come by time of day, weekly ones by weekday
   and monthly ones by day of the month, timed tasks first.
 
-## [2.7.0] - 22-10-2026
+## [2.7.0] - 2026-10-22
 
 ### Added
 
@@ -387,8 +388,8 @@ is a major version because two behaviors that scripts may rely on changed:
 
 See the [GitHub releases and tags](https://github.com/luis-octavius/akrasia/tags).
 
-
-[Unreleased]: https://github.com/luis-octavius/akrasia/compare/v.2.7.0...dev
+[Unreleased]: https://github.com/luis-octavius/akrasia/compare/dev...v.2.7.1
+[2.7.1]: https://github.com/luis-octavius/akrasia/compare/v.2.7.1...v.2.7.0
 [2.7.0]: https://github.com/luis-octavius/akrasia/compare/v.2.6.0...v.2.7.0
 [2.6.0]: https://github.com/luis-octavius/akrasia/compare/v.2.5.0...v.2.6.0
 [2.5.0]: https://github.com/luis-octavius/akrasia/compare/v.2.4.0...v.2.5.0
