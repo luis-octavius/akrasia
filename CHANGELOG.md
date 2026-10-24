@@ -6,6 +6,13 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **TUI: the All tab is grouped by kind of task**: DAILY, WEEKLY, MONTHLY
+  and WITH A DATE (the one-off tasks, by due date). A group without tasks
+  has no header. Daily tasks come by time of day, weekly ones by weekday
+  and monthly ones by day of the month, timed tasks first.
+
 ## [2.7.0] - 22-10-2026
 
 ### Added
