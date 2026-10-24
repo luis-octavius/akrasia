@@ -9,7 +9,7 @@ Below the tabs, a bar shows today's progress (see `akrasia progress`).
 | Key | Action |
 | --- | --- |
 | `↑` `↓` / `home` `end` | move / jump to top or bottom |
-| `tab` `shift+tab` / `←` `→` | switch tabs (Today, All, Daily, Dump) |
+| `tab` `shift+tab` / `←` `→` | switch tabs (Today, All, Daily, Dump); All is grouped into daily, weekly, monthly and dated tasks |
 | `space` | complete the selected task (asks for optional notes, then shows a quote; `esc` closes it). On a task already done today, it opens today's note to rewrite it. On a task with pending subtasks, it asks before completing them too |
 | `a` | new task (on the Dump tab: new dump entry) |
 | `s` | new subtask of the selected task (or of the selected subtask's parent) |

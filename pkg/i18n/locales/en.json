@@ -363,6 +363,12 @@
 		"quote13": "\"How long will you wait before you demand the best for yourself?\" - Epictetus, Discourses"
 	},
 	"tui": {
+		"groups": {
+			"daily": "DAILY",
+			"weekly": "WEEKLY",
+			"monthly": "MONTHLY",
+			"dated": "WITH A DATE"
+		},
 		"tabs": {
 			"today": "Today",
 			"all": "All",

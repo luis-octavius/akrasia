@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"sort"
 	"strings"
 	"time"
 
@@ -391,7 +392,7 @@ func fetchRows(ctx context.Context, svc Service, t tab) ([]row, error) {
 
 	case tabAll:
 		todos, err := svc.ListTodos(ctx, "")
-		return todoRows(todos), err
+		return allRows(todos), err
 
 	case tabDaily:
 		todos, err := svc.DailyTodos(ctx)
@@ -416,6 +417,45 @@ func appendSection(rows []row, title string, todos []tasks.TodoView) []row {
 	}
 	rows = append(rows, row{header: title})
 	return append(rows, todoRows(todos)...)
+}
+
+// allRows groups every task by how it recurs: daily, weekly, monthly, and
+// the ones with a date. A group without tasks has no header. Weekly tasks
+// come in weekday order and monthly ones by day of the month, timed ones
+// first; the dated ones keep the due date order the service gave.
+func allRows(todos []tasks.TodoView) []row {
+	var daily, weekly, monthly, dated []tasks.TodoView
+	for _, todo := range todos {
+		switch {
+		case todo.Recurrence == tasks.RecurWeekly:
+			weekly = append(weekly, todo)
+		case todo.Recurrence == tasks.RecurMonthly:
+			monthly = append(monthly, todo)
+		case todo.IsDaily:
+			daily = append(daily, todo)
+		default:
+			dated = append(dated, todo)
+		}
+	}
+
+	for _, group := range [][]tasks.TodoView{daily, weekly, monthly} {
+		sort.SliceStable(group, func(i, j int) bool {
+			a, b := group[i], group[j]
+			if a.RepeatOn != b.RepeatOn {
+				return a.RepeatOn < b.RepeatOn
+			}
+			if (a.DueTime == "") != (b.DueTime == "") {
+				return a.DueTime != ""
+			}
+			return a.DueTime < b.DueTime
+		})
+	}
+
+	var rows []row
+	rows = appendSection(rows, i18n.T("tui.groups.daily"), daily)
+	rows = appendSection(rows, i18n.T("tui.groups.weekly"), weekly)
+	rows = appendSection(rows, i18n.T("tui.groups.monthly"), monthly)
+	return appendSection(rows, i18n.T("tui.groups.dated"), dated)
 }
 
 // todoRows lists each task followed by its subtasks.

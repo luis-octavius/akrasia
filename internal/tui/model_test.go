@@ -252,23 +252,24 @@ func TestVimKeysOnlyInVimLayout(t *testing.T) {
 	svc := &fakeService{all: []tasks.TodoView{todo("a"), todo("b"), todo("c")}}
 
 	def := send(t, start(t, svc, KeymapDefault), keyTab, runes("j"))
-	if got := def.tabs[tabAll].cursor; got != 0 {
+	// the cursor starts on the first task, under the group header
+	if got := def.tabs[tabAll].cursor; got != 1 {
 		t.Fatalf("j should do nothing in the default layout, cursor %d", got)
 	}
 
 	vim := send(t, start(t, svc, KeymapVim), keyTab, runes("j"), runes("j"))
-	if got := vim.tabs[tabAll].cursor; got != 2 {
+	if got := vim.tabs[tabAll].cursor; got != 3 {
 		t.Fatalf("j should move down in the vim layout, cursor %d", got)
 	}
 
 	vim = send(t, vim, runes("g"))
-	if got := vim.tabs[tabAll].cursor; got != 0 {
-		t.Fatalf("g should jump to the top, cursor %d", got)
+	if got := vim.tabs[tabAll].cursor; got != 1 {
+		t.Fatalf("g should jump to the first task, cursor %d", got)
 	}
 
 	// arrows keep working with vim on
 	vim = send(t, vim, keyDown)
-	if got := vim.tabs[tabAll].cursor; got != 1 {
+	if got := vim.tabs[tabAll].cursor; got != 2 {
 		t.Fatalf("down arrow should still work, cursor %d", got)
 	}
 }
@@ -279,8 +280,8 @@ func TestTabSwitchLoadsOnce(t *testing.T) {
 	m := start(t, svc, KeymapDefault)
 	m = send(t, m, keyTab)
 
-	if m.active != tabAll || len(m.rows()) != 2 {
-		t.Fatalf("expected All tab loaded with 2 rows, got tab %v with %d rows", m.active, len(m.rows()))
+	if m.active != tabAll || len(m.rows()) != 3 {
+		t.Fatalf("expected All tab loaded with a header and 2 rows, got tab %v with %d rows", m.active, len(m.rows()))
 	}
 
 	m = send(t, m, tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift}, keyTab)
@@ -1016,8 +1017,8 @@ func TestSubtasksAreRowsUnderTheirParent(t *testing.T) {
 	svc := &fakeService{all: []tasks.TodoView{party(), todo("taxes")}}
 	m := send(t, start(t, svc, KeymapDefault), keyTab)
 
-	if got := len(m.rows()); got != 4 {
-		t.Fatalf("expected parent, 2 subtasks and taxes, got %d rows", got)
+	if got := len(m.rows()); got != 5 {
+		t.Fatalf("expected the header, parent, 2 subtasks and taxes, got %d rows", got)
 	}
 	list := ansi.Strip(m.renderList(60, 0))
 	if !strings.Contains(list, "party ▾ 1/2") || !strings.Contains(list, "     ✔ cake") {
@@ -1026,11 +1027,11 @@ func TestSubtasksAreRowsUnderTheirParent(t *testing.T) {
 
 	// z folds the subtasks away, and back
 	m = send(t, m, runes("z"))
-	if got := len(m.rows()); got != 2 || !strings.Contains(ansi.Strip(m.renderList(60, 0)), "party ▸ 1/2") {
+	if got := len(m.rows()); got != 3 || !strings.Contains(ansi.Strip(m.renderList(60, 0)), "party ▸ 1/2") {
 		t.Fatalf("folded: %d rows\n%s", got, ansi.Strip(m.renderList(60, 0)))
 	}
 	m = send(t, m, runes("z"))
-	if got := len(m.rows()); got != 4 {
+	if got := len(m.rows()); got != 5 {
 		t.Fatalf("unfolded: %d rows", got)
 	}
 }
@@ -1186,5 +1187,58 @@ func TestEditFormRepeatField(t *testing.T) {
 	if len(svc.edited) != 1 || svc.edited[0].patch.Recurrence == nil || *svc.edited[0].patch.Recurrence != tasks.RecurWeekly ||
 		svc.edited[0].patch.RepeatOn == nil || *svc.edited[0].patch.RepeatOn != 1 {
 		t.Fatalf("expected weekly on Monday, got %+v (form err %v)", svc.edited, m.form.err)
+	}
+}
+
+func TestAllTabGroupsTasksByKind(t *testing.T) {
+	recurring := func(name, kind string, on int, clock string) tasks.TodoView {
+		v := todo(name)
+		v.IsDaily, v.Recurrence, v.RepeatOn, v.DueTime = true, kind, on, clock
+		return v
+	}
+	svc := &fakeService{all: []tasks.TodoView{
+		todo("taxes"),
+		recurring("rent", tasks.RecurMonthly, 5, ""),
+		recurring("review", tasks.RecurWeekly, 5, ""),
+		recurring("run", tasks.RecurDaily, 0, "07:00"),
+		recurring("gym", tasks.RecurWeekly, 1, ""),
+		recurring("read", tasks.RecurDaily, 0, ""),
+		recurring("bills", tasks.RecurMonthly, 1, ""),
+		todo("trip"),
+	}}
+	m := send(t, start(t, svc, KeymapDefault), keyTab)
+
+	var got []string
+	for _, r := range m.rows() {
+		switch {
+		case r.header != "":
+			got = append(got, "#"+r.header)
+		case r.todo != nil:
+			got = append(got, r.todo.Name)
+		}
+	}
+	want := []string{
+		"#" + i18n.T("tui.groups.daily"), "run", "read",
+		"#" + i18n.T("tui.groups.weekly"), "gym", "review",
+		"#" + i18n.T("tui.groups.monthly"), "bills", "rent",
+		"#" + i18n.T("tui.groups.dated"), "taxes", "trip",
+	}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("All tab rows = %v, want %v", got, want)
+	}
+
+	// a group with nothing in it has no header
+	svc = &fakeService{all: []tasks.TodoView{todo("taxes")}}
+	m = send(t, start(t, svc, KeymapDefault), keyTab)
+	if rows := m.rows(); len(rows) != 2 || rows[0].header != i18n.T("tui.groups.dated") {
+		t.Fatalf("only the dated group should show, got %+v", rows)
+	}
+
+	// the search keeps the header of a group that still has a match
+	m = send(t, start(t, &fakeService{all: []tasks.TodoView{
+		todo("taxes"), recurring("run", tasks.RecurDaily, 0, ""),
+	}}, KeymapDefault), keyTab, runes("/"), runes("run"), keyEnter)
+	if rows := m.rows(); len(rows) != 2 || rows[0].header != i18n.T("tui.groups.daily") {
+		t.Fatalf("search for run should leave the daily group, got %+v", rows)
 	}
 }

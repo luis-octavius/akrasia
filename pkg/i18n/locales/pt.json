@@ -363,6 +363,12 @@
 		"quote13": "\"Quanto tempo você vai esperar antes de exigir o melhor de si mesmo?\" - Epicteto, Discursos"
 	},
 	"tui": {
+		"groups": {
+			"daily": "DIÁRIAS",
+			"weekly": "SEMANAIS",
+			"monthly": "MENSAIS",
+			"dated": "COM DATA"
+		},
 		"tabs": {
 			"today": "Hoje",
 			"all": "Todas",
