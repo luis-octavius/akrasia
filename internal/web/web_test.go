@@ -145,7 +145,7 @@ func TestPagesListTasks(t *testing.T) {
 	// the Today tab lists the pending daily task; htmx gets only the app
 	w = do(t, s, "GET", "/today", nil, true, true)
 	body = w.Body.String()
-	if strings.Contains(body, "<!doctype html>") || !strings.Contains(body, `<main id="app">`) {
+	if strings.Contains(body, "<!doctype html>") || !strings.Contains(body, `<main id="app"`) {
 		t.Errorf("htmx GET /today should be the app alone:\n%.200s", body)
 	}
 	if !strings.Contains(body, "Run") {
@@ -633,5 +633,35 @@ func TestServiceWorkerCarriesTheBuild(t *testing.T) {
 	}
 	if len(s.build) != 12 {
 		t.Errorf("build = %q", s.build)
+	}
+}
+
+// queue.js reads its texts from data attributes. html/template treats an
+// attribute that starts with "on" as JavaScript and would put quotes
+// around the text, so none of them may.
+func TestQueueTextsAreInTheMarkup(t *testing.T) {
+	s, tkm := newTestServer(t)
+	addTask(t, tkm, tasks.NewTodo{Name: "Party"})
+	addTask(t, tkm, tasks.NewTodo{Name: "Bake", Parent: "Party"})
+
+	body := do(t, s, "GET", "/all", nil, true, false).Body.String()
+	for _, want := range []string{
+		`id="queue-status"`,
+		`data-offline="Offline"`,
+		`data-waiting="%d waiting"`,
+		`data-needscomputer="This needs the computer: try again when it is reachable."`,
+		`<template id="tpl-offline-complete">`,
+		`<script src="/queue.js" defer>`,
+		`data-path="Party" data-pending="1"`,
+		`data-path="Party/Bake" data-pending="0"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("GET /all misses %q", want)
+		}
+	}
+	for _, bad := range []string{`data-needscomputer="&#34;`, `data-needscomputer="\"`} {
+		if strings.Contains(body, bad) {
+			t.Errorf("a queue text is quoted: %q", bad)
+		}
 	}
 }

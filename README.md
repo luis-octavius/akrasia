@@ -16,7 +16,7 @@ This gap between available tools and my personal workflow led me to develop my o
 - **Fast CLI**: every action is also a single command, such as `akrasia add`, `akrasia today` or `akrasia update-status`, which makes it easy to script.
 - **Daily, weekly and monthly tasks, and streaks**: track habits and routines (with an optional time of day), see your current streak and its history, and backfill days you forgot to log.
 - **Subtasks**: split a task into steps; finishing the last one completes it.
-- **On your phone**: `akrasia serve` gives a web app you can install on the home screen, reached privately over Tailscale.
+- **On your phone**: `akrasia serve` gives a web app you can install on the home screen, reached privately over Tailscale. It opens and keeps what you add or complete even when the computer can't be reached, and sends it later.
 - **Backups and reminders**: daily copies to a folder you already sync, and reminders of what's due in a Discord channel.
 - **Themes**: nine color themes (`catppuccin-mocha`, `tokyo-night`, `gruvbox`, `nord`, `rose-pine`, `cyberpunk`, …).
 - **English and Portuguese** interface.

@@ -85,6 +85,13 @@ func rows(t tab, todos []tasks.TodoView) []row {
 // Subs are the subtask rows under a parent.
 func (r row) Subs() []row { return rows(r.Tab, r.Subtasks) }
 
+// PendingSubs is how many subtasks are still to do: what completing the
+// parent would complete too, which the phone needs when offline.
+func (r row) PendingSubs() int {
+	p := r.SubtaskProgress()
+	return p.Total - p.Done
+}
+
 // Late reports whether a one-off task is past its due day.
 func (r row) Late() bool {
 	return !r.IsDaily && !r.Done() && r.ExpiresAt.Before(dayStart(time.Now()))

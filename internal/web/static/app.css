@@ -213,3 +213,19 @@ input[name="name"], textarea, select, input[type="date"] {
 .login label { display: grid; gap: 6px; margin: 16px 0; }
 .login input { width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .login button { width: 100%; }
+
+/* the offline queue: what waits to be sent (queue.js) */
+.queue-status {
+  margin: 0 0 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: .85rem;
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+}
+.queue-status[data-state="failed"], .queue-status[data-state="login"] {
+  background: color-mix(in srgb, var(--err) 18%, transparent);
+}
+.queue-status[data-state="login"] { cursor: pointer; }
+.todo.queued { opacity: .85; border: 1px dashed var(--line); }
+.todo.queued.failed { border-color: var(--err); }
+.todo.queued .why { display: block; color: var(--err); font-size: .8rem; }
