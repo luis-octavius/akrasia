@@ -25,6 +25,8 @@ All notable changes to Akrasia are documented here. The format follows
     the day it was done, not the day it was sent. A queued completion must
     match the task's name exactly, so a task renamed on the computer is
     never replaced by a similar one.
+  - Adding with an empty name while offline says "name is required" at
+    once instead of queuing an item that could only fail.
   - Writes answer with `X-Akrasia-Result: ok|error`.
   - Not offline: editing, deleting or converting a dump entry, and sending
     while the app is closed.

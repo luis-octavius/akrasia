@@ -290,7 +290,10 @@
     if (!cfg) return;
     const path = cfg.path.split("?")[0];
 
-    if (cfg.verb === "post" && WRITES.includes(path) && cfg.headers["X-Queue-Id"]) {
+    if (cfg.verb === "post" && path === "/add" && !(cfg.formData.get("name") || "").trim()) {
+      // nothing to wait for: say so now, as the server would
+      notice($("#queue-status")?.dataset.nameneeded);
+    } else if (cfg.verb === "post" && WRITES.includes(path) && cfg.headers["X-Queue-Id"]) {
       const params = Object.fromEntries(cfg.formData.entries());
       enqueue(cfg.headers["X-Queue-Id"], path, params);
       // the form is done with: the task is in the queue

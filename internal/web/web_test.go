@@ -650,6 +650,7 @@ func TestQueueTextsAreInTheMarkup(t *testing.T) {
 		`data-offline="Offline"`,
 		`data-waiting="%d waiting"`,
 		`data-needscomputer="This needs the computer: try again when it is reachable."`,
+		`data-nameneeded="name is required"`,
 		`<template id="tpl-offline-complete">`,
 		`<script src="/queue.js" defer>`,
 		`data-path="Party" data-pending="1"`,
