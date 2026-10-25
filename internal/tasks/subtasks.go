@@ -87,6 +87,11 @@ func (tkm *TaskManager) family(ctx context.Context, id uuid.UUID) (TodoView, err
 // reopens it when one of them is pending. A parent without subtasks is
 // left alone.
 func (tkm *TaskManager) syncParent(ctx context.Context, parentID uuid.UUID) error {
+	return tkm.syncParentOn(ctx, parentID, time.Time{})
+}
+
+// syncParentOn is syncParent for a completion made on day (zero: today).
+func (tkm *TaskManager) syncParentOn(ctx context.Context, parentID uuid.UUID, day time.Time) error {
 	parent, err := tkm.family(ctx, parentID)
 	if err != nil || len(parent.Subtasks) == 0 {
 		return err
@@ -95,7 +100,7 @@ func (tkm *TaskManager) syncParent(ctx context.Context, parentID uuid.UUID) erro
 	p := parent.SubtaskProgress()
 	switch {
 	case p.Done == p.Total && !parent.Done():
-		return tkm.markDone(ctx, parent.ID, parent.IsDaily, "")
+		return tkm.markDoneOn(ctx, parent.ID, parent.IsDaily, "", day)
 	case p.Done < p.Total && parent.Done():
 		return tkm.reopen(ctx, parent)
 	}
@@ -105,19 +110,36 @@ func (tkm *TaskManager) syncParent(ctx context.Context, parentID uuid.UUID) erro
 // markDone records a completion today: the concluded flag of a one-off
 // task, and a history row for every task.
 func (tkm *TaskManager) markDone(ctx context.Context, id uuid.UUID, daily bool, notes string) error {
+	return tkm.markDoneOn(ctx, id, daily, notes, time.Time{})
+}
+
+// markDoneOn is markDone for a completion made on day (zero: today).
+func (tkm *TaskManager) markDoneOn(ctx context.Context, id uuid.UUID, daily bool, notes string, day time.Time) error {
 	if !daily {
 		if _, err := tkm.Queries.UpdateTodoStatusById(ctx, id); err != nil {
 			return fmt.Errorf(i18n.T("tasks.error.updateTaskStatus"), id, err)
 		}
 	}
 
-	_, err := tkm.Queries.AddTodoHistory(ctx, database.AddTodoHistoryParams{
-		ID:          uuid.New(),
-		TodoID:      id,
-		Completed:   sql.NullBool{Bool: true, Valid: true},
-		CompletedAt: sql.NullTime{Time: time.Now(), Valid: true},
-		Notes:       sql.NullString{String: notes, Valid: true},
-	})
+	var err error
+	if day.IsZero() {
+		_, err = tkm.Queries.AddTodoHistory(ctx, database.AddTodoHistoryParams{
+			ID:          uuid.New(),
+			TodoID:      id,
+			Completed:   sql.NullBool{Bool: true, Valid: true},
+			CompletedAt: sql.NullTime{Time: time.Now(), Valid: true},
+			Notes:       sql.NullString{String: notes, Valid: true},
+		})
+	} else {
+		_, err = tkm.Queries.AddTodoHistoryOn(ctx, database.AddTodoHistoryOnParams{
+			ID:          uuid.New(),
+			TodoID:      id,
+			Date:        day.Format(time.DateOnly),
+			Completed:   sql.NullBool{Bool: true, Valid: true},
+			CompletedAt: sql.NullTime{Time: day, Valid: true},
+			Notes:       sql.NullString{String: notes, Valid: true},
+		})
+	}
 	if err != nil {
 		return fmt.Errorf("%s: %w", i18n.T("tasks.error.createTaskHistory"), err)
 	}
@@ -141,7 +163,7 @@ func (tkm *TaskManager) CompleteAll(ctx context.Context, name, notes string) (To
 	if err != nil {
 		return TodoView{}, fmt.Errorf(i18n.T("tasks.error.updateTaskStatus"), name, err)
 	}
-	return tkm.complete(ctx, row, notes, true)
+	return tkm.complete(ctx, row, notes, true, time.Time{})
 }
 
 // pendingSubtasksError tells the caller how many subtasks completing the

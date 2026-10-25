@@ -102,7 +102,7 @@ func TestPagesNeedTheToken(t *testing.T) {
 	}
 
 	// what installs the app needs no login, and holds no data
-	for _, path := range []string{"/manifest.json", "/sw.js", "/app.css", "/app.js", "/htmx.min.js", "/icon-192.png", "/login"} {
+	for _, path := range []string{"/manifest.json", "/sw.js", "/app.css", "/app.js", "/queue.js", "/htmx.min.js", "/icon-192.png", "/login"} {
 		if w := do(t, s, "GET", path, nil, false, false); w.Code != http.StatusOK {
 			t.Errorf("GET %s = %d, want 200 without login", path, w.Code)
 		}
@@ -464,5 +464,174 @@ func TestEmptyNameShowsAMessage(t *testing.T) {
 		if !strings.Contains(bar, `class="msg err"`) {
 			t.Errorf("%s: an empty name should show an error in the add bar:\n%s", kind, body)
 		}
+	}
+}
+
+const (
+	uuidA = "11111111-1111-1111-1111-111111111111"
+	uuidB = "22222222-2222-2222-2222-222222222222"
+)
+
+// doQueued is do with the id the phone's offline queue puts on a request.
+func doQueued(t *testing.T, s *Server, target, id string, form url.Values) *httptest.ResponseRecorder {
+	t.Helper()
+	r := httptest.NewRequest("POST", target, strings.NewReader(form.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Set("HX-Request", "true")
+	r.Header.Set("X-Queue-Id", id)
+	r.AddCookie(&http.Cookie{Name: cookieName, Value: testToken})
+	w := httptest.NewRecorder()
+	s.ServeHTTP(w, r)
+	return w
+}
+
+func TestWritesSayHowTheyWent(t *testing.T) {
+	s, _ := newTestServer(t)
+
+	w := do(t, s, "POST", "/add", url.Values{"name": {"Pay rent"}, "kind": {"task"}}, true, true)
+	if got := w.Header().Get("X-Akrasia-Result"); got != "ok" {
+		t.Errorf("a successful write = %q, want ok", got)
+	}
+	w = do(t, s, "POST", "/add", url.Values{"name": {"Pay rent"}, "kind": {"task"}}, true, true)
+	if got := w.Header().Get("X-Akrasia-Result"); got != "error" {
+		t.Errorf("a name already taken = %q, want error", got)
+	}
+}
+
+func TestQueuedWriteIsAppliedOnce(t *testing.T) {
+	s, tkm := newTestServer(t)
+	ctx := context.Background()
+
+	form := url.Values{"name": {"learn sql"}, "kind": {"dump"}}
+	for range 3 {
+		w := doQueued(t, s, "/add", uuidA, form)
+		if got := w.Header().Get("X-Akrasia-Result"); got != "ok" {
+			t.Fatalf("a replayed write = %q, want ok", got)
+		}
+	}
+	if dumps, _ := tkm.Dumps(ctx); len(dumps) != 1 {
+		t.Fatalf("the same queue id three times made %d dump entries, want 1", len(dumps))
+	}
+
+	// another id is another request
+	doQueued(t, s, "/add", uuidB, form)
+	if dumps, _ := tkm.Dumps(ctx); len(dumps) != 2 {
+		t.Fatalf("a new id should write again, got %d entries", len(dumps))
+	}
+
+	// a task too
+	task := url.Values{"name": {"Pay rent"}, "kind": {"task"}}
+	doQueued(t, s, "/add", "33333333-3333-3333-3333-333333333333", task)
+	w := doQueued(t, s, "/add", "33333333-3333-3333-3333-333333333333", task)
+	if strings.Contains(w.Body.String(), `class="msg err"`) {
+		t.Errorf("replaying an applied add is not an error:\n%s", w.Body.String())
+	}
+}
+
+func TestFailedQueuedWriteCanBeRetried(t *testing.T) {
+	s, tkm := newTestServer(t)
+	addTask(t, tkm, tasks.NewTodo{Name: "Pay rent"})
+
+	// the name is taken: not applied, so not remembered
+	w := doQueued(t, s, "/add", uuidA, url.Values{"name": {"Pay rent"}, "kind": {"task"}})
+	if w.Header().Get("X-Akrasia-Result") != "error" {
+		t.Fatalf("a taken name should fail")
+	}
+	if seen, _ := tkm.QueueSeen(context.Background(), uuidA); seen {
+		t.Error("a failed write must not be remembered")
+	}
+}
+
+func TestQueueIdMustBeAUUID(t *testing.T) {
+	s, tkm := newTestServer(t)
+	form := url.Values{"name": {"idea"}, "kind": {"dump"}}
+	doQueued(t, s, "/add", "not-a-uuid", form)
+	doQueued(t, s, "/add", "not-a-uuid", form)
+	// no valid id: no dedupe, as for any plain request
+	if dumps, _ := tkm.Dumps(context.Background()); len(dumps) != 2 {
+		t.Errorf("got %d entries, want 2", len(dumps))
+	}
+}
+
+func TestQueuedCompleteNeedsTheExactName(t *testing.T) {
+	s, tkm := newTestServer(t)
+	ctx := context.Background()
+	addTask(t, tkm, tasks.NewTodo{Name: "Pay electricity bill"})
+
+	// the phone queued "Pay" for a task that has since been renamed: the
+	// fuzzy lookup would find the electricity bill
+	w := doQueued(t, s, "/complete", uuidA, url.Values{"path": {"Pay"}, "tab": {"today"}})
+	if w.Header().Get("X-Akrasia-Result") != "error" {
+		t.Fatalf("a queued complete with another name must fail")
+	}
+	if todo, _ := tkm.FindTodo(ctx, "Pay electricity bill"); todo.Concluded {
+		t.Fatal("the electricity bill was completed by a stale name")
+	}
+
+	w = doQueued(t, s, "/complete", uuidB, url.Values{"path": {"pay electricity bill"}, "tab": {"today"}})
+	if w.Header().Get("X-Akrasia-Result") != "ok" {
+		t.Fatalf("the exact name (any case) should complete it:\n%s", w.Body.String())
+	}
+	if todo, _ := tkm.FindTodo(ctx, "Pay electricity bill"); !todo.Concluded {
+		t.Fatal("the task should be concluded")
+	}
+
+	// a plain request keeps the fuzzy lookup
+	addTask(t, tkm, tasks.NewTodo{Name: "Call the dentist"})
+	w = do(t, s, "POST", "/complete", url.Values{"path": {"dentist"}, "tab": {"today"}}, true, true)
+	if w.Header().Get("X-Akrasia-Result") != "ok" {
+		t.Errorf("a request without a queue id still matches by part of the name")
+	}
+}
+
+func TestCompleteKeepsTheDayItWasDone(t *testing.T) {
+	s, tkm := newTestServer(t)
+	ctx := context.Background()
+	if _, err := tkm.AddTodo(ctx, tasks.NewTodo{Name: "Run", IsDaily: true}); err != nil {
+		t.Fatal(err)
+	}
+	yesterday := time.Now().AddDate(0, 0, -1).Format(time.DateOnly)
+
+	w := doQueued(t, s, "/complete", uuidA, url.Values{"path": {"Run"}, "tab": {"today"}, "done_on": {yesterday}, "notes": {"5km"}})
+	if w.Header().Get("X-Akrasia-Result") != "ok" {
+		t.Fatalf("done_on yesterday failed:\n%s", w.Body.String())
+	}
+
+	report, err := tkm.Debug(ctx, "Run")
+	if err != nil || len(report.History) != 1 || report.History[0].Date != yesterday || report.History[0].Notes != "5km" {
+		t.Fatalf("history = %+v, %v; want one row on %s", report.History, err, yesterday)
+	}
+	if todo, _ := tkm.FindTodo(ctx, "Run"); todo.Done() {
+		t.Error("completing yesterday must not make today done")
+	}
+
+	for name, day := range map[string]string{
+		"future":   time.Now().AddDate(0, 0, 2).Format(time.DateOnly),
+		"too old":  time.Now().AddDate(0, 0, -9).Format(time.DateOnly),
+		"not date": "yesterday",
+	} {
+		w := do(t, s, "POST", "/complete", url.Values{"path": {"Run"}, "tab": {"today"}, "done_on": {day}}, true, true)
+		if w.Header().Get("X-Akrasia-Result") != "error" {
+			t.Errorf("done_on %s (%s) should be rejected", name, day)
+		}
+	}
+}
+
+func TestServiceWorkerCarriesTheBuild(t *testing.T) {
+	s, _ := newTestServer(t)
+
+	w := do(t, s, "GET", "/sw.js", nil, false, false)
+	body := w.Body.String()
+	if w.Code != http.StatusOK || strings.Contains(body, "__BUILD__") || !strings.Contains(body, `"`+s.build+`"`) {
+		t.Errorf("sw.js should carry build %q, got %d:\n%s", s.build, w.Code, body)
+	}
+	if got := w.Header().Get("Cache-Control"); got != "no-cache" {
+		t.Errorf("Cache-Control = %q, want no-cache", got)
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/javascript") {
+		t.Errorf("Content-Type = %q", ct)
+	}
+	if len(s.build) != 12 {
+		t.Errorf("build = %q", s.build)
 	}
 }

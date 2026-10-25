@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -177,12 +178,53 @@ func (s *Server) reply(w http.ResponseWriter, r *http.Request, t tab, status str
 	if err != nil {
 		failure = errors.Join(failure, err)
 	}
+	result := "ok"
 	if failure != nil {
 		data.Error = failure.Error()
+		result = "error"
 	} else {
 		data.Status = status
 	}
+	// the phone's offline queue reads this, not the markup
+	w.Header().Set("X-Akrasia-Result", result)
 	s.render(w, "app", data)
+}
+
+// queueID is the id the phone's offline queue gave a request, empty when
+// there is none or it is not a uuid.
+func queueID(r *http.Request) string {
+	id := r.Header.Get("X-Queue-Id")
+	if _, err := uuid.Parse(id); err != nil {
+		return ""
+	}
+	return id
+}
+
+// once runs a write that the phone may send again from its offline queue:
+// a request whose id was already applied (its answer was lost) is answered
+// as done without writing a second time. The id is remembered only after
+// the write succeeded, so a request that failed can be retried.
+func (s *Server) once(w http.ResponseWriter, r *http.Request, t tab, write func() (string, error)) {
+	id := queueID(r)
+	if id != "" {
+		seen, err := s.svc.QueueSeen(r.Context(), id)
+		if err != nil {
+			s.reply(w, r, t, "", err)
+			return
+		}
+		if seen {
+			s.reply(w, r, t, i18n.T("web.queue.alreadyApplied"), nil)
+			return
+		}
+	}
+
+	status, err := write()
+	if err == nil && id != "" {
+		if rerr := s.svc.QueueRemember(r.Context(), id); rerr != nil {
+			log.Printf("web: remembering queue id %s: %v", id, rerr)
+		}
+	}
+	s.reply(w, r, t, status, err)
 }
 
 // add creates a task, a subtask (with a parent) or a dump entry.
@@ -195,8 +237,10 @@ func (s *Server) add(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.FormValue("kind") == "dump" {
-		entry, err := s.svc.AddDump(r.Context(), name)
-		s.reply(w, r, t, fmt.Sprintf(i18n.T("tui.status.dumpAdded"), entry.Name), err)
+		s.once(w, r, t, func() (string, error) {
+			entry, err := s.svc.AddDump(r.Context(), name)
+			return fmt.Sprintf(i18n.T("tui.status.dumpAdded"), entry.Name), err
+		})
 		return
 	}
 
@@ -219,8 +263,10 @@ func (s *Server) add(w http.ResponseWriter, r *http.Request) {
 	}
 	in.ExpiresAt = due
 
-	todo, err := s.svc.AddTodo(r.Context(), in)
-	s.reply(w, r, t, fmt.Sprintf(i18n.T("tui.status.created"), todo.Path()), err)
+	s.once(w, r, t, func() (string, error) {
+		todo, err := s.svc.AddTodo(r.Context(), in)
+		return fmt.Sprintf(i18n.T("tui.status.created"), todo.Path()), err
+	})
 }
 
 // repeatFromForm reads how the form says the task repeats: the repeat
@@ -296,16 +342,47 @@ func (s *Server) complete(w http.ResponseWriter, r *http.Request) {
 	t := parseTab(r.FormValue("tab"))
 	path, notes := r.FormValue("path"), strings.TrimSpace(r.FormValue("notes"))
 
-	var (
-		todo tasks.TodoView
-		err  error
-	)
-	if r.FormValue("all") != "" {
-		todo, err = s.svc.CompleteAll(r.Context(), path, notes)
-	} else {
-		todo, err = s.svc.Complete(r.Context(), path, notes)
+	all := r.FormValue("all") != ""
+
+	// a completion made offline keeps its day
+	var day time.Time
+	if v := r.FormValue("done_on"); v != "" {
+		d, err := time.ParseInLocation(time.DateOnly, v, s.now().Location())
+		if err != nil {
+			s.reply(w, r, t, "", errors.New(i18n.T("tui.form.invalidDate")))
+			return
+		}
+		day = d
 	}
-	s.reply(w, r, t, fmt.Sprintf(i18n.T("tui.status.completed"), todo.Name), err)
+
+	s.once(w, r, t, func() (string, error) {
+		// a request from the queue was written when the list looked
+		// different: the name must still be exactly that task's, since the
+		// lookup by name is fuzzy
+		if queueID(r) != "" {
+			found, err := s.svc.FindTodo(r.Context(), path)
+			if err != nil {
+				return "", err
+			}
+			if !strings.EqualFold(found.Path(), path) {
+				return "", fmt.Errorf(i18n.T("tasks.error.queuedNotFound"), path)
+			}
+		}
+
+		var (
+			todo tasks.TodoView
+			err  error
+		)
+		switch {
+		case !day.IsZero():
+			todo, err = s.svc.CompleteOn(r.Context(), path, notes, all, day)
+		case all:
+			todo, err = s.svc.CompleteAll(r.Context(), path, notes)
+		default:
+			todo, err = s.svc.Complete(r.Context(), path, notes)
+		}
+		return fmt.Sprintf(i18n.T("tui.status.completed"), todo.Name), err
+	})
 }
 
 // convertData is the dialog that turns a dump entry into a task.
