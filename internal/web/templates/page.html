@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1e1e2e">
-<meta name="htmx-config" content='{"includeIndicatorStyles": false, "historyCacheSize": 0}'>
+<meta name="htmx-config" content='{"includeIndicatorStyles": false, "historyCacheSize": 0, "timeout": 15000}'>
 <title>Akrasia</title>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon-192.png">
@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="/app.css">
 <script src="/htmx.min.js" defer></script>
 <script src="/app.js" defer></script>
+<script src="/queue.js" defer></script>
 </head>
 <body>
 {{template "app" .}}
@@ -19,7 +20,7 @@
 </html>
 {{end}}
 
-{{define "app"}}<main id="app">
+{{define "app"}}<main id="app" data-tab="{{.Tab}}">
   <header class="top">
     <h1>akrasia</h1>
     <nav class="tabs">
@@ -31,6 +32,14 @@
       <span>{{if .Progress.Total}}{{printf (T "tasks.tasks.progress") .Progress.Done .Progress.Total}}{{else}}{{T "tasks.tasks.progressClear"}}{{end}}</span>
       <progress value="{{.Progress.Done}}" max="{{if .Progress.Total}}{{.Progress.Total}}{{else}}1{{end}}">{{.Percent}}%</progress>
     </div>
+    {{/* the offline queue (queue.js) fills this in and reads its texts */}}
+    <p id="queue-status" class="queue-status" hidden role="status"
+      data-offline="{{T "web.queue.offline"}}" data-waiting="{{T "web.queue.waitingCount"}}"
+      data-syncing="{{T "web.queue.syncing"}}" data-login="{{T "web.queue.login"}}"
+      data-failed="{{T "web.queue.failedCount"}}" data-title="{{T "web.queue.title"}}"
+      data-pending="{{T "web.queue.pending"}}" data-failedbadge="{{T "web.queue.failed"}}"
+      data-dismiss="{{T "web.queue.dismiss"}}" data-needscomputer="{{T "web.queue.onlineOnly"}}" data-nameneeded="{{T "tui.form.nameRequired"}}" data-kind-task="{{T "web.queue.kindTask"}}"
+      data-kind-dump="{{T "web.queue.kindDump"}}" data-kind-complete="{{T "web.queue.kindComplete"}}"></p>
   </header>
 
   <section class="list">
@@ -87,10 +96,27 @@
       <button name="kind" value="dump" class="secondary">{{T "web.addDump"}}</button>
     </div>
   </form>
+
+  {{/* what a completion asks when the server can't be reached; queue.js fills it in */}}
+  <template id="tpl-offline-complete">
+    <div class="dialog" role="dialog" aria-modal="true">
+      <form data-offline-complete data-notes="{{T "tui.prompt.notes"}}" data-all="{{T "tui.prompt.completeAll"}}">
+        <input type="hidden" name="path">
+        <input type="hidden" name="tab">
+        <input type="hidden" name="all" value="1" disabled>
+        <p class="title"></p>
+        <textarea name="notes" rows="3" aria-label="{{T "tui.help.notes"}}"></textarea>
+        <div class="buttons">
+          <button>{{T "web.complete"}}</button>
+          <button type="button" class="secondary" data-close>{{T "tui.help.cancel"}}</button>
+        </div>
+      </form>
+    </div>
+  </template>
 </main>
 {{end}}
 
-{{define "todo"}}<li class="todo{{if .IsSubtask}} sub{{end}}{{if .Done}} done{{end}}">
+{{define "todo"}}<li class="todo{{if .IsSubtask}} sub{{end}}{{if .Done}} done{{end}}" data-path="{{.Path}}" data-pending="{{.PendingSubs}}">
   {{if .Done}}<span class="check" title="{{T "tasks.tasks.done"}}">✔</span>{{else}}
   <form hx-get="/complete" hx-target="#overlay">
     <input type="hidden" name="path" value="{{.Path}}">

@@ -422,8 +422,12 @@ or a dump entry, and a tap to complete a task (with notes). The Dump tab
 lists the dump entries: `→` turns one into a task (the name can be changed
 first, and the entry leaves the dump) and `×` deletes it after a
 confirmation. Messages, like an empty name, show above the add bar. The
-database stays here: the phone only talks to it, so the computer has to be
-on.
+database stays here: the phone only talks to it.
+
+When the computer can't be reached (it is off, or the phone has no signal)
+the app still opens, from the last copy of each tab, and what you add or
+complete waits in a queue on the phone and is sent when the computer
+answers again; see "Without the computer" below.
 
 It is reached privately through [Tailscale](https://tailscale.com) (free
 for personal use), which gives it an HTTPS address only your devices can
@@ -451,6 +455,36 @@ enter the token once, and use the browser's "Add to Home screen".
   with `systemctl --user stop akrasia`.
 - `akrasia serve` alone runs it in the terminal (`ctrl+c` stops it), and
   `akrasia serve uninstall` removes the service.
+
+#### Without the computer
+
+Open the app once with the computer on (the phone then keeps the app and
+the last copy of Today, All and Dump). After that, when the computer can't
+be reached:
+
+- a task, a subtask or a dump entry you add is kept on the phone and shows
+  under "Waiting to send" with a *pending* mark;
+- tapping the circle of a task asks for the notes (optional) in a small
+  dialog, shows the task as done and queues the completion. It remembers
+  the day you did it: a daily task finished at 23:50 and sent at 00:10
+  counts for the day you did it, up to 7 days back;
+- the bar under the tabs says "Offline" and how many are waiting; they are
+  sent in order as soon as the computer answers (when the app is open, when
+  the phone is back online and every 30 seconds), and the lists refresh.
+
+Each item is sent once even if the answer got lost on the way. If the
+computer refuses one (a name that is already taken, a date that has
+passed, a task renamed meanwhile), it stays under "Waiting to send" marked
+*failed* with the reason, and `×` discards it. If the token was replaced
+(`serve token --new`), the bar asks you to sign in again and the queue is
+sent afterwards.
+
+What doesn't work offline: editing, deleting or turning a dump entry into
+a task (they need the computer), and sending while the app is closed: the
+queue is sent the next time you open it. The copy of the lists is the one
+from the last visit, so tasks you changed on the computer in the meantime
+show up after the next sync. Anyone who opens the phone can read that
+copy, as they can the app itself.
 
 ### Settings
 

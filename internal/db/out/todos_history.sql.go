@@ -54,6 +54,50 @@ func (q *Queries) AddTodoHistory(ctx context.Context, arg AddTodoHistoryParams) 
 	return i, err
 }
 
+const addTodoHistoryOn = `-- name: AddTodoHistoryOn :one
+INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
+VALUES (
+    ?, ?, date(?), ?, ?, ?
+)
+ON CONFLICT(todo_id, date) DO UPDATE SET
+    completed = excluded.completed,
+    completed_at = excluded.completed_at,
+    notes = excluded.notes
+RETURNING id, todo_id, date, completed, completed_at, notes
+`
+
+type AddTodoHistoryOnParams struct {
+	ID          interface{}
+	TodoID      interface{}
+	Date        interface{}
+	Completed   sql.NullBool
+	CompletedAt sql.NullTime
+	Notes       sql.NullString
+}
+
+// Like AddTodoHistory, for a given day (yyyy-mm-dd): a completion made
+// offline on the phone keeps the day it was made, not the day it syncs.
+func (q *Queries) AddTodoHistoryOn(ctx context.Context, arg AddTodoHistoryOnParams) (TodosHistory, error) {
+	row := q.db.QueryRowContext(ctx, addTodoHistoryOn,
+		arg.ID,
+		arg.TodoID,
+		arg.Date,
+		arg.Completed,
+		arg.CompletedAt,
+		arg.Notes,
+	)
+	var i TodosHistory
+	err := row.Scan(
+		&i.ID,
+		&i.TodoID,
+		&i.Date,
+		&i.Completed,
+		&i.CompletedAt,
+		&i.Notes,
+	)
+	return i, err
+}
+
 const backfillDailyDone = `-- name: BackfillDailyDone :one
 INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
 VALUES (

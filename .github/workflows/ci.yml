@@ -46,6 +46,9 @@ jobs:
       - name: Tests (race detector)
         run: go test -race ./...
 
+      - name: Tests of the phone app's JavaScript
+        run: node --test internal/web/jstest/queue.test.cjs
+
   windows:
     name: Windows
     runs-on: windows-latest

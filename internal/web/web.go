@@ -5,9 +5,12 @@
 package web
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/subtle"
 	"embed"
+	"encoding/hex"
 	"errors"
 	"html/template"
 	"io/fs"
@@ -36,6 +39,11 @@ type Service interface {
 	PromoteDump(ctx context.Context, id uuid.UUID, in tasks.NewTodo) (tasks.TodoView, error)
 	Complete(ctx context.Context, name, notes string) (tasks.TodoView, error)
 	CompleteAll(ctx context.Context, name, notes string) (tasks.TodoView, error)
+	// CompleteOn completes for a past day: the phone's offline queue
+	CompleteOn(ctx context.Context, name, notes string, all bool, day time.Time) (tasks.TodoView, error)
+	FindTodo(ctx context.Context, name string) (tasks.TodoView, error)
+	QueueSeen(ctx context.Context, id string) (bool, error)
+	QueueRemember(ctx context.Context, id string) error
 }
 
 //go:embed templates/*.html
@@ -53,6 +61,9 @@ type Server struct {
 	token string
 	pages *template.Template
 	mux   *http.ServeMux
+	// build identifies this binary's pages and assets: the service worker
+	// names its caches with it, so a new binary replaces the old shell
+	build string
 	// now is time.Now; tests fix it
 	now func() time.Time
 }
@@ -66,15 +77,17 @@ func New(svc Service, token string) (*Server, error) {
 	}
 
 	s := &Server{svc: svc, token: token, pages: pages, mux: http.NewServeMux(), now: time.Now}
+	s.build = buildID()
 
 	static, err := fs.Sub(staticFS, "static")
 	if err != nil {
 		return nil, err
 	}
 	files := http.FileServerFS(static)
-	for _, name := range []string{"/htmx.min.js", "/app.js", "/app.css", "/manifest.json", "/sw.js"} {
+	for _, name := range []string{"/htmx.min.js", "/app.js", "/queue.js", "/app.css", "/manifest.json"} {
 		s.mux.Handle("GET "+name, files)
 	}
+	s.mux.HandleFunc("GET /sw.js", s.serviceWorker)
 	s.mux.HandleFunc("GET /icon-192.png", s.icon)
 	s.mux.HandleFunc("GET /icon-512.png", s.icon)
 	s.mux.HandleFunc("GET /login", s.loginPage)
@@ -93,6 +106,40 @@ func New(svc Service, token string) (*Server, error) {
 	s.mux.Handle("GET /complete", s.private(http.HandlerFunc(s.completeForm)))
 	s.mux.Handle("POST /complete", s.private(s.mutation(s.complete)))
 	return s, nil
+}
+
+// buildID is a short hash of the embedded templates and static files.
+func buildID() string {
+	sum := sha256.New()
+	for _, fsys := range []fs.FS{templateFS, staticFS} {
+		// fs.WalkDir visits in lexical order, so the hash is stable
+		_ = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			data, err := fs.ReadFile(fsys, path)
+			if err != nil {
+				return err
+			}
+			sum.Write([]byte(path))
+			sum.Write(data)
+			return nil
+		})
+	}
+	return hex.EncodeToString(sum.Sum(nil))[:12]
+}
+
+// serviceWorker serves sw.js with its __BUILD__ replaced by the build id.
+// The browser must look for a new worker every time, so it is never cached.
+func (s *Server) serviceWorker(w http.ResponseWriter, r *http.Request) {
+	data, err := fs.ReadFile(staticFS, "static/sw.js")
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	_, _ = w.Write(bytes.ReplaceAll(data, []byte("__BUILD__"), []byte(s.build)))
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

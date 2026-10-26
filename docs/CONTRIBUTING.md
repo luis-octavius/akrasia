@@ -144,6 +144,7 @@ gofmt -l .          # must print nothing
 go mod tidy -diff   # must print nothing
 go vet ./...
 go test -race ./...
+node --test internal/web/jstest/queue.test.cjs   # the phone app's queue logic (needs node)
 ```
 
 The same checks run in GitHub Actions (`.github/workflows/ci.yml`) on every

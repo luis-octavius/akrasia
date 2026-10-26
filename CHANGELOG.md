@@ -5,6 +5,35 @@ All notable changes to Akrasia are documented here. The format follows
 [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+
+### Added
+
+- **The phone app works without the computer.** When `akrasia serve` can't
+  be reached, the app opens from the last copy of Today, All and Dump, and
+  what you add (a task, a subtask, a dump entry) or complete waits in a
+  queue on the phone, saved across closing the app.
+  - Queued items show under "Waiting to send" as *pending*; a completed task
+    shows as done; the bar says "Offline" and how many are waiting.
+  - They are sent in order when the computer answers again (on opening the
+    app, when the phone is back online and every 30 seconds). A refused one
+    (name taken, date passed...) stays as *failed* with the reason, to
+    discard; an expired token asks to sign in again, and nothing is lost.
+  - Each request has an id the server remembers (`web_queue`, migration
+    012, 30 days), so one whose answer was lost is not applied twice.
+  - A completion made offline keeps its day (`done_on`, up to 7 days back):
+    the history, the streak and the week or month of a recurring task follow
+    the day it was done, not the day it was sent. A queued completion must
+    match the task's name exactly, so a task renamed on the computer is
+    never replaced by a similar one.
+  - Adding with an empty name while offline says "name is required" at
+    once instead of queuing an item that could only fail.
+  - Writes answer with `X-Akrasia-Result: ok|error`.
+  - Not offline: editing, deleting or converting a dump entry, and sending
+    while the app is closed.
+  - New files: `sw.js` (cache, named by a hash of the build so a new
+    version replaces the old one) and `queue.js`. Its logic is tested with
+    `node --test internal/web/jstest/queue.test.cjs`, which CI runs.
+
 ## [2.7.1] - 2026-10-24
 
 ### Changed

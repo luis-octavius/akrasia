@@ -13,6 +13,19 @@ ON CONFLICT(todo_id, date) DO UPDATE SET
     notes = excluded.notes
 RETURNING *;
 
+-- name: AddTodoHistoryOn :one
+-- Like AddTodoHistory, for a given day (yyyy-mm-dd): a completion made
+-- offline on the phone keeps the day it was made, not the day it syncs.
+INSERT INTO todos_history (id, todo_id, date, completed, completed_at, notes)
+VALUES (
+    ?, ?, date(?), ?, ?, ?
+)
+ON CONFLICT(todo_id, date) DO UPDATE SET
+    completed = excluded.completed,
+    completed_at = excluded.completed_at,
+    notes = excluded.notes
+RETURNING *;
+
 -- name: DeleteCurrentPeriodHistory :exec
 -- Undoes a recurring task's completion: removes the rows of its current
 -- period (today, this week or this month).

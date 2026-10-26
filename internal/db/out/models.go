@@ -57,3 +57,8 @@ type TodosHistoryLegacyBackup005 struct {
 	CompletedAt sql.NullTime
 	Notes       sql.NullString
 }
+
+type WebQueue struct {
+	ID        string
+	CreatedAt time.Time
+}
