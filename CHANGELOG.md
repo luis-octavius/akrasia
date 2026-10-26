@@ -6,6 +6,8 @@ All notable changes to Akrasia are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-10-26
+
 ### Added
 
 - **The phone app works without the computer.** When `akrasia serve` can't
@@ -417,7 +419,8 @@ is a major version because two behaviors that scripts may rely on changed:
 
 See the [GitHub releases and tags](https://github.com/luis-octavius/akrasia/tags).
 
-[Unreleased]: https://github.com/luis-octavius/akrasia/compare/dev...v.2.7.1
+[Unreleased]: https://github.com/luis-octavius/akrasia/compare/dev...v.2.8.0
+[2.8.0]: https://github.com/luis-octavius/akrasia/compare/2.8.0...v.2.7.1
 [2.7.1]: https://github.com/luis-octavius/akrasia/compare/v.2.7.1...v.2.7.0
 [2.7.0]: https://github.com/luis-octavius/akrasia/compare/v.2.6.0...v.2.7.0
 [2.6.0]: https://github.com/luis-octavius/akrasia/compare/v.2.5.0...v.2.6.0
